@@ -6,15 +6,27 @@
   "collisionGrid": 64,
   "transitions": [
     {
-      "id": "lily-to-route2-south",
+      "id": "lily-to-route2",
       "x": 1536,
       "y": 0,
       "width": 512,
       "height": 128,
-      "targetMapId": "route2",
+      "targetMapId": "route-2",
       "targetSpawn": {
-        "x": 3392,
-        "y": 5952
+        "x": 1856,
+        "y": 1600
+      }
+    },
+    {
+      "id": "lily-to-route1",
+      "x": 1536,
+      "y": 2304,
+      "width": 512,
+      "height": 128,
+      "targetMapId": "route-1",
+      "targetSpawn": {
+        "x": 2880,
+        "y": 192
       }
     }
   ],

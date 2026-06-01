@@ -762,6 +762,9 @@
         { itemId: "basic-orb", quantity: 5 },
         { itemId: "small-tonic", quantity: 2 },
       ],
+      ui: {
+        activePanel: "",
+      },
       battle: null,
       interaction: null,
       message: content.mapMetadata[starterTown.mapId]?.safezone
@@ -782,6 +785,9 @@
       bank: save.bank || [],
       registry: save.registry || { seen: [], caught: [] },
       inventory: save.inventory || [],
+      ui: {
+        activePanel: "",
+      },
       battle: null,
       interaction: null,
       message: "Loaded " + save.saveName + ".",
@@ -811,6 +817,18 @@
       registry: state.registry,
       inventory: state.inventory,
     };
+  }
+
+  function ensureWorldUiState(state) {
+    if (!state.ui) {
+      state.ui = { activePanel: "" };
+    }
+
+    if (typeof state.ui.activePanel !== "string") {
+      state.ui.activePanel = "";
+    }
+
+    return state.ui;
   }
 
   function calculateDamage(attacker, defender) {
@@ -1212,7 +1230,7 @@
     }
 
     const length = Math.hypot(dx, dy) || 1;
-    const speed = 260 * (state.settings.zoom / 100);
+    const speed = 260;
     const map = content.maps[state.world.currentMapId];
     const nextX = state.world.position.x + (dx / length) * speed * (deltaMs / 1000);
     const nextY = state.world.position.y + (dy / length) * speed * (deltaMs / 1000);
@@ -1241,9 +1259,12 @@
     const map = content.maps[state.world.currentMapId];
     const worldWidth = map.mapWidth * map.tileSize;
     const worldHeight = map.mapHeight * map.tileSize;
+    const zoomScale = Math.max(0.1, Number(state.settings.zoom || 100) / 100);
+    const visibleWorldWidth = VIEWPORT.width / zoomScale;
+    const visibleWorldHeight = VIEWPORT.height / zoomScale;
 
-    const x = Math.max(0, Math.min(worldWidth - VIEWPORT.width, state.world.position.x - VIEWPORT.width / 2));
-    const y = Math.max(0, Math.min(worldHeight - VIEWPORT.height, state.world.position.y - VIEWPORT.height / 2));
+    const x = Math.max(0, Math.min(worldWidth - visibleWorldWidth, state.world.position.x - visibleWorldWidth / 2));
+    const y = Math.max(0, Math.min(worldHeight - visibleWorldHeight, state.world.position.y - visibleWorldHeight / 2));
 
     return { x, y };
   }
@@ -1259,8 +1280,9 @@
     return String(layerName || "").trim().toLowerCase() === "higher decor in front of player";
   }
 
-  function drawMapLayers(ctx, map, camera, layerFilter) {
+  function drawMapLayers(ctx, map, camera, layerFilter, zoomScale) {
     const tileSize = map.tileSize;
+    const scaledTileSize = tileSize * zoomScale;
     const image = getImage(map.image);
     const renderCamera = snapCamera(camera);
 
@@ -1282,17 +1304,17 @@
         if (
           worldX + tileSize < renderCamera.x ||
           worldY + tileSize < renderCamera.y ||
-          worldX > renderCamera.x + VIEWPORT.width ||
-          worldY > renderCamera.y + VIEWPORT.height
+          worldX > renderCamera.x + VIEWPORT.width / zoomScale ||
+          worldY > renderCamera.y + VIEWPORT.height / zoomScale
         ) {
           return;
         }
 
         const sx = (tile.id % columns) * tileSize;
         const sy = Math.floor(tile.id / columns) * tileSize;
-        const dx = Math.round(worldX - renderCamera.x);
-        const dy = Math.round(worldY - renderCamera.y);
-        ctx.drawImage(image, sx, sy, tileSize, tileSize, dx, dy, tileSize, tileSize);
+        const dx = Math.round((worldX - renderCamera.x) * zoomScale);
+        const dy = Math.round((worldY - renderCamera.y) * zoomScale);
+        ctx.drawImage(image, sx, sy, tileSize, tileSize, dx, dy, scaledTileSize, scaledTileSize);
       });
     });
 
@@ -1301,6 +1323,7 @@
 
   function drawMap(ctx, map, camera, phase) {
     ctx.imageSmoothingEnabled = true;
+    const zoomScale = Math.max(0.1, Number(ACTIVE_APP?.state?.settings?.zoom || 100) / 100);
 
     if (phase === "base") {
       ctx.fillStyle = "#9fd6da";
@@ -1309,7 +1332,7 @@
 
     const loaded = drawMapLayers(ctx, map, camera, function (layer) {
       return phase === "foreground" ? isFrontOfPlayerLayer(layer.name) : !isFrontOfPlayerLayer(layer.name);
-    });
+    }, zoomScale);
 
     if (!loaded && phase === "base") {
       ctx.fillStyle = "#ffffff";
@@ -1325,18 +1348,19 @@
 
     const transitions = content.mapMetadata[state.world.currentMapId]?.transitions || [];
     const selectedId = devToolsState.selectedTransitionId;
+    const zoomScale = Math.max(0.1, Number(state.settings.zoom || 100) / 100);
 
     transitions.forEach(function (transition) {
-      const x = Math.round(transition.x - camera.x);
-      const y = Math.round(transition.y - camera.y);
+      const x = Math.round((transition.x - camera.x) * zoomScale);
+      const y = Math.round((transition.y - camera.y) * zoomScale);
       const isSelected = transition.id === selectedId;
 
       ctx.save();
       ctx.fillStyle = isSelected ? "rgba(240, 139, 110, 0.30)" : "rgba(35, 110, 143, 0.22)";
       ctx.strokeStyle = isSelected ? "rgba(240, 139, 110, 0.95)" : "rgba(35, 110, 143, 0.95)";
       ctx.lineWidth = isSelected ? 4 : 2;
-      ctx.fillRect(x, y, transition.width, transition.height);
-      ctx.strokeRect(x, y, transition.width, transition.height);
+      ctx.fillRect(x, y, transition.width * zoomScale, transition.height * zoomScale);
+      ctx.strokeRect(x, y, transition.width * zoomScale, transition.height * zoomScale);
 
       ctx.fillStyle = "rgba(30, 35, 42, 0.9)";
       const label = transition.id + " -> " + transition.targetMapId;
@@ -1350,8 +1374,8 @@
       ctx.restore();
     });
 
-    const playerX = Math.round(state.world.position.x - camera.x);
-    const playerY = Math.round(state.world.position.y - camera.y);
+    const playerX = Math.round((state.world.position.x - camera.x) * zoomScale);
+    const playerY = Math.round((state.world.position.y - camera.y) * zoomScale);
     const coords = "Player " + Math.round(state.world.position.x) + ", " + Math.round(state.world.position.y);
     ctx.save();
     ctx.fillStyle = "rgba(30, 35, 42, 0.85)";
@@ -1368,10 +1392,11 @@
     const species = getSpecies(content, monster.speciesId);
     const variant = getSpeciesVariant(species, monster.variantId);
     const spritePath = variant?.sprite || "";
-    const screenX = Math.round(monster.x - camera.x);
-    const screenY = Math.round(monster.y - camera.y);
+    const zoomScale = Math.max(0.1, Number(ACTIVE_APP?.state?.settings?.zoom || 100) / 100);
+    const screenX = Math.round((monster.x - camera.x) * zoomScale);
+    const screenY = Math.round((monster.y - camera.y) * zoomScale);
     const map = content.maps[ACTIVE_APP?.state?.world?.currentMapId || ""];
-    const spriteSize = map?.tileSize || 128;
+    const spriteSize = (map?.tileSize || 128) * zoomScale;
 
     if (spritePath) {
       const image = getImage(spritePath);
@@ -1397,6 +1422,7 @@
     const ctx = canvas.getContext("2d");
     const map = content.maps[state.world.currentMapId];
     const camera = snapCamera(getCamera(state, content));
+    const zoomScale = Math.max(0.1, Number(state.settings.zoom || 100) / 100);
 
     drawMap(ctx, map, camera, "base");
     drawTransitionOverlay(ctx, state, content, camera, devToolsState);
@@ -1409,8 +1435,8 @@
       drawWildMonsterSprite(ctx, monster, content, camera);
     });
 
-    const playerX = state.world.position.x - camera.x;
-    const playerY = state.world.position.y - camera.y;
+    const playerX = (state.world.position.x - camera.x) * zoomScale;
+    const playerY = (state.world.position.y - camera.y) * zoomScale;
     ctx.beginPath();
     ctx.fillStyle = "#1b4f75";
     ctx.arc(playerX, playerY, PLAYER_RADIUS, 0, Math.PI * 2);
@@ -1643,6 +1669,118 @@
     ].join("");
   }
 
+  function renderWorldPanelModal(state, content) {
+    const ui = ensureWorldUiState(state);
+    const panel = ui.activePanel;
+    if (!panel) {
+      return "";
+    }
+
+    const mapMeta = content.mapMetadata[state.world.currentMapId];
+    const panelTitle = {
+      map: "Map",
+      character: "Character",
+      inventory: "Inventory",
+      monsters: "Monsters",
+      registry: "Registry",
+      quests: "Quests",
+      settings: "Settings",
+    }[panel] || "Panel";
+
+    let panelBody = "";
+
+    if (panel === "map") {
+      const availableMonsters = state.settings.mapDetails
+        ? (mapMeta.mapMonstersPanel || []).map(function (monsterId) {
+            const species = getSpecies(content, monsterId);
+            return "<li><span>" + escapeHtml(species?.name || monsterId) + "</span><strong>" + escapeHtml(monsterId) + "</strong></li>";
+          }).join("")
+        : '<li><span>Map details are hidden in Settings.</span></li>';
+
+      panelBody = [
+        "<p>Current area: <strong>" + escapeHtml(mapMeta.displayName) + "</strong></p>",
+        "<p>Coordinates: " + Math.round(state.world.position.x) + ", " + Math.round(state.world.position.y) + "</p>",
+        "<p>Safezone: " + (mapMeta.safezone ? "Yes" : "No") + "</p>",
+        '<h3>Available Monsters</h3>',
+        '<ul class="compact-list">' + (availableMonsters || "<li><span>No monsters listed for this map yet.</span></li>") + "</ul>",
+      ].join("");
+    } else if (panel === "character") {
+      panelBody = [
+        "<p>Name: <strong>" + escapeHtml(state.player.name) + "</strong></p>",
+        "<p>Avatar: " + escapeHtml(state.player.avatarId || "avatar-1") + "</p>",
+        "<p>Money: $" + state.player.money + "</p>",
+        "<p>Experience: " + Number(state.player.experience || 0) + "</p>",
+        "<p>Last Town: " + escapeHtml(state.player.lastTownId || "Unknown") + "</p>",
+        "<p>Support skills are still a placeholder, but this is where they will appear.</p>",
+      ].join("");
+    } else if (panel === "inventory") {
+      panelBody = '<ul class="compact-list">' + state.inventory.map(function (item) {
+        return "<li><span>" + escapeHtml(item.itemId) + "</span><strong>x" + Number(item.quantity) + "</strong></li>";
+      }).join("") + "</ul>";
+    } else if (panel === "monsters") {
+      const partyList = state.party.map(function (monster) {
+        const species = getSpecies(content, monster.speciesId);
+        return "<li><span>" + escapeHtml(species?.name || monster.speciesId) + " Lv " + monster.level + "</span><strong>" + monster.currentHp + "/" + monster.stats.hp + " HP</strong></li>";
+      }).join("");
+      const bankList = state.bank.length
+        ? state.bank.map(function (monster) {
+            const species = getSpecies(content, monster.speciesId);
+            return "<li><span>" + escapeHtml(species?.name || monster.speciesId) + " Lv " + monster.level + "</span><strong>Banked</strong></li>";
+          }).join("")
+        : "<li><span>No monsters in the bank yet.</span></li>";
+
+      panelBody = [
+        "<p>Party size setting: " + Number(state.settings.partySize) + "</p>",
+        "<h3>Party</h3>",
+        '<ul class="compact-list">' + partyList + "</ul>",
+        "<h3>Bank</h3>",
+        '<ul class="compact-list">' + bankList + "</ul>",
+      ].join("");
+    } else if (panel === "registry") {
+      const seenList = state.registry.seen.map(function (monsterId) {
+        const species = getSpecies(content, monsterId);
+        const caught = state.registry.caught.includes(monsterId) ? "Caught" : "Seen";
+        return "<li><span>" + escapeHtml(species?.name || monsterId) + "</span><strong>" + caught + "</strong></li>";
+      }).join("");
+      panelBody = [
+        "<p>Seen: " + state.registry.seen.length + "</p>",
+        "<p>Caught: " + state.registry.caught.length + "</p>",
+        '<ul class="compact-list">' + (seenList || "<li><span>No monsters logged yet.</span></li>") + "</ul>",
+      ].join("");
+    } else if (panel === "quests") {
+      panelBody = "<p>Quest tracking is still planned work. This panel is ready for that system when you want it.</p>";
+    } else if (panel === "settings") {
+      const themeOptions = (content.themes.themes || []).map(function (theme) {
+        const selected = state.settings.theme === theme.id ? " selected" : "";
+        return '<option value="' + escapeHtml(theme.id) + '"' + selected + ">" + escapeHtml(theme.label) + "</option>";
+      }).join("");
+      const zoomOptions = (content.settings.allowedZoomLevels || [100, 90, 80, 70, 60, 50]).map(function (zoom) {
+        const selected = Number(state.settings.zoom) === Number(zoom) ? " selected" : "";
+        return '<option value="' + zoom + '"' + selected + ">" + zoom + "%</option>";
+      }).join("");
+
+      panelBody = [
+        '<div class="form-grid">',
+        '<label class="input-group"><span>Theme</span><select data-world-setting="theme">' + themeOptions + "</select></label>",
+        '<label class="input-group"><span>Map Zoom</span><select data-world-setting="zoom">' + zoomOptions + "</select></label>",
+        '<label class="input-group"><span>Party Size</span><input type="number" min="1" max="12" data-world-setting="partySize" value="' + Number(state.settings.partySize) + '" /></label>',
+        '<label class="input-group"><span>Share Experience</span><select data-world-setting="shareExperience"><option value="true"' + (state.settings.shareExperience ? " selected" : "") + '>Yes</option><option value="false"' + (!state.settings.shareExperience ? " selected" : "") + '>No</option></select></label>',
+        '<label class="input-group"><span>Show Map Details</span><select data-world-setting="mapDetails"><option value="true"' + (state.settings.mapDetails ? " selected" : "") + '>Yes</option><option value="false"' + (!state.settings.mapDetails ? " selected" : "") + '>No</option></select></label>',
+        '</div>',
+        '<div class="title-actions"><button class="secondary-button" type="button" data-action="save">Save Game</button><button class="secondary-button" type="button" data-action="title">Return To Title</button></div>',
+      ].join("");
+    }
+
+    return [
+      '<div class="battle-overlay">',
+      '<section class="battle-modal world-panel-modal">',
+      '<div class="section-heading"><h2>' + panelTitle + '</h2><button class="secondary-button" type="button" data-action="close-world-panel">Close</button></div>',
+      '<div class="world-panel-body">' + panelBody + "</div>",
+      "</section>",
+      "</div>",
+    ].join("");
+  }
+
   function renderDevToolsEditor(content, mapId, devToolsState) {
     const mapMeta = content.mapMetadata[mapId];
     const mapType = mapMeta?.isTown ? "town" : "route";
@@ -1836,7 +1974,7 @@
     const image = getImage(map.image);
     const worldWidth = map.mapWidth * map.tileSize;
     const worldHeight = map.mapHeight * map.tileSize;
-    const scale = Math.max(0.2, Number(devToolsState.previewZoom || 100) / 100);
+    const scale = Math.max(0.1, Number(devToolsState.previewZoom || 100) / 100);
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = "#9fd6da";
@@ -1973,7 +2111,7 @@
     const image = getImage(map.image);
     const worldWidth = map.mapWidth * map.tileSize;
     const worldHeight = map.mapHeight * map.tileSize;
-    const scale = Math.max(0.2, Number(devToolsState.previewZoom || 100) / 100);
+    const scale = Math.max(0.1, Number(devToolsState.previewZoom || 100) / 100);
 
     if (!image.complete || !image.naturalWidth) {
       ctx.fillStyle = "#ffffff";
@@ -2025,7 +2163,7 @@
     const scaleY = canvas.height / rect.height;
     const worldWidth = map.mapWidth * map.tileSize;
     const worldHeight = map.mapHeight * map.tileSize;
-    const scale = Math.max(0.2, Number(zoomPercent || 100) / 100);
+    const scale = Math.max(0.1, Number(zoomPercent || 100) / 100);
     const offsetX = Math.round((canvas.width - worldWidth * scale) / 2);
     const offsetY = Math.round((canvas.height - worldHeight * scale) / 2);
 
@@ -2356,11 +2494,11 @@
   function getDevPreviewCanvasSize(map, zoomPercent) {
     const worldWidth = map.mapWidth * map.tileSize;
     const worldHeight = map.mapHeight * map.tileSize;
-    const scale = Math.max(0.2, Number(zoomPercent || 100) / 100);
+    const scale = Math.max(0.1, Number(zoomPercent || 100) / 100);
 
     return {
-      width: Math.max(480, Math.round(worldWidth * scale)),
-      height: Math.max(320, Math.round(worldHeight * scale)),
+      width: Math.max(1, Math.round(worldWidth * scale)),
+      height: Math.max(1, Math.round(worldHeight * scale)),
     };
   }
 
@@ -2571,7 +2709,7 @@
     const image = getImage(map.image);
     const worldWidth = map.mapWidth * map.tileSize;
     const worldHeight = map.mapHeight * map.tileSize;
-    const scale = Math.max(0.2, Number(devToolsState.previewZoom || 100) / 100);
+    const scale = Math.max(0.1, Number(devToolsState.previewZoom || 100) / 100);
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = "#9fd6da";
@@ -2683,6 +2821,7 @@
   }
 
   function renderWorld(root, state, content, saveManager, devToolsState) {
+    ensureWorldUiState(state);
     const mapName = content.mapMetadata[state.world.currentMapId].displayName;
     const saveSlots = saveManager.listSaves();
     const activeMonster = state.party[0];
@@ -2693,7 +2832,7 @@
       '<main class="game-shell">',
       '<header class="game-topbar">',
       '<div><span class="eyebrow">Location</span><strong>' + mapName + "</strong></div>",
-      '<div class="topbar-stats"><span>' + new Intl.DateTimeFormat([], { hour: "numeric", minute: "2-digit" }).format(new Date()) + "</span><span>$" + state.player.money + '</span><button class="secondary-button" type="button" data-action="save">Save</button><button class="secondary-button" type="button" data-action="title">Title</button></div>',
+      '<div class="topbar-stats"><span>' + new Intl.DateTimeFormat([], { hour: "numeric", minute: "2-digit" }).format(new Date()) + "</span><span>$" + state.player.money + '</span><button class="secondary-button" type="button" data-action="open-settings">Settings</button><button class="secondary-button" type="button" data-action="save">Save</button><button class="secondary-button" type="button" data-action="title">Title</button></div>',
       "</header>",
       '<section class="play-area">',
       '<div class="map-panel"><canvas class="world-canvas" width="' + VIEWPORT.width + '" height="' + VIEWPORT.height + '"></canvas><div class="map-caption">Move with arrow keys or WASD. Touch a pink marker to battle.' + (activeInteraction ? " " + escapeHtml(buildInteractionPrompt(activeInteraction)) + "." : "") + '</div></div>',
@@ -2710,6 +2849,8 @@
       '<section class="touch-controls"><button data-touch="ArrowUp">Up</button><div><button data-touch="ArrowLeft">Left</button><button data-touch="ArrowDown">Down</button><button data-touch="ArrowRight">Right</button></div></section>',
       "</aside>",
       "</section>",
+      '<nav class="world-menu-bar"><button class="secondary-button" type="button" data-open-panel="map">Map</button><button class="secondary-button" type="button" data-open-panel="character">Character</button><button class="secondary-button" type="button" data-open-panel="inventory">Inventory</button><button class="secondary-button" type="button" data-open-panel="monsters">Monsters</button><button class="secondary-button" type="button" data-open-panel="registry">Registry</button><button class="secondary-button" type="button" data-open-panel="quests">Quests</button></nav>',
+      renderWorldPanelModal(state, content),
       renderInteractionModal(state),
       renderBattleModal(state, content),
       "</main>",
@@ -2722,12 +2863,31 @@
     root.querySelector('[data-action="save"]')?.addEventListener("click", function () {
       app.saveCurrentGame();
     });
+    root.querySelector('[data-action="open-settings"]')?.addEventListener("click", function () {
+      app.openWorldPanel("settings");
+    });
+    root.querySelector('[data-action="close-world-panel"]')?.addEventListener("click", function () {
+      app.closeWorldPanel();
+    });
 
     root.querySelector('[data-action="title"]')?.addEventListener("click", function () {
       app.showTitle();
     });
     root.querySelector('[data-action="close-interaction"]')?.addEventListener("click", function () {
       app.closeInteraction();
+    });
+
+    root.querySelectorAll("[data-open-panel]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.openWorldPanel(button.getAttribute("data-open-panel"));
+      });
+    });
+
+    root.querySelectorAll("[data-world-setting]").forEach(function (field) {
+      const eventName = field.tagName === "SELECT" ? "change" : "input";
+      field.addEventListener(eventName, function () {
+        app.updateWorldSetting(field.getAttribute("data-world-setting"), field.value);
+      });
     });
 
     root.querySelectorAll("[data-battle-action]").forEach(function (button) {
@@ -2916,16 +3076,34 @@
     });
 
     root.querySelectorAll("[data-dev-field]").forEach(function (field) {
+      const useDeferredRender = isDeferredDevTextField(field);
       const eventName = field.tagName === "SELECT" ? "change" : "input";
       field.addEventListener(eventName, function () {
-        app.updateTransitionField(field.getAttribute("data-dev-field"), field.value);
+        app.updateTransitionField(field.getAttribute("data-dev-field"), field.value, !useDeferredRender);
+        if (useDeferredRender) {
+          app.clearDeferredRender();
+        }
       });
+      if (useDeferredRender) {
+        field.addEventListener("change", function () {
+          app.updateTransitionField(field.getAttribute("data-dev-field"), field.value);
+        });
+      }
     });
     root.querySelectorAll("[data-dev-spawn-field]").forEach(function (field) {
+      const useDeferredRender = isDeferredDevTextField(field);
       const eventName = field.tagName === "SELECT" ? "change" : "input";
       field.addEventListener(eventName, function () {
-        app.updateSpawnField(field.getAttribute("data-dev-spawn-field"), field.value);
+        app.updateSpawnField(field.getAttribute("data-dev-spawn-field"), field.value, !useDeferredRender);
+        if (useDeferredRender) {
+          app.clearDeferredRender();
+        }
       });
+      if (useDeferredRender) {
+        field.addEventListener("change", function () {
+          app.updateSpawnField(field.getAttribute("data-dev-spawn-field"), field.value);
+        });
+      }
     });
     root.querySelectorAll("[data-dev-spawn-option-field]").forEach(function (field) {
       const isWeightField = field.getAttribute("data-dev-spawn-option-field") === "weight";
@@ -2949,16 +3127,34 @@
       }
     });
     root.querySelectorAll("[data-dev-map-field]").forEach(function (field) {
+      const useDeferredRender = isDeferredDevTextField(field);
       const eventName = field.tagName === "SELECT" ? "change" : "input";
       field.addEventListener(eventName, function () {
-        app.updateMapField(field.getAttribute("data-dev-map-field"), field.value);
+        app.updateMapField(field.getAttribute("data-dev-map-field"), field.value, !useDeferredRender);
+        if (useDeferredRender) {
+          app.clearDeferredRender();
+        }
       });
+      if (useDeferredRender) {
+        field.addEventListener("change", function () {
+          app.updateMapField(field.getAttribute("data-dev-map-field"), field.value);
+        });
+      }
     });
     root.querySelectorAll("[data-dev-town-field]").forEach(function (field) {
+      const useDeferredRender = isDeferredDevTextField(field);
       const eventName = field.tagName === "SELECT" ? "change" : "input";
       field.addEventListener(eventName, function () {
-        app.updateTownField(field.getAttribute("data-dev-town-field"), field.value);
+        app.updateTownField(field.getAttribute("data-dev-town-field"), field.value, !useDeferredRender);
+        if (useDeferredRender) {
+          app.clearDeferredRender();
+        }
       });
+      if (useDeferredRender) {
+        field.addEventListener("change", function () {
+          app.updateTownField(field.getAttribute("data-dev-town-field"), field.value);
+        });
+      }
     });
     root.querySelectorAll("[data-dev-species-field]").forEach(function (field) {
       const useDeferredRender = isDeferredDevTextField(field);
@@ -3052,6 +3248,156 @@
     root.querySelector(".dev-town-canvas")?.addEventListener("click", function (event) {
       app.placeTownSpawnFromDevCanvas(event);
     });
+  }
+
+  function attachPersistentRootHandlers(root, app) {
+    root.addEventListener("click", function (event) {
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target) {
+        return;
+      }
+
+      if (app.state.screen === "dev-tools") {
+        const actionEl = target.closest("[data-action]");
+        if (actionEl instanceof HTMLElement) {
+          const action = actionEl.getAttribute("data-action");
+          if (action === "back-to-title") {
+            event.preventDefault();
+            event.stopPropagation();
+            app.showTitle();
+            return;
+          }
+          if (action === "load-folder") {
+            event.preventDefault();
+            event.stopPropagation();
+            app.loadProjectFolder(true);
+            return;
+          }
+          if (action === "dev-section-maps") {
+            event.preventDefault();
+            event.stopPropagation();
+            app.setDevSection("maps");
+            return;
+          }
+          if (action === "dev-section-towns") {
+            event.preventDefault();
+            event.stopPropagation();
+            app.setDevSection("towns");
+            return;
+          }
+          if (action === "dev-section-monsters") {
+            event.preventDefault();
+            event.stopPropagation();
+            app.setDevSection("monsters");
+            return;
+          }
+          if (action === "mode-transitions") {
+            event.preventDefault();
+            event.stopPropagation();
+            app.setDevEditorMode("transitions");
+            return;
+          }
+          if (action === "mode-spawns") {
+            event.preventDefault();
+            event.stopPropagation();
+            app.setDevEditorMode("spawns");
+            return;
+          }
+          if (action === "mode-interactions") {
+            event.preventDefault();
+            event.stopPropagation();
+            app.setDevEditorMode("interactions");
+            return;
+          }
+          if (action === "add-transition") {
+            event.preventDefault();
+            event.stopPropagation();
+            app.addTransition();
+            return;
+          }
+          if (action === "duplicate-transition") {
+            event.preventDefault();
+            event.stopPropagation();
+            app.duplicateTransition();
+            return;
+          }
+          if (action === "delete-transition") {
+            event.preventDefault();
+            event.stopPropagation();
+            app.deleteTransition();
+            return;
+          }
+          if (action === "dev-zoom") {
+            event.preventDefault();
+            event.stopPropagation();
+            app.setDevPreviewZoom(Number(actionEl.getAttribute("data-zoom")));
+            return;
+          }
+        }
+
+        const mapEl = target.closest("[data-dev-select-map]");
+        if (mapEl instanceof HTMLElement) {
+          app.selectDevMap(mapEl.getAttribute("data-dev-select-map"));
+          return;
+        }
+
+        const townEl = target.closest("[data-dev-select-town-map]");
+        if (townEl instanceof HTMLElement) {
+          app.selectTownMap(townEl.getAttribute("data-dev-select-town-map"));
+          return;
+        }
+
+        const transitionEl = target.closest("[data-dev-select-transition]");
+        if (transitionEl instanceof HTMLElement) {
+          app.selectTransition(transitionEl.getAttribute("data-dev-select-transition"));
+          return;
+        }
+
+        const spawnEl = target.closest("[data-dev-select-spawn]");
+        if (spawnEl instanceof HTMLElement) {
+          app.selectSpawn(spawnEl.getAttribute("data-dev-select-spawn"));
+          return;
+        }
+
+        const interactionEl = target.closest("[data-dev-select-interaction]");
+        if (interactionEl instanceof HTMLElement) {
+          app.selectInteraction(interactionEl.getAttribute("data-dev-select-interaction"));
+          return;
+        }
+
+        const speciesEl = target.closest("[data-dev-select-species]");
+        if (speciesEl instanceof HTMLElement) {
+          app.selectSpecies(speciesEl.getAttribute("data-dev-select-species"));
+          return;
+        }
+
+        const skillEl = target.closest("[data-dev-select-skill]");
+        if (skillEl instanceof HTMLElement) {
+          event.preventDefault();
+          event.stopPropagation();
+          app.selectSkill(skillEl.getAttribute("data-dev-select-skill"));
+        }
+      }
+    }, true);
+
+    root.addEventListener("change", function (event) {
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      if (!target || app.state.screen !== "dev-tools") {
+        return;
+      }
+
+      if (target.matches("[data-dev-field]")) {
+        event.stopPropagation();
+        app.updateTransitionField(target.getAttribute("data-dev-field"), target.value);
+        return;
+      }
+
+      if (target.matches("[data-action='select-preview-variant']")) {
+        event.stopPropagation();
+        app.selectPreviewVariant(target.value);
+        return;
+      }
+    }, true);
   }
 
   function createApp(root, content, saveManager) {
@@ -3172,6 +3518,37 @@
         const save = serializeState(this.state);
         this.saveManager.writeSave(save);
         this.state.message = "Game saved locally in this browser.";
+        this.render();
+      },
+      openWorldPanel: function (panel) {
+        if (this.state.screen !== "world") {
+          return;
+        }
+
+        ensureWorldUiState(this.state).activePanel = panel;
+        this.render();
+      },
+      closeWorldPanel: function () {
+        if (this.state.screen !== "world") {
+          return;
+        }
+
+        ensureWorldUiState(this.state).activePanel = "";
+        this.render();
+      },
+      updateWorldSetting: function (key, rawValue) {
+        if (this.state.screen !== "world") {
+          return;
+        }
+
+        if (key === "zoom" || key === "partySize") {
+          this.state.settings[key] = Number(rawValue || 0);
+        } else if (key === "shareExperience" || key === "mapDetails") {
+          this.state.settings[key] = rawValue === "true";
+        } else {
+          this.state.settings[key] = rawValue;
+        }
+
         this.render();
       },
       closeInteraction: function () {
@@ -3638,7 +4015,7 @@
         spawn.speciesId = getSpawnDisplaySpeciesId(spawn, this.content);
         this.render();
       },
-      updateTransitionField: function (path, rawValue) {
+      updateTransitionField: function (path, rawValue, shouldRender) {
         const mapMeta = this.content.mapMetadata[this.devTools.selectedMapId];
         const transition = mapMeta.transitions.find((entry) => entry.id === this.devTools.selectedTransitionId);
         if (!transition) {
@@ -3661,9 +4038,11 @@
           }
         }
 
-        this.render();
+        if (shouldRender !== false) {
+          this.render();
+        }
       },
-      updateSpawnField: function (path, rawValue) {
+      updateSpawnField: function (path, rawValue, shouldRender) {
         const visibleSpawns = getEditableVisibleSpawns(this.content.mapMetadata[this.devTools.selectedMapId]);
         const spawn = visibleSpawns.find((entry) => entry.id === this.devTools.selectedSpawnId);
         if (!spawn) {
@@ -3675,7 +4054,9 @@
         if (path === "id") {
           this.devTools.selectedSpawnId = rawValue;
         }
-        this.render();
+        if (shouldRender !== false) {
+          this.render();
+        }
       },
       updateSpawnOptionField: function (optionIndex, field, rawValue, shouldRender) {
         const visibleSpawns = getEditableVisibleSpawns(this.content.mapMetadata[this.devTools.selectedMapId]);
@@ -3728,7 +4109,7 @@
           this.render();
         }
       },
-      updateMapField: function (path, rawValue) {
+      updateMapField: function (path, rawValue, shouldRender) {
         const mapId = this.devTools.selectedMapId;
         const mapMeta = this.content.mapMetadata[mapId];
         if (!mapMeta) {
@@ -3753,9 +4134,11 @@
           mapMeta.safezone = rawValue === "true";
         }
 
-        this.render();
+        if (shouldRender !== false) {
+          this.render();
+        }
       },
-      updateTownField: function (path, rawValue) {
+      updateTownField: function (path, rawValue, shouldRender) {
         const mapId = this.devTools.selectedTownMapId || this.devTools.selectedMapId;
         const town = ensureTownEntryForMap(this.content, mapId);
 
@@ -3777,7 +4160,9 @@
         }
 
         town.mapId = mapId;
-        this.render();
+        if (shouldRender !== false) {
+          this.render();
+        }
       },
       updateSpeciesField: function (path, rawValue, shouldRender) {
         const species = this.content.monsters.species.find((entry) => entry.id === this.devTools.selectedSpeciesId);
@@ -4099,6 +4484,10 @@
           return;
         }
 
+        if (ensureWorldUiState(this.state).activePanel) {
+          return;
+        }
+
         const hadBattle = Boolean(this.state.battle);
         updateRespawns(this.state, this.content);
         movePlayer(this.state, this.content, deltaMs);
@@ -4108,6 +4497,12 @@
         }
       },
       render: function () {
+        if (this.state.screen === "world") {
+          document.body.setAttribute("data-theme", this.state.settings.theme || "classic");
+        } else {
+          document.body.setAttribute("data-theme", "classic");
+        }
+
         const shouldPreserveDevScroll = this.state.screen === "dev-tools";
         const focusState = captureFocusableState(root);
         if (shouldPreserveDevScroll) {
@@ -4198,6 +4593,7 @@
       ACTIVE_APP = app;
 
       registerKeyboard();
+      attachPersistentRootHandlers(root, app);
       app.render();
 
       function frame(timestamp) {

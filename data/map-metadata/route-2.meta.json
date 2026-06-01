@@ -1,0 +1,107 @@
+{
+  "mapId": "route-2",
+  "displayName": "Route 2",
+  "isTown": false,
+  "safezone": false,
+  "collisionGrid": 64,
+  "transitions": [
+    {
+      "id": "route2-to-bougainvillea",
+      "x": 1536,
+      "y": 0,
+      "width": 512,
+      "height": 128,
+      "targetMapId": "bougainvillea-town",
+      "targetSpawn": {
+        "x": 1856,
+        "y": 1088
+      }
+    },
+    {
+      "id": "route2-to-lilyharbor",
+      "x": 1536,
+      "y": 1664,
+      "width": 512,
+      "height": 128,
+      "targetMapId": "lily-harbor",
+      "targetSpawn": {
+        "x": 1856,
+        "y": 192
+      }
+    },
+    {
+      "id": "route2-to-route3",
+      "x": 0,
+      "y": 768,
+      "width": 128,
+      "height": 384,
+      "targetMapId": "route-3",
+      "targetSpawn": {
+        "x": 2496,
+        "y": 5184
+      }
+    }
+  ],
+  "interactions": [],
+  "spawnZones": [
+    {
+      "id": "default-zone",
+      "label": "Default Zone",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "visibleSpawns": [
+        {
+          "id": "spawn-1",
+          "speciesId": "Pawlit",
+          "spawnChance": 100,
+          "x": 1216,
+          "y": 1216,
+          "levelMin": 2,
+          "levelMax": 4,
+          "respawnSeconds": 120,
+          "monsterOptions": [
+            {
+              "speciesId": "Pawlit",
+              "weight": 50,
+              "variantId": "default"
+            },
+            {
+              "speciesId": "Pawlit",
+              "weight": 50,
+              "variantId": "Grass"
+            }
+          ]
+        },
+        {
+          "id": "spawn-2",
+          "speciesId": "Pawlit",
+          "spawnChance": 100,
+          "x": 2368,
+          "y": 704,
+          "levelMin": 2,
+          "levelMax": 4,
+          "respawnSeconds": 120,
+          "monsterOptions": [
+            {
+              "speciesId": "Pawlit",
+              "weight": 50,
+              "variantId": "default"
+            },
+            {
+              "speciesId": "Pawlit",
+              "weight": 60,
+              "variantId": "Lilac"
+            }
+          ]
+        }
+      ],
+      "spawnTable": []
+    }
+  ],
+  "trainers": [],
+  "mapMonstersPanel": []
+}

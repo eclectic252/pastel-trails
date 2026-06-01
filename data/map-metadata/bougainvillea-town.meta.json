@@ -11,10 +11,10 @@
       "y": 1152,
       "width": 512,
       "height": 128,
-      "targetMapId": "route2",
+      "targetMapId": "route-2",
       "targetSpawn": {
-        "x": 3520,
-        "y": 4416
+        "x": 1856,
+        "y": 192
       }
     },
     {
@@ -23,9 +23,9 @@
       "y": 384,
       "width": 128,
       "height": 512,
-      "targetMapId": "route2",
+      "targetMapId": "route-3",
       "targetSpawn": {
-        "x": 1600,
+        "x": 2624,
         "y": 3776
       }
     }

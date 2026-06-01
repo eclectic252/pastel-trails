@@ -28,6 +28,30 @@
         "x": 1728,
         "y": 64
       }
+    },
+    {
+      "id": "route1-to-jasmine",
+      "x": 0,
+      "y": 768,
+      "width": 128,
+      "height": 512,
+      "targetMapId": "jasmine-bay",
+      "targetSpawn": {
+        "x": 2112,
+        "y": 832
+      }
+    },
+    {
+      "id": "route1-to-route3",
+      "x": 0,
+      "y": 0,
+      "width": 128,
+      "height": 128,
+      "targetMapId": "route-3",
+      "targetSpawn": {
+        "x": 1856,
+        "y": 8128
+      }
     }
   ],
   "interactions": [],
