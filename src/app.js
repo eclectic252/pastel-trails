@@ -23,8 +23,8 @@
         encounterPreview: false,
         encounterPreviewMode: "available",
         arenaLeaderMinLevel: 1,
-        arenaLeaderMaxLevel: 100,
-        arenaLeaderPartySize: 6,
+        arenaLeaderMaxLevel: 10,
+        arenaLeaderPartySize: 3,
         devMode: false,
       },
       allowedZoomLevels: [100, 90, 80, 70, 60, 50],
@@ -489,6 +489,57 @@
 
       seen.add(key);
       return true;
+    });
+  }
+
+  function buildRegistryEntries(content) {
+    const mapMetadata = content.mapMetadata || {};
+
+    return (content.monsters?.species || []).map(function (species) {
+      const speciesLocations = new Set();
+      const variantLocationMap = new Map();
+
+      (species.variants || []).forEach(function (variant) {
+        variantLocationMap.set(variant.id || "default", new Set());
+      });
+
+      Object.keys(mapMetadata).forEach(function (mapId) {
+        const mapMeta = mapMetadata[mapId];
+        const mapName = mapMeta?.displayName || mapId;
+
+        (mapMeta?.spawnZones || []).forEach(function (zone) {
+          (zone.visibleSpawns || []).forEach(function (spawn) {
+            const options = ensureSpawnOptions(spawn, content).length
+              ? ensureSpawnOptions(spawn, content)
+              : [{ speciesId: spawn.speciesId, variantId: spawn.variantId || "default" }];
+
+            options.forEach(function (option) {
+              if (option.speciesId !== species.id) {
+                return;
+              }
+
+              const resolvedVariant = getSpeciesVariant(species, option.variantId || "default");
+              const variantKey = resolvedVariant?.id || "default";
+              speciesLocations.add(mapName);
+              if (!variantLocationMap.has(variantKey)) {
+                variantLocationMap.set(variantKey, new Set());
+              }
+              variantLocationMap.get(variantKey).add(mapName);
+            });
+          });
+        });
+      });
+
+      return {
+        species,
+        locations: Array.from(speciesLocations),
+        variants: (species.variants || []).map(function (variant) {
+          return {
+            variant,
+            locations: Array.from(variantLocationMap.get(variant.id || "default") || []),
+          };
+        }),
+      };
     });
   }
 
@@ -1120,6 +1171,12 @@
     };
 
     world.wildMonsters = createWildMonstersForMap(content, world.currentMapId, world.position);
+    const initialCameraTarget = {
+      screen: "world",
+      settings: Object.assign({}, content.settings.defaults),
+      world,
+    };
+    world.camera = getCamera(initialCameraTarget, content);
 
     return {
       screen: "world",
@@ -1189,18 +1246,22 @@
       state.world.transitionCooldownUntil = 0;
     }
 
+    ensureWorldCameraState(state, content);
     ensureArenaProgress(state);
 
     return state;
   }
 
   function serializeState(state) {
+    const world = Object.assign({}, state.world);
+    delete world.camera;
+
     return {
       slotId: state.currentSaveSlotId || "slot-1",
       saveName: state.currentSaveName || "Pastel Trails Adventure",
       updatedAt: new Date().toISOString(),
       player: state.player,
-      world: state.world,
+      world,
       settings: state.settings,
       arenaProgress: ensureArenaProgress(state),
       party: state.party,
@@ -1347,6 +1408,7 @@
 
     state.world.currentMapId = town.mapId;
     state.world.position = { x: town.spawn.x, y: town.spawn.y };
+    syncCameraToPlayer(state, content);
   }
 
   function resolveBattleAttack(state, content) {
@@ -1608,6 +1670,7 @@
     };
     state.world.transitionCooldownUntil = Date.now() + TRANSITION_COOLDOWN_MS;
     state.world.wildMonsters = createWildMonstersForMap(content, targetMapId, state.world.position);
+    syncCameraToPlayer(state, content);
 
     if (targetMeta?.isTown) {
       const town = content.towns.towns.find(function (entry) {
@@ -1751,6 +1814,48 @@
     return { x, y };
   }
 
+  function ensureWorldCameraState(state, content) {
+    if (!state.world.camera || typeof state.world.camera.x !== "number" || typeof state.world.camera.y !== "number") {
+      const target = getCamera(state, content);
+      state.world.camera = {
+        x: target.x,
+        y: target.y,
+      };
+    }
+
+    return state.world.camera;
+  }
+
+  function syncCameraToPlayer(state, content) {
+    const target = getCamera(state, content);
+    state.world.camera = {
+      x: target.x,
+      y: target.y,
+    };
+    return state.world.camera;
+  }
+
+  function updateCamera(state, content, deltaMs) {
+    if (state.screen !== "world") {
+      return;
+    }
+
+    const target = getCamera(state, content);
+    const camera = ensureWorldCameraState(state, content);
+    const followRate = 1 - Math.pow(1 - 0.08, deltaMs / (1000 / 60));
+
+    camera.x += (target.x - camera.x) * followRate;
+    camera.y += (target.y - camera.y) * followRate;
+
+    if (Math.abs(target.x - camera.x) < 0.01) {
+      camera.x = target.x;
+    }
+
+    if (Math.abs(target.y - camera.y) < 0.01) {
+      camera.y = target.y;
+    }
+  }
+
   function snapCamera(camera) {
     return {
       x: Math.round(camera.x),
@@ -1824,8 +1929,12 @@
   }
 
   function drawMap(ctx, map, camera, phase) {
-    ctx.imageSmoothingEnabled = false;
     const zoomScale = Math.max(0.1, Number(ACTIVE_APP?.state?.settings?.zoom || 100) / 100);
+    const useSmoothSampling = Math.abs(zoomScale - 1) > 0.001;
+    ctx.imageSmoothingEnabled = useSmoothSampling;
+    if (useSmoothSampling) {
+      ctx.imageSmoothingQuality = "high";
+    }
 
     if (phase === "base") {
       ctx.fillStyle = "#9fd6da";
@@ -1914,6 +2023,7 @@
     const variant = getSpeciesVariant(species, monster.variantId);
     const spritePath = variant?.sprite || "";
     const zoomScale = Math.max(0.1, Number(ACTIVE_APP?.state?.settings?.zoom || 100) / 100);
+    const useSmoothSampling = Math.abs(zoomScale - 1) > 0.001;
     const screenX = Math.round((monster.x - camera.x) * zoomScale);
     const screenY = Math.round((monster.y - camera.y) * zoomScale);
     const map = content.maps[ACTIVE_APP?.state?.world?.currentMapId || ""];
@@ -1954,7 +2064,13 @@
     if (spritePath) {
       const image = getImage(spritePath);
       if (image.complete && image.naturalWidth) {
+        ctx.save();
+        ctx.imageSmoothingEnabled = useSmoothSampling;
+        if (useSmoothSampling) {
+          ctx.imageSmoothingQuality = "high";
+        }
         ctx.drawImage(image, drawX, drawY, spriteSize, spriteSize);
+        ctx.restore();
         drawWildMonsterLabel();
         return;
       }
@@ -1974,7 +2090,7 @@
   function drawWorld(canvas, state, content, devToolsState) {
     const ctx = canvas.getContext("2d");
     const map = content.maps[state.world.currentMapId];
-    const camera = snapCamera(getCamera(state, content));
+    const camera = ensureWorldCameraState(state, content);
     const zoomScale = Math.max(0.1, Number(state.settings.zoom || 100) / 100);
 
     drawMap(ctx, map, camera, "base");
@@ -2377,15 +2493,37 @@
         const label = arena?.crestName || crestId;
         return "<li><span>" + escapeHtml(label) + "</span><strong>Crest</strong></li>";
       }).join("");
-      const seenList = state.registry.seen.map(function (monsterId) {
-        const species = getSpecies(content, monsterId);
-        const caught = state.registry.caught.includes(monsterId) ? "Caught" : "Seen";
-        return "<li><span>" + escapeHtml(species?.name || monsterId) + "</span><strong>" + caught + "</strong></li>";
+      const registryEntries = buildRegistryEntries(content).map(function (entry) {
+        const isCaught = state.registry.caught.includes(entry.species.id);
+        const stats = entry.species.baseStats || {};
+        const locationText = entry.locations.length ? entry.locations.join(", ") : "No spawn locations assigned yet";
+        const variantMarkup = entry.variants.map(function (variantEntry) {
+          const variantLabel = formatMonsterVariantLabel(variantEntry.variant.id || "default");
+          const variantLocationText = variantEntry.locations.length ? variantEntry.locations.join(", ") : "No available spawn locations assigned yet";
+          const spriteMarkup = variantEntry.variant.sprite
+            ? '<img class="registry-variant-sprite" src="' + escapeHtml(variantEntry.variant.sprite) + '" alt="' + escapeHtml(entry.species.name + " " + variantLabel) + '" />'
+            : '<span class="registry-variant-fallback">' + escapeHtml(entry.species.name.slice(0, 1)) + "</span>";
+
+          return [
+            '<li class="registry-variant-row">',
+            '<div class="registry-variant-identity">' + spriteMarkup + '<div><strong>' + escapeHtml(variantLabel) + '</strong><span>' + escapeHtml(variantLocationText) + "</span></div></div>",
+            "</li>",
+          ].join("");
+        }).join("");
+
+        return [
+          '<article class="registry-card">',
+          '<div class="registry-card-header"><div><h3>' + escapeHtml(entry.species.name) + '</h3><p>' + escapeHtml(entry.species.id) + '</p></div><span class="registry-status ' + (isCaught ? "registry-status-caught" : "registry-status-missing") + '">' + (isCaught ? "Caught" : "Not Caught") + "</span></div>",
+          '<p class="registry-spawn-line"><strong>Available Spawn Locations:</strong> ' + escapeHtml(locationText) + "</p>",
+          '<p class="registry-stats">HP ' + Number(stats.hp || 0) + " · ATK " + Number(stats.attack || 0) + " · DEF " + Number(stats.defense || 0) + " · SPD " + Number(stats.speed || 0) + "</p>",
+          '<div class="registry-variants"><h4>Variants</h4><ul class="compact-list">' + variantMarkup + "</ul></div>",
+          "</article>",
+        ].join("");
       }).join("");
       panelBody = [
-        "<p>Seen: " + state.registry.seen.length + "</p>",
+        "<p>Total monsters: " + (content.monsters?.species?.length || 0) + "</p>",
         "<p>Caught: " + state.registry.caught.length + "</p>",
-        '<ul class="compact-list">' + (seenList || "<li><span>No monsters logged yet.</span></li>") + "</ul>",
+        '<div class="registry-section-scroll"><div class="registry-grid">' + (registryEntries || "<p>No monsters configured yet.</p>") + "</div></div>",
         "<h3>Crests</h3>",
         '<ul class="compact-list">' + (earnedCrests || "<li><span>No crests earned yet.</span></li>") + "</ul>",
       ].join("");
@@ -5620,6 +5758,7 @@
         const hadBattle = Boolean(this.state.battle);
         updateRespawns(this.state, this.content);
         movePlayer(this.state, this.content, deltaMs);
+        updateCamera(this.state, this.content, deltaMs);
         const nextUiSignature = getWorldUiSignature(this.state, this.content);
 
         if (!hadBattle && this.state.battle) {

@@ -561,6 +561,9 @@ button {
 .world-panel-body {
   display: grid;
   gap: 0.9rem;
+  max-height: min(72vh, 720px);
+  overflow: auto;
+  padding-right: 0.35rem;
 }
 
 .world-panel-body h3 {
@@ -769,6 +772,113 @@ button {
   padding: 0.7rem 0.8rem;
   border-radius: 12px;
   background: rgba(214, 237, 246, 0.65);
+}
+
+.registry-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.registry-section-scroll {
+  max-height: min(52vh, 560px);
+  overflow: auto;
+  padding-right: 0.35rem;
+}
+
+.registry-card {
+  border: 1px solid rgba(32, 56, 82, 0.12);
+  border-radius: 18px;
+  padding: 1rem 1.1rem;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.registry-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.registry-card-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.registry-card-header p {
+  margin: 0.2rem 0 0;
+  color: #66758c;
+  font-size: 0.92rem;
+}
+
+.registry-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.registry-status-caught {
+  background: rgba(96, 163, 111, 0.16);
+  color: #2f6a3d;
+}
+
+.registry-status-missing {
+  background: rgba(109, 125, 148, 0.12);
+  color: #56667b;
+}
+
+.registry-spawn-line,
+.registry-stats {
+  margin: 0.8rem 0 0;
+}
+
+.registry-variants {
+  margin-top: 0.9rem;
+}
+
+.registry-variants h4 {
+  margin: 0 0 0.55rem;
+}
+
+.registry-variant-row {
+  display: block;
+}
+
+.registry-variant-identity {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.registry-variant-identity strong {
+  display: block;
+}
+
+.registry-variant-identity span {
+  display: block;
+  color: #66758c;
+  font-size: 0.9rem;
+  margin-top: 0.15rem;
+}
+
+.registry-variant-sprite,
+.registry-variant-fallback {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: rgba(226, 239, 246, 0.9);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
+.registry-variant-fallback {
+  font-weight: 700;
+  color: #1f4d73;
 }
 
 .compact-list li.compact-list-selected {

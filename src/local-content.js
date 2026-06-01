@@ -5,8 +5,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       "zoom": 100,
       "partySize": 6,
       "arenaLeaderMinLevel": 1,
-      "arenaLeaderMaxLevel": 100,
-      "arenaLeaderPartySize": 6,
+      "arenaLeaderMaxLevel": 10,
+      "arenaLeaderPartySize": 3,
       "shareExperience": true,
       "mapDetails": true,
       "encounterPreview": false,
@@ -232,15 +232,31 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "leaderName": "Heather",
         "leaderTitle": "Leader",
         "crestId": "crest-1",
-        "crestName": "New Crest",
+        "crestName": "Lily Crest",
         "recommendedLevel": 5,
-        "partySize": 1,
+        "partySize": 2,
         "rewardMoney": 50,
         "rewardText": "",
         "description": "",
         "mapId": "lily-harbor",
-        "team": [],
-        "pool": []
+        "team": [
+          {
+            "speciesId": "Pawlit",
+            "variantId": "default",
+            "level": 3
+          },
+          {
+            "speciesId": "Pawlit",
+            "variantId": "Grass",
+            "level": 5
+          }
+        ],
+        "pool": [
+          {
+            "speciesId": "Pawlit",
+            "variantId": "Lilac"
+          }
+        ]
       }
     ]
   },
