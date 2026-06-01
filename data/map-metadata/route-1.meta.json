@@ -1,0 +1,50 @@
+{
+  "mapId": "route-1",
+  "displayName": "Route 1",
+  "isTown": false,
+  "safezone": false,
+  "collisionGrid": 64,
+  "transitions": [
+    {
+      "id": "route1-lilyharbor",
+      "x": 2560,
+      "y": 0,
+      "width": 512,
+      "height": 128,
+      "targetMapId": "lily-harbor",
+      "targetSpawn": {
+        "x": 1856,
+        "y": 2368
+      }
+    },
+    {
+      "id": "route1-to-plumeria",
+      "x": 2560,
+      "y": 1536,
+      "width": 640,
+      "height": 128,
+      "targetMapId": "plumeria-shores",
+      "targetSpawn": {
+        "x": 1728,
+        "y": 64
+      }
+    }
+  ],
+  "interactions": [],
+  "spawnZones": [
+    {
+      "id": "default-zone",
+      "label": "Default Zone",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "visibleSpawns": [],
+      "spawnTable": []
+    }
+  ],
+  "trainers": [],
+  "mapMonstersPanel": []
+}

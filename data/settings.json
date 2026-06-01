@@ -1,0 +1,12 @@
+{
+  "defaults": {
+    "theme": "classic",
+    "zoom": 100,
+    "partySize": 6,
+    "shareExperience": true,
+    "mapDetails": true,
+    "devMode": false
+  },
+  "allowedZoomLevels": [100, 90, 80, 70, 60, 50],
+  "maxSaveSlots": 5
+}

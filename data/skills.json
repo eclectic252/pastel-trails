@@ -1,0 +1,11 @@
+{
+  "skills": [
+    {
+      "id": "basic-attack",
+      "name": "Basic Attack",
+      "kind": "attack",
+      "power": 8,
+      "description": "A simple physical strike."
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "name": "pastel-trails-prototype",
+  "private": true,
+  "scripts": {
+    "build:local-content": "node scripts/build-local-content.mjs"
+  }
+}

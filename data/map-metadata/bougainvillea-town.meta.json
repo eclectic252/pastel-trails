@@ -1,0 +1,50 @@
+{
+  "mapId": "bougainvillea-town",
+  "displayName": "Bougainvillea Town",
+  "isTown": true,
+  "safezone": true,
+  "collisionGrid": 64,
+  "transitions": [
+    {
+      "id": "bougainvillea-to-lily-south",
+      "x": 1536,
+      "y": 1152,
+      "width": 512,
+      "height": 128,
+      "targetMapId": "route2",
+      "targetSpawn": {
+        "x": 3520,
+        "y": 4416
+      }
+    },
+    {
+      "id": "bougainvillea-to-route2-west",
+      "x": 0,
+      "y": 384,
+      "width": 128,
+      "height": 512,
+      "targetMapId": "route2",
+      "targetSpawn": {
+        "x": 1600,
+        "y": 3776
+      }
+    }
+  ],
+  "interactions": [],
+  "spawnZones": [
+    {
+      "id": "default-zone",
+      "label": "Default Zone",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "visibleSpawns": [],
+      "spawnTable": []
+    }
+  ],
+  "trainers": [],
+  "mapMonstersPanel": []
+}

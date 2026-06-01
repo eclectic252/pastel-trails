@@ -1,0 +1,44 @@
+{
+  "towns": [
+    {
+      "id": "lily-harbor",
+      "name": "Lily Harbor",
+      "mapId": "lily-harbor",
+      "spawn": {
+        "x": 1856,
+        "y": 1344
+      },
+      "includeInStarterSelection": true
+    },
+    {
+      "id": "bougainvillea-town",
+      "name": "Bougainvillea Town",
+      "mapId": "bougainvillea-town",
+      "spawn": {
+        "x": 1856,
+        "y": 960
+      },
+      "includeInStarterSelection": true
+    },
+    {
+      "id": "camelia-ranch",
+      "name": "Camelia Ranch",
+      "mapId": "camelia-ranch",
+      "spawn": {
+        "x": 960,
+        "y": 1344
+      },
+      "includeInStarterSelection": true
+    },
+    {
+      "id": "plumeria-shores",
+      "name": "Plumeria Shores",
+      "mapId": "plumeria-shores",
+      "spawn": {
+        "x": 1728,
+        "y": 832
+      },
+      "includeInStarterSelection": true
+    }
+  ]
+}

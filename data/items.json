@@ -1,0 +1,20 @@
+{
+  "items": [
+    {
+      "id": "basic-orb",
+      "name": "Basic Orb",
+      "type": "catch",
+      "effect": {
+        "catchModifier": 1
+      }
+    },
+    {
+      "id": "small-tonic",
+      "name": "Small Tonic",
+      "type": "heal",
+      "effect": {
+        "healAmount": 20
+      }
+    }
+  ]
+}

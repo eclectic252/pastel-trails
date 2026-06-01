@@ -1,0 +1,38 @@
+{
+  "mapId": "plumeria-shores",
+  "displayName": "Plumeria Shores",
+  "isTown": true,
+  "safezone": true,
+  "collisionGrid": 64,
+  "transitions": [
+    {
+      "id": "Plumeria-to-route1",
+      "x": 1408,
+      "y": 0,
+      "width": 640,
+      "height": 128,
+      "targetMapId": "route-1",
+      "targetSpawn": {
+        "x": 2880,
+        "y": 1600
+      }
+    }
+  ],
+  "interactions": [],
+  "spawnZones": [
+    {
+      "id": "default-zone",
+      "label": "Default Zone",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "visibleSpawns": [],
+      "spawnTable": []
+    }
+  ],
+  "trainers": [],
+  "mapMonstersPanel": []
+}
