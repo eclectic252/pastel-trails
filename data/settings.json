@@ -5,6 +5,8 @@
     "partySize": 6,
     "shareExperience": true,
     "mapDetails": true,
+    "encounterPreview": false,
+    "encounterPreviewMode": "available",
     "devMode": false
   },
   "allowedZoomLevels": [100, 90, 80, 70, 60, 50],

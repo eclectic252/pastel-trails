@@ -45,11 +45,16 @@ button {
 }
 
 .title-screen,
-.game-shell,
 .dev-screen {
   width: min(1280px, calc(100vw - 2rem));
   margin: 0 auto;
   padding: 1.25rem 0 2rem;
+}
+
+.game-shell {
+  width: min(1280px, calc(100vw - 2rem));
+  margin: 0 auto;
+  padding: 0 0 2rem;
 }
 
 .title-card,
@@ -310,11 +315,93 @@ button {
   gap: 0.8rem;
 }
 
+.world-location-header {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.world-location-line {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.encounter-preview-strip {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.encounter-preview-card {
+  display: grid;
+  justify-items: center;
+  gap: 0.3rem;
+  width: 95px;
+}
+
+.encounter-preview-visual {
+  position: relative;
+  width: 80px;
+  height: 80px;
+}
+
+.encounter-preview-icon,
+.encounter-preview-fallback {
+  width: 80px;
+  height: 80px;
+  border-radius: 14px;
+  border: 1px solid rgba(57, 79, 91, 0.14);
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 6px 16px rgba(38, 52, 65, 0.1);
+}
+
+.encounter-preview-icon {
+  display: block;
+  object-fit: contain;
+  padding: 0.1rem;
+}
+
+.encounter-preview-fallback {
+  display: grid;
+  place-items: center;
+  color: var(--accent-strong);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.encounter-preview-label {
+  display: block;
+  width: 100%;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.encounter-preview-badge {
+  position: absolute;
+  right: -8px;
+  top: -8px;
+  padding: 0.15rem 0.4rem;
+  border-radius: 999px;
+  background: var(--warm);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 6px 14px rgba(240, 139, 110, 0.32);
+}
+
 .play-area {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
   gap: 1rem;
-  margin-top: 1rem;
+  margin-top: 0;
   align-items: start;
 }
 

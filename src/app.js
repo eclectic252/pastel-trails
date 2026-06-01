@@ -20,6 +20,8 @@
         partySize: 6,
         shareExperience: true,
         mapDetails: true,
+        encounterPreview: false,
+        encounterPreviewMode: "available",
         devMode: false,
       },
       allowedZoomLevels: [100, 90, 80, 70, 60, 50],
@@ -440,6 +442,157 @@
     }) || species?.variants?.[0] || null;
   }
 
+  function buildEncounterPreviewEntry(content, speciesId, variantId) {
+    const species = getSpecies(content, speciesId);
+    if (!species) {
+      return null;
+    }
+
+    const resolvedVariant = getSpeciesVariant(species, variantId);
+    return {
+      speciesId: species.id,
+      variantId: resolvedVariant?.id || "default",
+      species,
+      variant: resolvedVariant,
+    };
+  }
+
+  function dedupeEncounterPreviewEntries(entries) {
+    const seen = new Set();
+
+    return entries.filter(function (entry) {
+      if (!entry?.speciesId) {
+        return false;
+      }
+
+      const key = entry.speciesId + "::" + (entry.variantId || "default");
+      if (seen.has(key)) {
+        return false;
+      }
+
+      seen.add(key);
+      return true;
+    });
+  }
+
+  function getAvailableEncounterPreviewEntries(state, content) {
+    const mapMeta = content.mapMetadata[state.world.currentMapId];
+    const entries = [];
+
+    (mapMeta?.spawnZones || []).forEach(function (zone) {
+      (zone.visibleSpawns || []).forEach(function (spawn) {
+        const options = Array.isArray(spawn.monsterOptions) && spawn.monsterOptions.length
+          ? spawn.monsterOptions
+          : [{ speciesId: spawn.speciesId, variantId: spawn.variantId || "" }];
+
+        options.forEach(function (option) {
+          const entry = buildEncounterPreviewEntry(content, option.speciesId || spawn.speciesId, option.variantId || spawn.variantId || "");
+          if (entry) {
+            entries.push(entry);
+          }
+        });
+      });
+
+      (zone.spawnTable || []).forEach(function (option) {
+        const entry = buildEncounterPreviewEntry(content, option.speciesId, option.variantId || "");
+        if (entry) {
+          entries.push(entry);
+        }
+      });
+    });
+
+    return dedupeEncounterPreviewEntries(entries);
+  }
+
+  function getCurrentEncounterPreviewEntries(state, content) {
+    const entries = state.world.wildMonsters.filter(function (monster) {
+      return monster.active;
+    }).map(function (monster) {
+      return buildEncounterPreviewEntry(content, monster.speciesId, monster.variantId || "");
+    });
+
+    return dedupeEncounterPreviewEntries(entries);
+  }
+
+  function getEncounterPreviewEntries(state, content) {
+    if (!state.settings.encounterPreview) {
+      return [];
+    }
+
+    if (state.settings.encounterPreviewMode === "available-current") {
+      const availableEntries = getAvailableEncounterPreviewEntries(state, content);
+      const currentKeys = new Set(getCurrentEncounterPreviewEntries(state, content).map(function (entry) {
+        return entry.speciesId + "::" + entry.variantId;
+      }));
+
+      return availableEntries.map(function (entry) {
+        return Object.assign({}, entry, {
+          isCurrent: currentKeys.has(entry.speciesId + "::" + entry.variantId),
+        });
+      });
+    }
+
+    if (state.settings.encounterPreviewMode === "current") {
+      return getCurrentEncounterPreviewEntries(state, content).map(function (entry) {
+        return Object.assign({}, entry, { isCurrent: true });
+      });
+    }
+
+    return getAvailableEncounterPreviewEntries(state, content).map(function (entry) {
+      return Object.assign({}, entry, { isCurrent: false });
+    });
+  }
+
+  function renderEncounterPreviewIcons(state, content) {
+    const entries = getEncounterPreviewEntries(state, content);
+    if (!entries.length) {
+      return "";
+    }
+
+    return (
+      '<div class="encounter-preview-strip">' +
+      entries.map(function (entry) {
+        const sprite = entry.variant?.sprite || "";
+        const variantLabel = entry.variant?.id || "Default";
+        const normalizedVariantLabel = String(variantLabel).trim() || "Default";
+        const label = entry.species.name + " - " + normalizedVariantLabel;
+        const nowBadge = entry.isCurrent
+          ? '<span class="encounter-preview-badge">Now</span>'
+          : "";
+        const previewVisual = sprite
+          ? '<img class="encounter-preview-icon" src="' + escapeHtml(sprite) + '" alt="' + escapeHtml(label) + '" title="' + escapeHtml(label) + '" />'
+          : '<span class="encounter-preview-fallback" title="' + escapeHtml(label) + '">' + escapeHtml(entry.species.name.slice(0, 1)) + "</span>";
+
+        return (
+          '<div class="encounter-preview-card" title="' + escapeHtml(label) + '">' +
+          '<div class="encounter-preview-visual">' + previewVisual + nowBadge + "</div>" +
+          '<span class="encounter-preview-label">' + escapeHtml(label) + "</span>" +
+          "</div>"
+        );
+      }).join("") +
+      "</div>"
+    );
+  }
+
+  function getWorldUiSignature(state, content) {
+    const activeInteraction = getActiveInteraction(state, content);
+    const encounterPreviewKey = getEncounterPreviewEntries(state, content).map(function (entry) {
+      return entry.speciesId + "::" + entry.variantId + "::" + (entry.isCurrent === false ? "inactive" : "active");
+    }).join("|");
+
+    return [
+      state.world.currentMapId,
+      Math.round(state.world.position.x),
+      Math.round(state.world.position.y),
+      state.player.money,
+      state.message,
+      state.settings.encounterPreview ? "preview-on" : "preview-off",
+      state.settings.encounterPreviewMode || "available",
+      activeInteraction?.id || "",
+      encounterPreviewKey,
+    ].join("~");
+  }
+
   function ensureSpawnZone(mapMeta) {
     if (!Array.isArray(mapMeta.spawnZones)) {
       mapMeta.spawnZones = [];
@@ -619,16 +772,51 @@
     }) || null;
   }
 
+  function getTownEntryForCurrentMap(content, mapId) {
+    return content.towns.towns.find(function (entry) {
+      return entry.mapId === mapId;
+    }) || null;
+  }
+
+  function performHealingCenterService(state, content, interaction) {
+    state.party.forEach(function (monster) {
+      monster.currentHp = monster.stats.hp;
+    });
+
+    const currentTown = getTownEntryForCurrentMap(content, state.world.currentMapId);
+    if (currentTown) {
+      state.player.lastTownId = currentTown.id;
+      state.world.lastTownId = currentTown.id;
+    }
+
+    const label = interaction.label || interaction.id || "Healing Center";
+    state.message = "Your party was healed at " + label + ".";
+    state.interaction = {
+      id: interaction.id,
+      type: interaction.type,
+      title: label,
+      phase: "complete",
+      text: interaction.data?.completeText || interaction.text || "Your party was fully restored.",
+      confirmText: "",
+      actionLabel: "Close",
+    };
+  }
+
   function openInteraction(state, content, interaction) {
     const label = interaction.label || interaction.id || "Interaction";
     let text = interaction.text || "";
 
     if (interaction.type === "healing-center") {
-      state.party.forEach(function (monster) {
-        monster.currentHp = monster.stats.hp;
-      });
-      text = text || "Your party was fully restored.";
-      state.message = "Your party was healed at " + label + ".";
+      state.interaction = {
+        id: interaction.id,
+        type: interaction.type,
+        title: label,
+        phase: "confirm",
+        text: interaction.data?.introText || "Welcome to " + label + ".",
+        confirmText: interaction.data?.confirmText || "Would you like to rest your party and set this town as your return point?",
+        actionLabel: "Restore Party",
+      };
+      return;
     } else if (interaction.type === "shop") {
       text = text || "The shop interface is not built yet, but this is where it will open.";
       state.message = "Visited " + label + ".";
@@ -1695,6 +1883,27 @@
       return "";
     }
 
+    if (state.interaction.type === "healing-center") {
+      const confirmBody = state.interaction.phase === "confirm"
+        ? '<div class="battle-log"><p>' + escapeHtml(state.interaction.text) + '</p><p>' + escapeHtml(state.interaction.confirmText || "") + "</p></div>"
+        : '<div class="battle-log"><p>' + escapeHtml(state.interaction.text) + "</p></div>";
+      const confirmActions = state.interaction.phase === "confirm"
+        ? '<div class="battle-actions"><button class="primary-button" type="button" data-action="confirm-healing-center">Restore Party</button><button class="secondary-button" type="button" data-action="close-interaction">Not Now</button></div>'
+        : '<div class="battle-actions"><button class="primary-button" type="button" data-action="close-interaction">Close</button></div>';
+
+      return [
+        '<div class="battle-overlay">',
+        '<section class="battle-modal">',
+        '<div class="battle-headings">',
+        '<div><span class="eyebrow">Healing Center</span><h2>' + escapeHtml(state.interaction.title) + "</h2><p>Restore your party</p></div>",
+        "</div>",
+        confirmBody,
+        confirmActions,
+        "</section>",
+        "</div>",
+      ].join("");
+    }
+
     return [
       '<div class="battle-overlay">',
       '<section class="battle-modal">',
@@ -1805,6 +2014,8 @@
         '<label class="input-group"><span>Party Size</span><input type="number" min="1" max="12" data-world-setting="partySize" value="' + Number(state.settings.partySize) + '" /></label>',
         '<label class="input-group"><span>Share Experience</span><select data-world-setting="shareExperience"><option value="true"' + (state.settings.shareExperience ? " selected" : "") + '>Yes</option><option value="false"' + (!state.settings.shareExperience ? " selected" : "") + '>No</option></select></label>',
         '<label class="input-group"><span>Show Map Details</span><select data-world-setting="mapDetails"><option value="true"' + (state.settings.mapDetails ? " selected" : "") + '>Yes</option><option value="false"' + (!state.settings.mapDetails ? " selected" : "") + '>No</option></select></label>',
+        '<label class="input-group"><span>Encounter Preview</span><select data-world-setting="encounterPreview"><option value="true"' + (state.settings.encounterPreview ? " selected" : "") + '>Yes</option><option value="false"' + (!state.settings.encounterPreview ? " selected" : "") + '>No</option></select></label>',
+        '<label class="input-group"><span>Encounter Preview Mode</span><select data-world-setting="encounterPreviewMode"><option value="available"' + (state.settings.encounterPreviewMode === "available" || !state.settings.encounterPreviewMode ? " selected" : "") + '>Show Available</option><option value="current"' + (state.settings.encounterPreviewMode === "current" ? " selected" : "") + '>Show Current Encounters</option><option value="available-current"' + (state.settings.encounterPreviewMode === "available-current" ? " selected" : "") + '>Show Available And Current</option></select></label>',
         '</div>',
         '<div class="title-actions"><button class="secondary-button" type="button" data-action="save">Save Game</button><button class="secondary-button" type="button" data-action="title">Return To Title</button></div>',
       ].join("");
@@ -1988,7 +2199,7 @@
     ].join("");
 
     return [
-      "<p>Editing <strong>" + escapeHtml(mapMeta?.displayName || mapId) + "</strong>. Changes are in-memory until you export the metadata JSON. Click the map preview to place the selected item. For transitions, drag the right, bottom, or corner handles to resize. Target Spawn X/Y are where the player arrives on the target map.</p>",
+      "<p>Editing <strong>" + escapeHtml(mapMeta?.displayName || mapId) + "</strong>. Changes are in-memory until you export the metadata JSON. Click the map preview to place the selected item. For transitions and interactions, drag the right, bottom, or corner handles to resize. Target Spawn X/Y are where the player arrives on the target map.</p>",
       mapSettings,
       '<div class="editor-mode-toggle"><button class="' + (editorMode === "transitions" ? "primary-button" : "secondary-button") + '" type="button" data-action="mode-transitions">Transition Zones</button><button class="' + (editorMode === "spawns" ? "primary-button" : "secondary-button") + '" type="button" data-action="mode-spawns">Wild Spawns</button><button class="' + (editorMode === "interactions" ? "primary-button" : "secondary-button") + '" type="button" data-action="mode-interactions">Interactions</button></div>',
       '<div class="dev-tools-layout">',
@@ -2030,6 +2241,15 @@
     const offsetX = Math.round((canvas.width - worldWidth * scale) / 2);
     const offsetY = Math.round((canvas.height - worldHeight * scale) / 2);
     const columns = Math.floor(image.naturalWidth / map.tileSize);
+    const drawResizeHandles = function (rect) {
+      getResizeHandleRects(rect, { offsetX, offsetY, scale }).forEach(function (handle) {
+        ctx.fillStyle = "#ffffff";
+        ctx.strokeStyle = "rgba(30,35,42,0.85)";
+        ctx.lineWidth = 2;
+        ctx.fillRect(handle.x, handle.y, handle.width, handle.height);
+        ctx.strokeRect(handle.x, handle.y, handle.width, handle.height);
+      });
+    };
 
     (map.layers || []).forEach(function (layer) {
       (layer.positions || []).forEach(function (tile) {
@@ -2059,20 +2279,7 @@
       ctx.strokeRect(x, y, width, height);
 
       if (isSelected && (devToolsState.editorMode || "transitions") === "transitions") {
-        const handleSize = 12;
-        const handles = [
-          { x: x + width - handleSize / 2, y: y + height / 2 - handleSize / 2 },
-          { x: x + width / 2 - handleSize / 2, y: y + height - handleSize / 2 },
-          { x: x + width - handleSize / 2, y: y + height - handleSize / 2 },
-        ];
-
-        handles.forEach(function (handle) {
-          ctx.fillStyle = "#ffffff";
-          ctx.strokeStyle = "rgba(30,35,42,0.85)";
-          ctx.lineWidth = 2;
-          ctx.fillRect(handle.x, handle.y, handleSize, handleSize);
-          ctx.strokeRect(handle.x, handle.y, handleSize, handleSize);
-        });
+        drawResizeHandles(transition);
       }
       ctx.restore();
     });
@@ -2120,6 +2327,10 @@
       ctx.fillStyle = "#fff";
       ctx.font = "12px sans-serif";
       ctx.fillText(label, x + 8, Math.max(20, y - 12));
+
+      if (isSelected && (devToolsState.editorMode || "transitions") === "interactions") {
+        drawResizeHandles(interaction);
+      }
       ctx.restore();
     });
 
@@ -2225,18 +2436,22 @@
     };
   }
 
-  function getTransitionHandleHit(transition, point, metrics) {
-    const x = metrics.offsetX + transition.x * metrics.scale;
-    const y = metrics.offsetY + transition.y * metrics.scale;
-    const width = transition.width * metrics.scale;
-    const height = transition.height * metrics.scale;
+  function getResizeHandleRects(rect, metrics) {
+    const x = metrics.offsetX + rect.x * metrics.scale;
+    const y = metrics.offsetY + rect.y * metrics.scale;
+    const width = rect.width * metrics.scale;
+    const height = rect.height * metrics.scale;
     const handleSize = 18;
 
-    const handles = [
+    return [
       { type: "right", x: x + width - handleSize / 2, y: y + height / 2 - handleSize / 2, width: handleSize, height: handleSize },
       { type: "bottom", x: x + width / 2 - handleSize / 2, y: y + height - handleSize / 2, width: handleSize, height: handleSize },
       { type: "corner", x: x + width - handleSize / 2, y: y + height - handleSize / 2, width: handleSize, height: handleSize },
     ];
+  }
+
+  function getRectResizeHandleHit(rect, point, metrics) {
+    const handles = getResizeHandleRects(rect, metrics);
 
     return handles.find(function (handle) {
       return point.canvasX >= handle.x && point.canvasX <= handle.x + handle.width &&
@@ -2866,21 +3081,20 @@
     const activeMonster = state.party[0];
     const activeSpecies = getSpecies(content, activeMonster.speciesId);
     const activeInteraction = getActiveInteraction(state, content);
+    const currentTime = new Intl.DateTimeFormat([], { hour: "numeric", minute: "2-digit" }).format(new Date());
+    const encounterPreviewIcons = renderEncounterPreviewIcons(state, content);
 
     root.innerHTML = [
       '<main class="game-shell">',
       '<header class="game-topbar">',
-      '<div><span class="eyebrow">Location</span><strong>' + mapName + "</strong></div>",
-      '<div class="topbar-stats"><span>' + new Intl.DateTimeFormat([], { hour: "numeric", minute: "2-digit" }).format(new Date()) + "</span><span>$" + state.player.money + '</span><button class="secondary-button" type="button" data-action="open-settings">Settings</button><button class="secondary-button" type="button" data-action="save">Save</button><button class="secondary-button" type="button" data-action="title">Title</button></div>',
+      '<div class="world-location-header"><span class="eyebrow">Location</span><div class="world-location-line"><strong>' + mapName + "</strong>" + encounterPreviewIcons + "</div></div>",
+      '<div class="topbar-stats"><span class="world-clock">' + currentTime + "</span><span>$" + state.player.money + '</span><button class="secondary-button" type="button" data-action="open-settings">Settings</button><button class="secondary-button" type="button" data-action="save">Save</button><button class="secondary-button" type="button" data-action="title">Title</button></div>',
       "</header>",
       '<section class="play-area">',
       '<div class="map-panel"><canvas class="world-canvas" width="' + VIEWPORT.width + '" height="' + VIEWPORT.height + '"></canvas><div class="map-caption">Move with arrow keys or WASD. Touch a pink marker to battle.' + (activeInteraction ? " " + escapeHtml(buildInteractionPrompt(activeInteraction)) + "." : "") + '</div></div>',
       '<aside class="status-panel">',
       '<section class="panel-block"><h2>Now Playing</h2><p>' + state.message + "</p></section>",
       '<section class="panel-block"><h2>Party Lead</h2><p>' + activeSpecies.name + " Lv " + activeMonster.level + "</p><p>HP " + activeMonster.currentHp + "/" + activeMonster.stats.hp + "</p></section>",
-      '<section class="panel-block"><h2>Wild Monsters</h2><ul class="compact-list">' + state.world.wildMonsters.map(function (monster) {
-        return "<li><span>" + monster.label + "</span><strong>" + (monster.active ? "Nearby" : "Respawn " + formatTimeUntil(monster.respawnsAt)) + "</strong></li>";
-      }).join("") + "</ul></section>",
       '<section class="panel-block"><h2>Inventory</h2><ul class="compact-list">' + state.inventory.map(function (item) {
         return "<li><span>" + item.itemId + "</span><strong>x" + item.quantity + "</strong></li>";
       }).join("") + "</ul></section>",
@@ -2896,6 +3110,18 @@
     ].join("");
 
     drawWorld(root.querySelector(".world-canvas"), state, content, devToolsState);
+  }
+
+  function updateLiveWorldUi(root) {
+    const clock = root.querySelector(".world-clock");
+    if (!clock) {
+      return;
+    }
+
+    const currentTime = new Intl.DateTimeFormat([], { hour: "numeric", minute: "2-digit" }).format(new Date());
+    if (clock.textContent !== currentTime) {
+      clock.textContent = currentTime;
+    }
   }
 
   function attachInputHandlers(root, app) {
@@ -2914,6 +3140,9 @@
     });
     root.querySelector('[data-action="close-interaction"]')?.addEventListener("click", function () {
       app.closeInteraction();
+    });
+    root.querySelector('[data-action="confirm-healing-center"]')?.addEventListener("click", function () {
+      app.confirmHealingCenter();
     });
 
     root.querySelectorAll("[data-open-panel]").forEach(function (button) {
@@ -3582,7 +3811,7 @@
 
         if (key === "zoom" || key === "partySize") {
           this.state.settings[key] = Number(rawValue || 0);
-        } else if (key === "shareExperience" || key === "mapDetails") {
+        } else if (key === "shareExperience" || key === "mapDetails" || key === "encounterPreview") {
           this.state.settings[key] = rawValue === "true";
         } else {
           this.state.settings[key] = rawValue;
@@ -3616,6 +3845,21 @@
         }
 
         openInteraction(this.state, this.content, interaction);
+        this.render();
+      },
+      confirmHealingCenter: function () {
+        if (this.state.screen !== "world" || !this.state.interaction || this.state.interaction.type !== "healing-center") {
+          return;
+        }
+
+        const interaction = getActiveInteraction(this.state, this.content) || this.content.mapMetadata[this.state.world.currentMapId]?.interactions?.find((entry) => entry.id === this.state.interaction.id);
+        if (!interaction) {
+          this.state.interaction = null;
+          this.render();
+          return;
+        }
+
+        performHealingCenterService(this.state, this.content, interaction);
         this.render();
       },
       updateNewGameSetup: function (action, value) {
@@ -4441,33 +4685,37 @@
         this.render();
       },
       beginDevCanvasInteraction: function (event) {
-        if (this.state.screen !== "dev-tools" || this.devTools.editorMode !== "transitions") {
+        if (this.state.screen !== "dev-tools" || !["transitions", "interactions"].includes(this.devTools.editorMode)) {
           return;
         }
 
         const mapId = this.devTools.selectedMapId;
         const map = this.content.maps[mapId];
         const mapMeta = this.content.mapMetadata[mapId];
-        const transition = mapMeta.transitions.find((entry) => entry.id === this.devTools.selectedTransitionId);
-        if (!transition) {
+        const isInteractionMode = this.devTools.editorMode === "interactions";
+        const targetRect = isInteractionMode
+          ? getEditableInteractions(mapMeta).find((entry) => entry.id === this.devTools.selectedInteractionId)
+          : mapMeta.transitions.find((entry) => entry.id === this.devTools.selectedTransitionId);
+        if (!targetRect) {
           return;
         }
 
         const canvas = event.currentTarget;
         const point = getCanvasPointFromEvent(event, canvas, map, this.devTools.previewZoom);
-        const handle = getTransitionHandleHit(transition, point, point);
+        const handle = getRectResizeHandleHit(targetRect, point, point);
         if (!handle) {
           return;
         }
 
         event.preventDefault();
         this.devTools.drag = {
+          entityType: isInteractionMode ? "interaction" : "transition",
           type: handle.type,
-          transitionId: transition.id,
+          entityId: targetRect.id,
           startWorldX: point.worldX,
           startWorldY: point.worldY,
-          startWidth: transition.width,
-          startHeight: transition.height,
+          startWidth: targetRect.width,
+          startHeight: targetRect.height,
           didDrag: false,
         };
       },
@@ -4479,8 +4727,10 @@
         const mapId = this.devTools.selectedMapId;
         const map = this.content.maps[mapId];
         const mapMeta = this.content.mapMetadata[mapId];
-        const transition = mapMeta.transitions.find((entry) => entry.id === this.devTools.drag.transitionId);
-        if (!transition) {
+        const targetRect = this.devTools.drag.entityType === "interaction"
+          ? getEditableInteractions(mapMeta).find((entry) => entry.id === this.devTools.drag.entityId)
+          : mapMeta.transitions.find((entry) => entry.id === this.devTools.drag.entityId);
+        if (!targetRect) {
           return;
         }
 
@@ -4491,11 +4741,11 @@
         const deltaY = Math.round((point.worldY - this.devTools.drag.startWorldY) / tileSize) * tileSize;
 
         if (this.devTools.drag.type === "right" || this.devTools.drag.type === "corner") {
-          transition.width = Math.max(tileSize, this.devTools.drag.startWidth + deltaX);
+          targetRect.width = Math.max(tileSize, this.devTools.drag.startWidth + deltaX);
         }
 
         if (this.devTools.drag.type === "bottom" || this.devTools.drag.type === "corner") {
-          transition.height = Math.max(tileSize, this.devTools.drag.startHeight + deltaY);
+          targetRect.height = Math.max(tileSize, this.devTools.drag.startHeight + deltaY);
         }
 
         this.devTools.drag.didDrag = true;
@@ -4506,11 +4756,12 @@
           return;
         }
 
+        const drag = this.devTools.drag;
         const didDrag = this.devTools.drag.didDrag;
         this.devTools.drag = null;
 
         if (didDrag) {
-          this.state.message = "Resized transition " + this.devTools.selectedTransitionId + ".";
+          this.state.message = "Resized " + (drag.entityType === "interaction" ? "interaction " + drag.entityId : "transition " + drag.entityId) + ".";
           this.render();
         }
       },
@@ -4527,11 +4778,18 @@
           return;
         }
 
+        const previousUiSignature = getWorldUiSignature(this.state, this.content);
         const hadBattle = Boolean(this.state.battle);
         updateRespawns(this.state, this.content);
         movePlayer(this.state, this.content, deltaMs);
+        const nextUiSignature = getWorldUiSignature(this.state, this.content);
 
         if (!hadBattle && this.state.battle) {
+          this.render();
+          return;
+        }
+
+        if (previousUiSignature !== nextUiSignature) {
           this.render();
         }
       },
@@ -4645,6 +4903,7 @@
         app.update(delta);
 
         if (app.state.screen === "world") {
+          updateLiveWorldUi(root);
           const canvas = root.querySelector(".world-canvas");
           if (canvas) {
             drawWorld(canvas, app.state, app.content, app.devTools);

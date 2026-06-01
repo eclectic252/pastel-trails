@@ -6,6 +6,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       "partySize": 6,
       "shareExperience": true,
       "mapDetails": true,
+      "encounterPreview": false,
+      "encounterPreviewMode": "available",
       "devMode": false
     },
     "allowedZoomLevels": [
@@ -35441,7 +35443,23 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           }
         }
       ],
-      "interactions": [],
+      "interactions": [
+        {
+          "id": "interaction-1",
+          "type": "healing-center",
+          "x": 2560,
+          "y": 768,
+          "width": 128,
+          "height": 128,
+          "label": "New Interaction",
+          "text": "Heal your party. ",
+          "data": {
+            "shopId": "",
+            "arenaId": "",
+            "crestId": ""
+          }
+        }
+      ],
       "spawnZones": [
         {
           "id": "default-zone",
