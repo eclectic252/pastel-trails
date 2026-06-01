@@ -9,9 +9,12 @@
       "crestName": "New Crest",
       "recommendedLevel": 5,
       "partySize": 1,
+      "rewardMoney": 50,
       "rewardText": "",
       "description": "",
-      "mapId": "lily-harbor"
+      "mapId": "lily-harbor",
+      "team": [],
+      "pool": []
     }
   ]
 }

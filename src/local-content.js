@@ -4,6 +4,9 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       "theme": "classic",
       "zoom": 100,
       "partySize": 6,
+      "arenaLeaderMinLevel": 1,
+      "arenaLeaderMaxLevel": 100,
+      "arenaLeaderPartySize": 6,
       "shareExperience": true,
       "mapDetails": true,
       "encounterPreview": false,
@@ -232,9 +235,12 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "crestName": "New Crest",
         "recommendedLevel": 5,
         "partySize": 1,
+        "rewardMoney": 50,
         "rewardText": "",
         "description": "",
-        "mapId": "lily-harbor"
+        "mapId": "lily-harbor",
+        "team": [],
+        "pool": []
       }
     ]
   },

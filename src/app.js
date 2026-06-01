@@ -22,6 +22,9 @@
         mapDetails: true,
         encounterPreview: false,
         encounterPreviewMode: "available",
+        arenaLeaderMinLevel: 1,
+        arenaLeaderMaxLevel: 100,
+        arenaLeaderPartySize: 6,
         devMode: false,
       },
       allowedZoomLevels: [100, 90, 80, 70, 60, 50],
@@ -445,6 +448,17 @@
     }) || species?.variants?.[0] || null;
   }
 
+  function formatMonsterVariantLabel(variantId) {
+    const raw = String(variantId || "default").trim() || "default";
+    return raw
+      .split(/[-_\s]+/)
+      .filter(Boolean)
+      .map(function (part) {
+        return part.charAt(0).toUpperCase() + part.slice(1);
+      })
+      .join(" ");
+  }
+
   function buildEncounterPreviewEntry(content, speciesId, variantId) {
     const species = getSpecies(content, speciesId);
     if (!species) {
@@ -799,10 +813,89 @@
       crestName: "New Crest",
       recommendedLevel: 5,
       partySize: 1,
+      rewardMoney: 50,
       rewardText: "",
       description: "",
       mapId: "",
+      team: [],
+      pool: [],
     };
+  }
+
+  function createEmptyArenaTeamMember(content, arena) {
+    const species = content.monsters?.species?.[0];
+    const variant = species?.variants?.[0];
+    return {
+      speciesId: species?.id || "",
+      variantId: variant?.id || "default",
+      level: Math.max(1, Number(arena?.recommendedLevel || 5)),
+    };
+  }
+
+  function createEmptyArenaPoolMember(content) {
+    const species = content.monsters?.species?.[0];
+    const variant = species?.variants?.[0];
+    return {
+      speciesId: species?.id || "",
+      variantId: variant?.id || "default",
+    };
+  }
+
+  function ensureArenaPools(content) {
+    ensureArenaCatalog(content).forEach(function (arena) {
+      if (!Array.isArray(arena.team)) {
+        arena.team = [];
+      }
+      if (!Array.isArray(arena.pool)) {
+        arena.pool = [];
+      }
+    });
+  }
+
+  function normalizeArenaLeaderLevelRange(settings) {
+    const min = Math.max(1, Number(settings?.arenaLeaderMinLevel || 1));
+    const max = Math.max(1, Number(settings?.arenaLeaderMaxLevel || 100));
+    return min <= max ? { min, max } : { min: max, max: min };
+  }
+
+  function rollArenaLeaderLevel(settings, fallbackLevel) {
+    const range = normalizeArenaLeaderLevelRange(settings);
+    if (range.min === range.max) {
+      return range.min;
+    }
+
+    return range.min + Math.floor(Math.random() * (range.max - range.min + 1));
+  }
+
+  function buildArenaBattleRoster(state, content, arena) {
+    ensureArenaPools(content);
+    const authoredTeam = (arena?.team || []).map(function (member) {
+      return Object.assign({}, member);
+    }).filter(function (member) {
+      return Boolean(getSpecies(content, member.speciesId));
+    });
+    const fallbackPool = (arena?.pool || []).map(function (member) {
+      return Object.assign({}, member);
+    }).filter(function (member) {
+      return Boolean(getSpecies(content, member.speciesId));
+    });
+    const requestedSize = Math.max(1, Number(state.settings?.arenaLeaderPartySize || authoredTeam.length || 1));
+    const roster = authoredTeam.slice(0, requestedSize);
+
+    while (roster.length < requestedSize && fallbackPool.length) {
+      const picked = fallbackPool[Math.floor(Math.random() * fallbackPool.length)];
+      roster.push({
+        speciesId: picked.speciesId,
+        variantId: picked.variantId || "default",
+        level: rollArenaLeaderLevel(state.settings, arena?.recommendedLevel || 5),
+      });
+    }
+
+    return roster.map(function (member) {
+      const nextMember = Object.assign({}, member);
+      nextMember.level = rollArenaLeaderLevel(state.settings, member.level || arena?.recommendedLevel || 5);
+      return nextMember;
+    });
   }
 
   function syncArenaDevSelection(content, devToolsState) {
@@ -1182,6 +1275,71 @@
     state.player.money += 12;
   }
 
+  function createBattleEnemyFromArenaTeamMember(content, member) {
+    const species = getSpecies(content, member.speciesId);
+    if (!species) {
+      return null;
+    }
+
+    const level = Math.max(1, Number(member.level || 1));
+    const variant = getSpeciesVariant(species, member.variantId || "");
+    return {
+      speciesId: species.id,
+      variantId: variant?.id || "default",
+      name: species.name,
+      level,
+      stats: Object.assign({}, species.baseStats),
+      currentHp: species.baseStats.hp,
+      maxHp: species.baseStats.hp,
+    };
+  }
+
+  function startArenaBattle(state, content, arena, interaction) {
+    const roster = buildArenaBattleRoster(state, content, arena);
+    const team = roster.map(function (member) {
+      return createBattleEnemyFromArenaTeamMember(content, member);
+    }).filter(Boolean);
+
+    if (!team.length) {
+      state.message = "This arena does not have a leader team configured yet.";
+      return;
+    }
+
+    state.interaction = null;
+    state.battle = {
+      type: "trainer",
+      opponentName: arena.leaderName || "Arena Leader",
+      opponentTitle: arena.leaderTitle || "Leader",
+      arenaId: arena.id,
+      crestId: arena.crestId || interaction.data?.crestId || "",
+      crestName: arena.crestName || "Arena Crest",
+      rewardMoney: Number(arena.rewardMoney || 0),
+      rewardText: arena.rewardText || "",
+      enemyQueue: team,
+      enemyIndex: 0,
+      enemy: team[0],
+      playerIndex: 0,
+      log: [(arena.leaderTitle || "Leader") + " " + (arena.leaderName || "Arena Leader") + " challenges you to a battle."],
+      outcome: null,
+    };
+    state.message = "Arena battle started at " + (arena.name || interaction.label || "the arena") + ".";
+  }
+
+  function rewardArenaVictory(state, battle) {
+    const progress = ensureArenaProgress(state);
+    const activeMonster = state.party[0];
+    activeMonster.xp += 10;
+    state.player.money += Number(battle.rewardMoney || 0);
+
+    if (battle.arenaId && !progress.clearedArenaIds.includes(battle.arenaId)) {
+      progress.clearedArenaIds.push(battle.arenaId);
+    }
+
+    if (battle.crestId && !progress.earnedCrests.includes(battle.crestId)) {
+      progress.earnedCrests.push(battle.crestId);
+    }
+  }
+
   function returnToTown(state, content) {
     const town = content.towns.towns.find(function (entry) {
       return entry.id === state.player.lastTownId;
@@ -1197,20 +1355,21 @@
     }
 
     const playerMonster = state.party[state.battle.playerIndex];
-    const enemy = state.battle.enemy;
-    const enemySpecies = getSpecies(content, enemy.speciesId);
-    const enemyInstance = {
-      stats: enemy.stats,
-      currentHp: enemy.currentHp,
-    };
-
-    const playerFirst = playerMonster.stats.speed >= enemy.stats.speed;
+    let skipEnemyTurn = false;
+    const playerFirst = playerMonster.stats.speed >= state.battle.enemy.stats.speed;
     const steps = playerFirst ? ["player", "enemy"] : ["enemy", "player"];
 
     steps.forEach(function (step) {
-      if (state.battle.outcome) {
+      if (state.battle.outcome || (step === "enemy" && skipEnemyTurn)) {
         return;
       }
+
+      const enemy = state.battle.enemy;
+      const enemySpecies = getSpecies(content, enemy.speciesId);
+      const enemyInstance = {
+        stats: enemy.stats,
+        currentHp: enemy.currentHp,
+      };
 
       if (step === "player") {
         const damage = calculateDamage(playerMonster, enemyInstance);
@@ -1218,11 +1377,36 @@
         state.battle.log.unshift(getSpecies(content, playerMonster.speciesId).name + " dealt " + damage + " damage.");
 
         if (enemy.currentHp <= 0) {
-          state.battle.outcome = "victory";
           state.battle.log.unshift(enemySpecies.name + " fainted.");
-          markWildMonsterDefeated(state, enemy.wildMonsterId);
-          grantVictoryRewards(state);
-          state.message = "Victory. Your party earned 5 XP and $12.";
+          skipEnemyTurn = true;
+
+          if (state.battle.type === "trainer") {
+            const nextEnemyIndex = Number(state.battle.enemyIndex || 0) + 1;
+            const nextEnemy = state.battle.enemyQueue?.[nextEnemyIndex];
+            if (nextEnemy) {
+              state.battle.enemyIndex = nextEnemyIndex;
+              state.battle.enemy = nextEnemy;
+              state.battle.log.unshift((state.battle.opponentTitle || "Leader") + " " + (state.battle.opponentName || "Trainer") + " sent out " + nextEnemy.name + ".");
+            } else {
+              state.battle.outcome = "victory";
+              rewardArenaVictory(state, state.battle);
+              const rewardParts = [];
+              if (state.battle.crestName) {
+                rewardParts.push("the " + state.battle.crestName);
+              }
+              if (Number(state.battle.rewardMoney || 0) > 0) {
+                rewardParts.push("$" + Number(state.battle.rewardMoney || 0));
+              }
+              state.message = rewardParts.length
+                ? "Victory. You earned " + rewardParts.join(" and ") + "."
+                : "Victory. You cleared the arena challenge.";
+            }
+          } else {
+            state.battle.outcome = "victory";
+            markWildMonsterDefeated(state, enemy.wildMonsterId);
+            grantVictoryRewards(state);
+            state.message = "Victory. Your party earned 5 XP and $12.";
+          }
         }
       } else {
         const damage = calculateDamage({ stats: enemy.stats }, playerMonster);
@@ -1241,7 +1425,7 @@
   }
 
   function resolveCatch(state, content) {
-    if (!state.battle || state.battle.outcome) {
+    if (!state.battle || state.battle.outcome || state.battle.type === "trainer") {
       return;
     }
 
@@ -1305,7 +1489,7 @@
   }
 
   function attemptRun(state, content) {
-    if (!state.battle || state.battle.outcome) {
+    if (!state.battle || state.battle.outcome || state.battle.type === "trainer") {
       return;
     }
 
@@ -1734,13 +1918,44 @@
     const screenY = Math.round((monster.y - camera.y) * zoomScale);
     const map = content.maps[ACTIVE_APP?.state?.world?.currentMapId || ""];
     const spriteSize = (map?.tileSize || 128) * zoomScale;
+    const drawX = Math.round(screenX - spriteSize / 2);
+    const drawY = Math.round(screenY - spriteSize / 2);
+    const label = "Lv " + Number(monster.level || 1) + " " + (species?.name || monster.speciesId) + " (" + formatMonsterVariantLabel(variant?.id || monster.variantId || "default") + ")";
+
+    const drawWildMonsterLabel = function () {
+      ctx.save();
+      const fontSize = Math.max(13, Math.round(15 * zoomScale));
+      ctx.font = "600 " + fontSize + "px Arial, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      const paddingX = 10;
+      const paddingY = 6;
+      const textWidth = ctx.measureText(label).width;
+      const pillWidth = textWidth + paddingX * 2;
+      const pillHeight = fontSize + paddingY * 2;
+      const pillX = Math.round(screenX - pillWidth / 2);
+      const pillY = Math.round(drawY - pillHeight - 8);
+      ctx.fillStyle = "rgba(23, 31, 40, 0.88)";
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.22)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      if (typeof ctx.roundRect === "function") {
+        ctx.roundRect(pillX, pillY, pillWidth, pillHeight, 10);
+      } else {
+        ctx.rect(pillX, pillY, pillWidth, pillHeight);
+      }
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText(label, screenX, pillY + pillHeight / 2 + 0.5);
+      ctx.restore();
+    };
 
     if (spritePath) {
       const image = getImage(spritePath);
       if (image.complete && image.naturalWidth) {
-        const drawX = Math.round(screenX - spriteSize / 2);
-        const drawY = Math.round(screenY - spriteSize / 2);
         ctx.drawImage(image, drawX, drawY, spriteSize, spriteSize);
+        drawWildMonsterLabel();
         return;
       }
     }
@@ -1753,6 +1968,7 @@
     ctx.fillStyle = "#fff7f8";
     ctx.font = "14px sans-serif";
     ctx.fillText("!", screenX - 4, screenY + 5);
+    drawWildMonsterLabel();
   }
 
   function drawWorld(canvas, state, content, devToolsState) {
@@ -1960,27 +2176,42 @@
     const activeMonster = state.party[state.battle.playerIndex];
     const activeSpecies = getSpecies(content, activeMonster.speciesId);
     const enemy = state.battle.enemy;
+    const isTrainerBattle = state.battle.type === "trainer";
+    const battleLabel = isTrainerBattle ? "Trainer Battle" : "Wild";
+    const opponentLabel = isTrainerBattle
+      ? escapeHtml((state.battle.opponentTitle || "Leader") + " " + (state.battle.opponentName || "Trainer"))
+      : "";
 
     const outcomeButton = state.battle.outcome
       ? '<button class="primary-button" type="button" data-battle-action="close-battle">Return</button>'
       : "";
 
+    const actionButtons = isTrainerBattle
+      ? [
+          '<button type="button" data-battle-action="attack">Attack</button>',
+          '<button type="button" data-battle-action="item">Item</button>',
+          '<button type="button" data-battle-action="swap">Swap</button>',
+        ].join("")
+      : [
+          '<button type="button" data-battle-action="attack">Attack</button>',
+          '<button type="button" data-battle-action="item">Item</button>',
+          '<button type="button" data-battle-action="swap">Swap</button>',
+          '<button type="button" data-battle-action="catch">Catch</button>',
+          '<button type="button" data-battle-action="run">Run</button>',
+        ].join("");
+
     return [
       '<div class="battle-overlay">',
       '<section class="battle-modal">',
       '<div class="battle-headings">',
-      '<div><span class="eyebrow">Wild</span><h2>' + enemy.name + " Lv " + enemy.level + "</h2><p>HP " + enemy.currentHp + "/" + enemy.maxHp + "</p></div>",
+      '<div><span class="eyebrow">' + battleLabel + '</span><h2>' + enemy.name + " Lv " + enemy.level + "</h2><p>" + (opponentLabel ? opponentLabel + " · " : "") + "HP " + enemy.currentHp + "/" + enemy.maxHp + "</p></div>",
       '<div><span class="eyebrow">Your Monster</span><h2>' + activeSpecies.name + " Lv " + activeMonster.level + "</h2><p>HP " + activeMonster.currentHp + "/" + activeMonster.stats.hp + "</p></div>",
       "</div>",
       '<div class="battle-log">' + state.battle.log.slice(0, 6).map(function (entry) {
         return "<p>" + entry + "</p>";
       }).join("") + "</div>",
       '<div class="battle-actions">',
-      '<button type="button" data-battle-action="attack">Attack</button>',
-      '<button type="button" data-battle-action="item">Item</button>',
-      '<button type="button" data-battle-action="swap">Swap</button>',
-      '<button type="button" data-battle-action="catch">Catch</button>',
-      '<button type="button" data-battle-action="run">Run</button>',
+      actionButtons,
       outcomeButton,
       "</div>",
       "</section>",
@@ -2025,6 +2256,12 @@
         introText: "Arena framework ready.",
         arenaStatus: "Arena framework ready.",
       };
+      const hasTeam = Array.isArray(arena.arena?.team) && arena.arena.team.length > 0;
+      const actionRow = arena.isCleared
+        ? '<div class="battle-actions"><button class="primary-button" type="button" data-action="close-interaction">Close</button></div>'
+        : hasTeam
+          ? '<div class="battle-actions"><button class="primary-button" type="button" data-action="start-arena-battle">Start Arena Battle</button><button class="secondary-button" type="button" data-action="close-interaction">Not Now</button></div>'
+          : '<div class="battle-actions"><button class="primary-button" type="button" data-action="close-interaction">Close</button></div>';
 
       return [
         '<div class="battle-overlay">',
@@ -2040,10 +2277,11 @@
             "<p><strong>Crest Reward:</strong> " + escapeHtml(arena.crestName) + "</p>" +
             "<p><strong>Recommended Level:</strong> " + escapeHtml(String(arena.recommendedLevel)) + "</p>" +
             "<p><strong>Leader Party Size:</strong> " + escapeHtml(String(arena.leaderPartySize)) + "</p>" +
+            "<p><strong>Configured Team:</strong> " + escapeHtml(String(arena.arena?.team?.length || 0)) + "</p>" +
             "<p><strong>Reward Notes:</strong> " + escapeHtml(arena.rewardText) + "</p>" +
           "</div>" +
         "</div>" +
-        '<div class="battle-actions"><button class="primary-button" type="button" data-action="close-interaction">Close</button></div>',
+        actionRow,
         "</section>",
         "</div>",
       ].join("");
@@ -2168,6 +2406,9 @@
         '<label class="input-group"><span>Theme</span><select data-world-setting="theme">' + themeOptions + "</select></label>",
         '<label class="input-group"><span>Map Zoom</span><select data-world-setting="zoom">' + zoomOptions + "</select></label>",
         '<label class="input-group"><span>Party Size</span><input type="number" min="1" max="12" data-world-setting="partySize" value="' + Number(state.settings.partySize) + '" /></label>',
+        '<label class="input-group"><span>Arena Leader Min Level</span><input type="number" min="1" max="999" data-world-setting="arenaLeaderMinLevel" value="' + Number(state.settings.arenaLeaderMinLevel || 1) + '" /></label>',
+        '<label class="input-group"><span>Arena Leader Max Level</span><input type="number" min="1" max="999" data-world-setting="arenaLeaderMaxLevel" value="' + Number(state.settings.arenaLeaderMaxLevel || 100) + '" /></label>',
+        '<label class="input-group"><span>Arena Leader Party Size</span><input type="number" min="1" max="12" data-world-setting="arenaLeaderPartySize" value="' + Number(state.settings.arenaLeaderPartySize || 6) + '" /></label>',
         '<label class="input-group"><span>Share Experience</span><select data-world-setting="shareExperience"><option value="true"' + (state.settings.shareExperience ? " selected" : "") + '>Yes</option><option value="false"' + (!state.settings.shareExperience ? " selected" : "") + '>No</option></select></label>',
         '<label class="input-group"><span>Show Map Details</span><select data-world-setting="mapDetails"><option value="true"' + (state.settings.mapDetails ? " selected" : "") + '>Yes</option><option value="false"' + (!state.settings.mapDetails ? " selected" : "") + '>No</option></select></label>',
         '<label class="input-group"><span>Encounter Preview</span><select data-world-setting="encounterPreview"><option value="true"' + (state.settings.encounterPreview ? " selected" : "") + '>Yes</option><option value="false"' + (!state.settings.encounterPreview ? " selected" : "") + '>No</option></select></label>',
@@ -3167,6 +3408,60 @@
         return '<option value="' + escapeHtml(mapId) + '"' + selected + ">" + escapeHtml(label) + "</option>";
       })
     ).join("");
+    const poolEditor = selectedArena
+      ? (selectedArena.pool || []).map(function (member, poolIndex) {
+          const memberSpecies = getSpecies(content, member.speciesId);
+          const speciesOptions = content.monsters.species.map(function (species) {
+            const selected = member.speciesId === species.id ? " selected" : "";
+            return '<option value="' + escapeHtml(species.id) + '"' + selected + ">" + escapeHtml(species.name) + "</option>";
+          }).join("");
+          const variantOptions = (memberSpecies?.variants || []).map(function (variant) {
+            const selected = (member.variantId || "default") === variant.id ? " selected" : "";
+            return '<option value="' + escapeHtml(variant.id) + '"' + selected + ">" + escapeHtml(variant.id) + "</option>";
+          }).join("");
+
+          return [
+            "<li>",
+            '<div class="form-grid">',
+            '<label class="input-group"><span>Species</span><select data-pool-index="' + poolIndex + '" data-dev-arena-pool-field="speciesId">' + speciesOptions + "</select></label>",
+            '<label class="input-group"><span>Variant</span><select data-pool-index="' + poolIndex + '" data-dev-arena-pool-field="variantId">' + variantOptions + "</select></label>",
+            '<div class="title-actions"><button class="secondary-button" type="button" data-action="delete-arena-pool-member" data-pool-index="' + poolIndex + '">Delete</button></div>',
+            "</div>",
+            "</li>",
+          ].join("");
+        }).join("")
+      : "";
+    const teamEditor = selectedArena
+      ? (selectedArena.team || []).map(function (member, teamIndex) {
+          const memberSpecies = getSpecies(content, member.speciesId);
+          const speciesOptions = content.monsters.species.map(function (species) {
+            const selected = member.speciesId === species.id ? " selected" : "";
+            return '<option value="' + escapeHtml(species.id) + '"' + selected + ">" + escapeHtml(species.name) + "</option>";
+          }).join("");
+          const variantOptions = (memberSpecies?.variants || []).map(function (variant) {
+            const selected = (member.variantId || "default") === variant.id ? " selected" : "";
+            return '<option value="' + escapeHtml(variant.id) + '"' + selected + ">" + escapeHtml(variant.id) + "</option>";
+          }).join("");
+
+          return [
+            "<li>",
+            '<div class="form-grid">',
+            '<label class="input-group"><span>Species</span><select data-team-index="' + teamIndex + '" data-dev-arena-team-field="speciesId">' + speciesOptions + "</select></label>",
+            '<label class="input-group"><span>Variant</span><select data-team-index="' + teamIndex + '" data-dev-arena-team-field="variantId">' + variantOptions + "</select></label>",
+            '<label class="input-group"><span>Level</span><input type="number" min="1" step="1" data-team-index="' + teamIndex + '" data-dev-arena-team-field="level" value="' + Number(member.level || 1) + '" /></label>',
+            '<div class="title-actions"><button class="secondary-button" type="button" data-action="delete-arena-team-member" data-team-index="' + teamIndex + '">Delete</button></div>',
+            "</div>",
+            "</li>",
+          ].join("");
+        }).join("")
+      : "";
+    const teamPreview = selectedArena
+      ? (selectedArena.team || []).map(function (member) {
+          const species = getSpecies(content, member.speciesId);
+          const variant = getSpeciesVariant(species, member.variantId || "default");
+          return "<li><span>" + escapeHtml(species?.name || member.speciesId || "Unassigned") + " - " + escapeHtml(variant?.id || member.variantId || "default") + "</span><strong>Lv " + Number(member.level || 1) + "</strong></li>";
+        }).join("")
+      : "";
 
     const arenaEditor = selectedArena
       ? [
@@ -3181,12 +3476,23 @@
           '<label class="input-group"><span>Crest Name</span><input data-dev-arena-field="crestName" value="' + escapeHtml(selectedArena.crestName || "") + '" /></label>',
           '<label class="input-group"><span>Recommended Level</span><input type="number" step="1" min="1" data-dev-arena-field="recommendedLevel" value="' + Number(selectedArena.recommendedLevel || 1) + '" /></label>',
           '<label class="input-group"><span>Leader Party Size</span><input type="number" step="1" min="1" data-dev-arena-field="partySize" value="' + Number(selectedArena.partySize || 1) + '" /></label>',
+          '<label class="input-group"><span>Reward Money</span><input type="number" step="1" min="0" data-dev-arena-field="rewardMoney" value="' + Number(selectedArena.rewardMoney || 0) + '" /></label>',
           '<label class="input-group"><span>Linked Map</span><select data-dev-arena-field="mapId">' + linkedMapOptions + '</select></label>',
           '<label class="input-group dev-input-group-wide"><span>Description</span><textarea rows="4" data-dev-arena-field="description">' + escapeHtml(selectedArena.description || "") + '</textarea></label>',
           '<label class="input-group dev-input-group-wide"><span>Reward Notes</span><textarea rows="4" data-dev-arena-field="rewardText">' + escapeHtml(selectedArena.rewardText || "") + '</textarea></label>',
           '</div>',
           '</section>',
-          '<section class="panel-block"><div class="section-heading"><h2>Preview</h2></div><p><strong>' + escapeHtml(selectedArena.name || selectedArena.id) + '</strong></p><p>' + escapeHtml((selectedArena.leaderTitle || "Leader") + " " + (selectedArena.leaderName || "TBD")) + '</p><p>Crest: ' + escapeHtml(selectedArena.crestName || selectedArena.crestId || "Unassigned") + '</p><p>Recommended Level: ' + escapeHtml(String(selectedArena.recommendedLevel || "TBD")) + ' · Party Size: ' + escapeHtml(String(selectedArena.partySize || "TBD")) + '</p><p>' + escapeHtml(selectedArena.description || "No arena description yet.") + '</p></section>',
+          '<section class="panel-block dev-editor-panel"><div class="section-heading"><h2>Leader Team</h2><div class="topbar-stats"><button class="secondary-button" type="button" data-action="add-arena-team-member">Add Team Member</button></div></div>' +
+            ((selectedArena.team || []).length
+              ? '<ul class="compact-list">' + teamEditor + "</ul>"
+              : '<p>Add at least one team member to make this arena battleable.</p>') +
+          "</section>",
+          '<section class="panel-block dev-editor-panel"><div class="section-heading"><h2>Fallback Pool</h2><div class="topbar-stats"><button class="secondary-button" type="button" data-action="add-arena-pool-member">Add Pool Monster</button></div></div><p class="dev-helper-text">When the player sets a larger arena leader party size than the authored team, extra slots are filled randomly from this pool.</p>' +
+            ((selectedArena.pool || []).length
+              ? '<ul class="compact-list">' + poolEditor + "</ul>"
+              : '<p>No fallback pool monsters configured yet.</p>') +
+          "</section>",
+          '<section class="panel-block"><div class="section-heading"><h2>Preview</h2></div><p><strong>' + escapeHtml(selectedArena.name || selectedArena.id) + '</strong></p><p>' + escapeHtml((selectedArena.leaderTitle || "Leader") + " " + (selectedArena.leaderName || "TBD")) + '</p><p>Crest: ' + escapeHtml(selectedArena.crestName || selectedArena.crestId || "Unassigned") + '</p><p>Recommended Level: ' + escapeHtml(String(selectedArena.recommendedLevel || "TBD")) + ' · Party Size: ' + escapeHtml(String(selectedArena.partySize || "TBD")) + '</p><p>Reward Money: $' + escapeHtml(String(Number(selectedArena.rewardMoney || 0))) + '</p><p>' + escapeHtml(selectedArena.description || "No arena description yet.") + '</p><h3>Configured Team</h3><ul class="compact-list">' + (teamPreview || "<li><span>No team members configured yet.</span></li>") + "</ul><h3>Fallback Pool</h3><ul class=\"compact-list\">" + ((selectedArena.pool || []).map(function (member) { const species = getSpecies(content, member.speciesId); const variant = getSpeciesVariant(species, member.variantId || "default"); return "<li><span>" + escapeHtml(species?.name || member.speciesId || "Unassigned") + " - " + escapeHtml(variant?.id || member.variantId || "default") + "</span><strong>Pool</strong></li>"; }).join("") || "<li><span>No pool monsters configured yet.</span></li>") + "</ul></section>",
         ].join("")
       : '<section class="panel-block dev-editor-panel"><h2>No Arena Selected</h2><p>Add a new arena to begin editing.</p></section>';
 
@@ -3405,6 +3711,9 @@
     root.querySelector('[data-action="confirm-healing-center"]')?.addEventListener("click", function () {
       app.confirmHealingCenter();
     });
+    root.querySelector('[data-action="start-arena-battle"]')?.addEventListener("click", function () {
+      app.startArenaBattleFromInteraction();
+    });
 
     root.querySelectorAll("[data-open-panel]").forEach(function (button) {
       button.addEventListener("click", function () {
@@ -3521,6 +3830,22 @@
     });
     root.querySelector('[data-action="export-arenas-json"]')?.addEventListener("click", function () {
       app.exportArenasJson();
+    });
+    root.querySelector('[data-action="add-arena-team-member"]')?.addEventListener("click", function () {
+      app.addArenaTeamMember();
+    });
+    root.querySelector('[data-action="add-arena-pool-member"]')?.addEventListener("click", function () {
+      app.addArenaPoolMember();
+    });
+    root.querySelectorAll('[data-action="delete-arena-team-member"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.deleteArenaTeamMember(Number(button.getAttribute("data-team-index")));
+      });
+    });
+    root.querySelectorAll('[data-action="delete-arena-pool-member"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.deleteArenaPoolMember(Number(button.getAttribute("data-pool-index")));
+      });
     });
 
     root.querySelector('[data-action="add-transition"]')?.addEventListener("click", function () {
@@ -3764,6 +4089,35 @@
           app.updateArenaField(field.getAttribute("data-dev-arena-field"), field.value);
         });
       }
+    });
+    root.querySelectorAll("[data-dev-arena-team-field]").forEach(function (field) {
+      const eventName = field.tagName === "SELECT" ? "change" : "input";
+      field.addEventListener(eventName, function () {
+        app.updateArenaTeamMember(
+          Number(field.getAttribute("data-team-index")),
+          field.getAttribute("data-dev-arena-team-field"),
+          field.value,
+          field.tagName === "SELECT"
+        );
+      });
+      if (field.tagName !== "SELECT") {
+        field.addEventListener("change", function () {
+          app.updateArenaTeamMember(
+            Number(field.getAttribute("data-team-index")),
+            field.getAttribute("data-dev-arena-team-field"),
+            field.value
+          );
+        });
+      }
+    });
+    root.querySelectorAll("[data-dev-arena-pool-field]").forEach(function (field) {
+      field.addEventListener("change", function () {
+        app.updateArenaPoolMember(
+          Number(field.getAttribute("data-pool-index")),
+          field.getAttribute("data-dev-arena-pool-field"),
+          field.value
+        );
+      });
     });
     root.querySelectorAll("[data-dev-interaction-field]").forEach(function (field) {
       const useDeferredRender = isDeferredDevTextField(field);
@@ -4119,7 +4473,7 @@
           return;
         }
 
-        if (key === "zoom" || key === "partySize") {
+        if (key === "zoom" || key === "partySize" || key === "arenaLeaderMinLevel" || key === "arenaLeaderMaxLevel" || key === "arenaLeaderPartySize") {
           this.state.settings[key] = Number(rawValue || 0);
         } else if (key === "shareExperience" || key === "mapDetails" || key === "encounterPreview") {
           this.state.settings[key] = rawValue === "true";
@@ -4211,13 +4565,43 @@
         } else if (action === "swap") {
           swapMonster(this.state, this.content);
         } else if (action === "catch") {
+          if (this.state.battle.type === "trainer") {
+            return;
+          }
           resolveCatch(this.state, this.content);
         } else if (action === "run") {
+          if (this.state.battle.type === "trainer") {
+            return;
+          }
           attemptRun(this.state, this.content);
         } else if (action === "close-battle") {
           this.state.battle = null;
         }
 
+        this.render();
+      },
+      startArenaBattleFromInteraction: function () {
+        if (this.state.screen !== "world" || !this.state.interaction || this.state.interaction.type !== "arena") {
+          return;
+        }
+
+        const interaction = getActiveInteraction(this.state, this.content)
+          || this.content.mapMetadata[this.state.world.currentMapId]?.interactions?.find((entry) => entry.id === this.state.interaction.id);
+        if (!interaction) {
+          this.state.interaction = null;
+          this.render();
+          return;
+        }
+
+        const arenaId = interaction.data?.arenaId || this.state.interaction.arena?.arenaId || "";
+        const arena = arenaId ? getArena(this.content, arenaId) : null;
+        if (!arena) {
+          this.state.message = "This arena interaction is not linked to a valid arena record yet.";
+          this.render();
+          return;
+        }
+
+        startArenaBattle(this.state, this.content, arena, interaction);
         this.render();
       },
       loadProjectFolder: async function (keepDevTools) {
@@ -4826,7 +5210,7 @@
           return;
         }
 
-        const numericFields = new Set(["recommendedLevel", "partySize"]);
+        const numericFields = new Set(["recommendedLevel", "partySize", "rewardMoney"]);
         const value = numericFields.has(path) ? Number(rawValue || 0) : rawValue;
         arena[path] = value;
         if (path === "id") {
@@ -4892,6 +5276,83 @@
         anchor.download = "towns.json";
         anchor.click();
         URL.revokeObjectURL(url);
+      },
+      addArenaTeamMember: function () {
+        const arena = ensureArenaCatalog(this.content).find((entry) => entry.id === this.devTools.selectedArenaId);
+        if (!arena) {
+          return;
+        }
+
+        if (!Array.isArray(arena.team)) {
+          arena.team = [];
+        }
+
+        arena.team.push(createEmptyArenaTeamMember(this.content, arena));
+        arena.partySize = Math.max(Number(arena.partySize || 1), arena.team.length);
+        this.render();
+      },
+      addArenaPoolMember: function () {
+        const arena = ensureArenaCatalog(this.content).find((entry) => entry.id === this.devTools.selectedArenaId);
+        if (!arena) {
+          return;
+        }
+
+        if (!Array.isArray(arena.pool)) {
+          arena.pool = [];
+        }
+
+        arena.pool.push(createEmptyArenaPoolMember(this.content));
+        this.render();
+      },
+      deleteArenaTeamMember: function (teamIndex) {
+        const arena = ensureArenaCatalog(this.content).find((entry) => entry.id === this.devTools.selectedArenaId);
+        if (!arena || !Array.isArray(arena.team) || !arena.team[teamIndex]) {
+          return;
+        }
+
+        arena.team.splice(teamIndex, 1);
+        arena.partySize = Math.max(1, Math.min(Number(arena.partySize || 1), arena.team.length || 1));
+        this.render();
+      },
+      deleteArenaPoolMember: function (poolIndex) {
+        const arena = ensureArenaCatalog(this.content).find((entry) => entry.id === this.devTools.selectedArenaId);
+        if (!arena || !Array.isArray(arena.pool) || !arena.pool[poolIndex]) {
+          return;
+        }
+
+        arena.pool.splice(poolIndex, 1);
+        this.render();
+      },
+      updateArenaTeamMember: function (teamIndex, field, rawValue, shouldRender) {
+        const arena = ensureArenaCatalog(this.content).find((entry) => entry.id === this.devTools.selectedArenaId);
+        const member = arena?.team?.[teamIndex];
+        if (!member) {
+          return;
+        }
+
+        member[field] = field === "level" ? Math.max(1, Number(rawValue || 1)) : rawValue;
+        if (field === "speciesId") {
+          const species = getSpecies(this.content, rawValue);
+          member.variantId = getSpeciesVariant(species, member.variantId || "default")?.id || species?.variants?.[0]?.id || "default";
+        }
+
+        if (shouldRender !== false) {
+          this.render();
+        }
+      },
+      updateArenaPoolMember: function (poolIndex, field, rawValue) {
+        const arena = ensureArenaCatalog(this.content).find((entry) => entry.id === this.devTools.selectedArenaId);
+        const member = arena?.pool?.[poolIndex];
+        if (!member) {
+          return;
+        }
+
+        member[field] = rawValue;
+        if (field === "speciesId") {
+          const species = getSpecies(this.content, rawValue);
+          member.variantId = getSpeciesVariant(species, member.variantId || "default")?.id || species?.variants?.[0]?.id || "default";
+        }
+        this.render();
       },
       addArena: function () {
         const arenas = ensureArenaCatalog(this.content);
