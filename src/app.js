@@ -1280,49 +1280,69 @@
     return String(layerName || "").trim().toLowerCase() === "higher decor in front of player";
   }
 
-  function drawMapLayers(ctx, map, camera, layerFilter, zoomScale) {
+  function createScratchCanvas(width, height) {
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(width));
+    canvas.height = Math.max(1, Math.round(height));
+    return canvas;
+  }
+
+  function getCachedWorldLayerCanvas(map, phase) {
     const tileSize = map.tileSize;
-    const scaledTileSize = tileSize * zoomScale;
     const image = getImage(map.image);
-    const renderCamera = snapCamera(camera);
 
     if (!image.complete || !image.naturalWidth) {
-      return false;
+      return null;
+    }
+
+    const cacheKey = phase === "foreground" ? "_foregroundWorldLayerCanvas" : "_baseWorldLayerCanvas";
+    const worldWidth = map.mapWidth * tileSize;
+    const worldHeight = map.mapHeight * tileSize;
+    const cached = map[cacheKey];
+
+    if (
+      cached &&
+      cached.width === worldWidth &&
+      cached.height === worldHeight &&
+      cached.imageWidth === image.naturalWidth &&
+      cached.imageHeight === image.naturalHeight
+    ) {
+      return cached.canvas;
     }
 
     const columns = Math.floor(image.naturalWidth / tileSize);
-
     const renderLayers = (map.layers || []).filter(function (layer) {
-      return !/^collision\b/i.test(layer.name || "") && layerFilter(layer);
+      return !/^collision\b/i.test(layer.name || "") &&
+        (phase === "foreground" ? isFrontOfPlayerLayer(layer.name) : !isFrontOfPlayerLayer(layer.name));
     });
+
+    const layerCanvas = createScratchCanvas(worldWidth, worldHeight);
+    const layerCtx = layerCanvas.getContext("2d");
+    layerCtx.imageSmoothingEnabled = false;
 
     renderLayers.forEach(function (layer) {
       layer.positions.forEach(function (tile) {
         const worldX = tile.x * tileSize;
         const worldY = tile.y * tileSize;
-
-        if (
-          worldX + tileSize < renderCamera.x ||
-          worldY + tileSize < renderCamera.y ||
-          worldX > renderCamera.x + VIEWPORT.width / zoomScale ||
-          worldY > renderCamera.y + VIEWPORT.height / zoomScale
-        ) {
-          return;
-        }
-
         const sx = (tile.id % columns) * tileSize;
         const sy = Math.floor(tile.id / columns) * tileSize;
-        const dx = Math.round((worldX - renderCamera.x) * zoomScale);
-        const dy = Math.round((worldY - renderCamera.y) * zoomScale);
-        ctx.drawImage(image, sx, sy, tileSize, tileSize, dx, dy, scaledTileSize, scaledTileSize);
+        layerCtx.drawImage(image, sx, sy, tileSize, tileSize, worldX, worldY, tileSize, tileSize);
       });
     });
 
-    return true;
+    map[cacheKey] = {
+      canvas: layerCanvas,
+      width: worldWidth,
+      height: worldHeight,
+      imageWidth: image.naturalWidth,
+      imageHeight: image.naturalHeight,
+    };
+
+    return layerCanvas;
   }
 
   function drawMap(ctx, map, camera, phase) {
-    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingEnabled = false;
     const zoomScale = Math.max(0.1, Number(ACTIVE_APP?.state?.settings?.zoom || 100) / 100);
 
     if (phase === "base") {
@@ -1330,11 +1350,30 @@
       ctx.fillRect(0, 0, VIEWPORT.width, VIEWPORT.height);
     }
 
-    const loaded = drawMapLayers(ctx, map, camera, function (layer) {
-      return phase === "foreground" ? isFrontOfPlayerLayer(layer.name) : !isFrontOfPlayerLayer(layer.name);
-    }, zoomScale);
+    const layerCanvas = getCachedWorldLayerCanvas(map, phase);
+    const worldWidth = map.mapWidth * map.tileSize;
+    const worldHeight = map.mapHeight * map.tileSize;
+    const visibleWorldWidth = Math.min(worldWidth, VIEWPORT.width / zoomScale);
+    const visibleWorldHeight = Math.min(worldHeight, VIEWPORT.height / zoomScale);
+    const sourceX = Math.max(0, Math.min(worldWidth - visibleWorldWidth, camera.x));
+    const sourceY = Math.max(0, Math.min(worldHeight - visibleWorldHeight, camera.y));
 
-    if (!loaded && phase === "base") {
+    if (layerCanvas) {
+      ctx.drawImage(
+        layerCanvas,
+        sourceX,
+        sourceY,
+        visibleWorldWidth,
+        visibleWorldHeight,
+        0,
+        0,
+        VIEWPORT.width,
+        VIEWPORT.height
+      );
+      return;
+    }
+
+    if (phase === "base") {
       ctx.fillStyle = "#ffffff";
       ctx.font = "20px sans-serif";
       ctx.fillText("Loading Lily Harbor...", 40, 60);

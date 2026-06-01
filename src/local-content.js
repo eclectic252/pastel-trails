@@ -159,7 +159,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           },
           {
             "id": "Lilac",
-            "sprite": "assets/monsters/Pawlit/meadowmew-lilac-ready"
+            "sprite": "assets/monsters/Pawlit/meadowmew-lilac-ready.png"
           }
         ]
       }
@@ -35377,6 +35377,18 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "x": 64,
             "y": 960
           }
+        },
+        {
+          "id": "jasmine-to-route3",
+          "x": 1408,
+          "y": 0,
+          "width": 512,
+          "height": 128,
+          "targetMapId": "route-3",
+          "targetSpawn": {
+            "x": 1088,
+            "y": 8384
+          }
         }
       ],
       "interactions": [],
@@ -35410,10 +35422,10 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "y": 0,
           "width": 512,
           "height": 128,
-          "targetMapId": "route2",
+          "targetMapId": "route-2",
           "targetSpawn": {
-            "x": 3392,
-            "y": 5952
+            "x": 1856,
+            "y": 1600
           }
         },
         {
@@ -35527,6 +35539,18 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "x": 2112,
             "y": 832
           }
+        },
+        {
+          "id": "route1-to-route3",
+          "x": 0,
+          "y": 0,
+          "width": 128,
+          "height": 128,
+          "targetMapId": "route-3",
+          "targetSpawn": {
+            "x": 1856,
+            "y": 8128
+          }
         }
       ],
       "interactions": [],
@@ -35550,24 +35574,230 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
     "route-2": {
       "mapId": "route-2",
       "displayName": "Route 2",
-      "isTown": true,
+      "isTown": false,
       "safezone": false,
       "collisionGrid": 64,
-      "transitions": [],
+      "transitions": [
+        {
+          "id": "route2-to-bougainvillea",
+          "x": 1536,
+          "y": 0,
+          "width": 512,
+          "height": 128,
+          "targetMapId": "bougainvillea-town",
+          "targetSpawn": {
+            "x": 1856,
+            "y": 1088
+          }
+        },
+        {
+          "id": "route2-to-lilyharbor",
+          "x": 1536,
+          "y": 1664,
+          "width": 512,
+          "height": 128,
+          "targetMapId": "lily-harbor",
+          "targetSpawn": {
+            "x": 1856,
+            "y": 192
+          }
+        },
+        {
+          "id": "route2-to-route3",
+          "x": 0,
+          "y": 768,
+          "width": 128,
+          "height": 384,
+          "targetMapId": "route-3",
+          "targetSpawn": {
+            "x": 2496,
+            "y": 5184
+          }
+        }
+      ],
       "interactions": [],
-      "spawnZones": [],
+      "spawnZones": [
+        {
+          "id": "default-zone",
+          "label": "Default Zone",
+          "bounds": {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          "visibleSpawns": [
+            {
+              "id": "spawn-1",
+              "speciesId": "Pawlit",
+              "spawnChance": 100,
+              "x": 1216,
+              "y": 1216,
+              "levelMin": 2,
+              "levelMax": 4,
+              "respawnSeconds": 120,
+              "monsterOptions": [
+                {
+                  "speciesId": "Pawlit",
+                  "weight": 50,
+                  "variantId": "default"
+                },
+                {
+                  "speciesId": "Pawlit",
+                  "weight": 50,
+                  "variantId": "Grass"
+                }
+              ]
+            },
+            {
+              "id": "spawn-2",
+              "speciesId": "Pawlit",
+              "spawnChance": 100,
+              "x": 2368,
+              "y": 704,
+              "levelMin": 2,
+              "levelMax": 4,
+              "respawnSeconds": 120,
+              "monsterOptions": [
+                {
+                  "speciesId": "Pawlit",
+                  "weight": 50,
+                  "variantId": "default"
+                },
+                {
+                  "speciesId": "Pawlit",
+                  "weight": 60,
+                  "variantId": "Lilac"
+                }
+              ]
+            }
+          ],
+          "spawnTable": []
+        }
+      ],
       "trainers": [],
       "mapMonstersPanel": []
     },
     "route-3": {
       "mapId": "route-3",
       "displayName": "Route 3",
-      "isTown": true,
+      "isTown": false,
       "safezone": false,
       "collisionGrid": 64,
-      "transitions": [],
+      "transitions": [
+        {
+          "id": "route3-to-camelia",
+          "x": 896,
+          "y": 256,
+          "width": 128,
+          "height": 384,
+          "targetMapId": "camelia-ranch",
+          "targetSpawn": {
+            "x": 1728,
+            "y": 1344
+          }
+        },
+        {
+          "id": "route3-to-roue1",
+          "x": 1536,
+          "y": 8320,
+          "width": 640,
+          "height": 128,
+          "targetMapId": "route-1",
+          "targetSpawn": {
+            "x": 320,
+            "y": 192
+          }
+        },
+        {
+          "id": "route3-to-jasminebay",
+          "x": 896,
+          "y": 8320,
+          "width": 512,
+          "height": 128,
+          "targetMapId": "jasmine-bay",
+          "targetSpawn": {
+            "x": 1728,
+            "y": 192
+          }
+        },
+        {
+          "id": "route3-route2",
+          "x": 2432,
+          "y": 4992,
+          "width": 128,
+          "height": 384,
+          "targetMapId": "route-2",
+          "targetSpawn": {
+            "x": 192,
+            "y": 960
+          }
+        }
+      ],
       "interactions": [],
-      "spawnZones": [],
+      "spawnZones": [
+        {
+          "id": "default-zone",
+          "label": "Default Zone",
+          "bounds": {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          "visibleSpawns": [
+            {
+              "id": "spawn-1",
+              "speciesId": "equira",
+              "spawnChance": 100,
+              "x": 1600,
+              "y": 1856,
+              "levelMin": 2,
+              "levelMax": 4,
+              "respawnSeconds": 120,
+              "monsterOptions": [
+                {
+                  "speciesId": "equira",
+                  "weight": 60
+                },
+                {
+                  "speciesId": "equira",
+                  "weight": 40,
+                  "variantId": "snow"
+                }
+              ]
+            },
+            {
+              "id": "spawn-2",
+              "speciesId": "equira",
+              "spawnChance": 100,
+              "x": 2112,
+              "y": 3520,
+              "levelMin": 2,
+              "levelMax": 4,
+              "respawnSeconds": 120,
+              "monsterOptions": [
+                {
+                  "speciesId": "equira",
+                  "weight": 29,
+                  "variantId": "Glam"
+                },
+                {
+                  "speciesId": "fluffram",
+                  "weight": 30,
+                  "variantId": "glam"
+                },
+                {
+                  "speciesId": "fluffram",
+                  "weight": 30,
+                  "variantId": "default"
+                }
+              ]
+            }
+          ],
+          "spawnTable": []
+        }
+      ],
       "trainers": [],
       "mapMonstersPanel": []
     }
