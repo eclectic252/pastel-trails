@@ -377,13 +377,24 @@
 
   function createSaveManager(storage) {
     function createPreview(save) {
+      const uniqueCaught = Array.from(new Set(save.registry?.caught || []));
+      const earnedCrests = Array.from(new Set(save.arenaProgress?.earnedCrests || []));
       return {
         slotId: save.slotId,
         saveName: save.saveName,
         updatedAt: save.updatedAt,
-        mapId: save.world.currentMapId,
+        playerName: save.player?.name || "Player",
+        currentMapId: save.world?.currentMapId || "",
         money: save.player.money,
-        partyCount: save.party.length,
+        caughtCount: uniqueCaught.length,
+        crestCount: earnedCrests.length,
+        party: (save.party || []).map(function (monster) {
+          return {
+            speciesId: monster.speciesId,
+            variantId: monster.variantId || "default",
+            level: Number(monster.level || 1),
+          };
+        }),
       };
     }
 
@@ -2128,9 +2139,14 @@
     return remaining + "s";
   }
 
-  function renderTitleScreen(root, saveSlots, onAction, notice) {
+  function renderTitleScreen(root, content, saveSlots, selectedSlotId, onAction, notice) {
+    const effectiveSelectedSlotId = selectedSlotId || saveSlots[0]?.slotId || "";
+    const totalAvailableMonsters = content.monsters?.species?.length || 0;
+    const totalAvailableCrests = new Set(ensureArenaCatalog(content).map(function (arena) {
+      return arena.crestId;
+    }).filter(Boolean)).size;
     const loadButton = saveSlots.length
-      ? '<button class="primary-button" type="button" data-action="continue">Continue</button>'
+      ? '<button class="primary-button" type="button" data-action="continue">Continue Selected</button>'
       : "";
 
     root.innerHTML = [
@@ -2150,7 +2166,32 @@
       "<h2>Save Slots</h2>",
       (saveSlots.length
         ? '<ul class="save-list">' + saveSlots.map(function (slot) {
-            return "<li><strong>" + slot.saveName + "</strong><span>" + slot.mapId + " · $" + slot.money + " · " + slot.partyCount + " monsters</span></li>";
+            const selected = slot.slotId === effectiveSelectedSlotId ? " save-list-selected" : "";
+            const locationName = content.mapMetadata?.[slot.currentMapId]?.displayName || slot.currentMapId || "Unknown";
+            const partyMarkup = (slot.party || []).map(function (monster) {
+              const species = getSpecies(content, monster.speciesId);
+              const variant = getSpeciesVariant(species, monster.variantId || "default");
+              const label = (species?.name || monster.speciesId || "Unknown") + " (" + formatMonsterVariantLabel(variant?.id || monster.variantId || "default") + ")";
+              const sprite = variant?.sprite || "";
+              const visual = sprite
+                ? '<img class="save-party-icon" src="' + escapeHtml(sprite) + '" alt="' + escapeHtml(label) + '" />'
+                : '<span class="save-party-fallback">' + escapeHtml((species?.name || "?").slice(0, 1)) + "</span>";
+
+              return '<div class="save-party-member">' +
+                visual +
+                '<span class="save-party-label">Lv ' + Number(monster.level || 1) + "</span>" +
+                '<span class="save-party-label">' + escapeHtml(species?.name || monster.speciesId || "Unknown") + "</span>" +
+                '<span class="save-party-label">' + escapeHtml(formatMonsterVariantLabel(variant?.id || monster.variantId || "default")) + "</span>" +
+                "</div>";
+            }).join("");
+            return '<li class="' + selected.trim() + '">' +
+              '<button class="link-button save-slot-button" type="button" data-action="select-save-slot" data-slot-id="' + escapeHtml(slot.slotId) + '">' +
+              '<strong>' + escapeHtml((slot.playerName || "Player") + " - " + locationName) + '</strong>' +
+              '<span>$' + Number(slot.money || 0) + " · " + Number(slot.caughtCount || 0) + " / " + totalAvailableMonsters + " caught · " + Number(slot.crestCount || 0) + " / " + totalAvailableCrests + " crests</span>" +
+              (partyMarkup ? '<div class="save-party-strip">' + partyMarkup + "</div>" : "") +
+              "</button>" +
+              '<button class="secondary-button" type="button" data-action="load-save-slot" data-slot-id="' + escapeHtml(slot.slotId) + '">Load</button>' +
+              "</li>";
           }).join("") + "</ul>"
         : "<p>No saves yet. Start a new game to create one.</p>"),
       "</section>",
@@ -2163,6 +2204,16 @@
     });
     root.querySelector('[data-action="continue"]')?.addEventListener("click", function () {
       onAction("continue");
+    });
+    root.querySelectorAll('[data-action="select-save-slot"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        onAction("select-save-slot", button.getAttribute("data-slot-id"));
+      });
+    });
+    root.querySelectorAll('[data-action="load-save-slot"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        onAction("load-save-slot", button.getAttribute("data-slot-id"));
+      });
     });
     root.querySelector('[data-action="load-folder"]')?.addEventListener("click", function () {
       onAction("load-folder");
@@ -4499,8 +4550,13 @@
       },
       lastFrameAt: null,
       deferredRenderTimer: null,
+      selectedTitleSaveSlotId: saveManager.listSaves()[0]?.slotId || "",
       showTitle: function (notice) {
+        const slots = this.saveManager.listSaves();
         this.titleNotice = notice || "";
+        if (!slots.find((slot) => slot.slotId === this.selectedTitleSaveSlotId)) {
+          this.selectedTitleSaveSlotId = slots[0]?.slotId || "";
+        }
         this.state = { screen: "title" };
         this.render();
       },
@@ -4563,14 +4619,15 @@
         this.saveCurrentGame();
         this.render();
       },
-      continueGame: function () {
+      continueGame: function (slotId) {
         const slots = this.saveManager.listSaves();
         if (!slots.length) {
           this.startNewGame();
           return;
         }
 
-        const save = this.saveManager.readSave(slots[0].slotId);
+        const resolvedSlotId = slotId || this.selectedTitleSaveSlotId || slots[0].slotId;
+        const save = this.saveManager.readSave(resolvedSlotId);
         if (!save) {
           this.startNewGame();
           return;
@@ -5784,9 +5841,14 @@
         }
 
         if (this.state.screen === "title") {
-          renderTitleScreen(root, this.saveManager.listSaves(), (action) => {
+          renderTitleScreen(root, this.content, this.saveManager.listSaves(), this.selectedTitleSaveSlotId, (action, value) => {
             if (action === "new-game") this.showNewGameSetup();
             if (action === "continue") this.continueGame();
+            if (action === "select-save-slot") {
+              this.selectedTitleSaveSlotId = value;
+              this.render();
+            }
+            if (action === "load-save-slot") this.continueGame(value);
             if (action === "open-dev-tools") this.showDevTools();
             if (action === "load-folder") this.loadProjectFolder();
           }, this.titleNotice);
