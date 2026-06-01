@@ -221,6 +221,23 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       }
     ]
   },
+  "arenas": {
+    "arenas": [
+      {
+        "id": "Lily-Harbor-Arena",
+        "name": "Lily Harbor Arena",
+        "leaderName": "Heather",
+        "leaderTitle": "Leader",
+        "crestId": "crest-1",
+        "crestName": "New Crest",
+        "recommendedLevel": 5,
+        "partySize": 1,
+        "rewardText": "",
+        "description": "",
+        "mapId": "lily-harbor"
+      }
+    ]
+  },
   "trainers": {
     "trainers": []
   },
@@ -35447,15 +35464,30 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         {
           "id": "interaction-1",
           "type": "healing-center",
-          "x": 2560,
-          "y": 768,
-          "width": 128,
+          "x": 2432,
+          "y": 896,
+          "width": 256,
           "height": 128,
           "label": "New Interaction",
           "text": "Heal your party. ",
           "data": {
             "shopId": "",
             "arenaId": "",
+            "crestId": ""
+          }
+        },
+        {
+          "id": "Lily-Harbor-Arena",
+          "type": "arena",
+          "x": 1664,
+          "y": 896,
+          "width": 256,
+          "height": 128,
+          "label": "Lily Harbor Arena",
+          "text": "Add interaction text here.",
+          "data": {
+            "shopId": "",
+            "arenaId": "Lily-Harbor-Arena",
             "crestId": ""
           }
         }

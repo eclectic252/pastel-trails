@@ -162,7 +162,7 @@ async function loadMapMetadata(mapIds, maps) {
 }
 
 async function buildLocalContent() {
-  const [settings, themes, items, skills, monsters, towns, trainers, maps] = await Promise.all([
+  const [settings, themes, items, skills, monsters, towns, arenas, trainers, maps] = await Promise.all([
     readJson("data/settings.json"),
     readJson("data/themes.json"),
     readJson("data/items.json"),
@@ -179,6 +179,7 @@ async function buildLocalContent() {
     }),
     readJson("data/monsters.json"),
     readJson("data/towns.json"),
+    readOptionalJson("data/arenas.json", { arenas: [] }),
     readJson("data/trainers.json"),
     loadMaps(),
   ]);
@@ -192,6 +193,7 @@ async function buildLocalContent() {
     skills,
     monsters,
     towns,
+    arenas,
     trainers,
     maps,
     mapMetadata,

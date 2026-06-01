@@ -699,6 +699,25 @@ button {
   font-size: 0.92rem;
 }
 
+.dev-helper-text {
+  margin: 0.85rem 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.dev-helper-text strong {
+  color: var(--text);
+}
+
+.dev-helper-text-warning {
+  color: #9a4b34;
+}
+
+.dev-helper-text-success {
+  color: #2f6b45;
+}
+
 .monster-preview-card {
   display: grid;
   grid-template-columns: 180px minmax(0, 1fr);

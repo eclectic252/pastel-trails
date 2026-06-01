@@ -34,15 +34,30 @@
     {
       "id": "interaction-1",
       "type": "healing-center",
-      "x": 2560,
-      "y": 768,
-      "width": 128,
+      "x": 2432,
+      "y": 896,
+      "width": 256,
       "height": 128,
       "label": "New Interaction",
       "text": "Heal your party. ",
       "data": {
         "shopId": "",
         "arenaId": "",
+        "crestId": ""
+      }
+    },
+    {
+      "id": "Lily-Harbor-Arena",
+      "type": "arena",
+      "x": 1664,
+      "y": 896,
+      "width": 256,
+      "height": 128,
+      "label": "Lily Harbor Arena",
+      "text": "Add interaction text here.",
+      "data": {
+        "shopId": "",
+        "arenaId": "Lily-Harbor-Arena",
         "crestId": ""
       }
     }

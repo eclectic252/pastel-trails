@@ -1,0 +1,17 @@
+{
+  "arenas": [
+    {
+      "id": "Lily-Harbor-Arena",
+      "name": "Lily Harbor Arena",
+      "leaderName": "Heather",
+      "leaderTitle": "Leader",
+      "crestId": "crest-1",
+      "crestName": "New Crest",
+      "recommendedLevel": 5,
+      "partySize": 1,
+      "rewardText": "",
+      "description": "",
+      "mapId": "lily-harbor"
+    }
+  ]
+}

@@ -63,6 +63,7 @@
         },
       ],
     },
+    arenas: { arenas: [] },
     trainers: { trainers: [] },
     maps: {
       "lily-harbor": {
@@ -231,6 +232,7 @@
           };
         }),
       },
+      arenas: rawContent.arenas || JSON.parse(JSON.stringify(fallbackContent.arenas)),
       trainers: rawContent.trainers,
       maps,
       mapMetadata: metadata,
@@ -322,6 +324,7 @@
     const skills = await tryReadJsonFromHandle(rootHandle, ["data", "skills.json"]) || JSON.parse(JSON.stringify(fallbackContent.skills));
     const monsters = await readJsonFromHandle(rootHandle, ["data", "monsters.json"]);
     const towns = await readJsonFromHandle(rootHandle, ["data", "towns.json"]);
+    const arenas = await tryReadJsonFromHandle(rootHandle, ["data", "arenas.json"]) || JSON.parse(JSON.stringify(fallbackContent.arenas));
     const trainers = await readJsonFromHandle(rootHandle, ["data", "trainers.json"]);
 
     const maps = await loadAuthoredMapsFromAssets(rootHandle);
@@ -330,7 +333,7 @@
       mapMetadata[mapId] = await tryReadJsonFromHandle(rootHandle, ["data", "map-metadata", mapId + ".meta.json"]) || {};
     }
 
-    return normalizeContent({ settings, themes, items, skills, monsters, towns, trainers, maps, mapMetadata }, "directory");
+    return normalizeContent({ settings, themes, items, skills, monsters, towns, arenas, trainers, maps, mapMetadata }, "directory");
   }
 
   function loadEmbeddedContent() {
@@ -778,6 +781,102 @@
     }) || null;
   }
 
+  function ensureArenaCatalog(content) {
+    if (!content.arenas || !Array.isArray(content.arenas.arenas)) {
+      content.arenas = JSON.parse(JSON.stringify(fallbackContent.arenas));
+    }
+
+    return content.arenas.arenas;
+  }
+
+  function createEmptyArena(index) {
+    return {
+      id: "arena-" + index,
+      name: "New Arena",
+      leaderName: "Leader Name",
+      leaderTitle: "Leader",
+      crestId: "crest-" + index,
+      crestName: "New Crest",
+      recommendedLevel: 5,
+      partySize: 1,
+      rewardText: "",
+      description: "",
+      mapId: "",
+    };
+  }
+
+  function syncArenaDevSelection(content, devToolsState) {
+    const arenas = ensureArenaCatalog(content);
+    if (!arenas.find(function (entry) { return entry.id === devToolsState.selectedArenaId; })) {
+      devToolsState.selectedArenaId = arenas[0]?.id || "";
+    }
+  }
+
+  function getArena(content, arenaId) {
+    return ensureArenaCatalog(content).find(function (arena) {
+      return arena.id === arenaId;
+    }) || null;
+  }
+
+  function ensureArenaProgress(state) {
+    if (!state.arenaProgress) {
+      state.arenaProgress = {
+        clearedArenaIds: [],
+        earnedCrests: [],
+      };
+    }
+
+    if (!Array.isArray(state.arenaProgress.clearedArenaIds)) {
+      state.arenaProgress.clearedArenaIds = [];
+    }
+
+    if (!Array.isArray(state.arenaProgress.earnedCrests)) {
+      state.arenaProgress.earnedCrests = [];
+    }
+
+    return state.arenaProgress;
+  }
+
+  function buildArenaViewModel(state, content, interaction) {
+    const arenaId = interaction.data?.arenaId || "";
+    const arena = arenaId ? getArena(content, arenaId) : null;
+    const crestId = arena?.crestId || interaction.data?.crestId || "";
+    const progress = ensureArenaProgress(state);
+    const isCleared = (arenaId && progress.clearedArenaIds.includes(arenaId)) || (crestId && progress.earnedCrests.includes(crestId));
+
+    return {
+      arenaId,
+      arena,
+      crestId,
+      isCleared,
+      title: arena?.name || interaction.label || interaction.id || "Arena",
+      leaderName: arena?.leaderName || "Arena Leader",
+      leaderTitle: arena?.leaderTitle || "Leader",
+      crestName: arena?.crestName || crestId || "Unassigned Crest",
+      recommendedLevel: arena?.recommendedLevel ?? "TBD",
+      leaderPartySize: arena?.partySize ?? "TBD",
+      rewardText: arena?.rewardText || "Defeat the arena leader to earn this crest once trainer battles are connected.",
+      introText: interaction.text || arena?.description || "This arena is ready for leader metadata and crest progression.",
+      arenaStatus: isCleared
+        ? "Crest earned"
+        : "Arena framework ready. Trainer battle integration will connect here next.",
+    };
+  }
+
+  function buildArenaInteractionState(state, content, interaction) {
+    const view = buildArenaViewModel(state, content, interaction);
+    state.message = view.isCleared
+      ? "You checked back in at " + view.title + "."
+      : "You reviewed the challenge at " + view.title + ".";
+
+    state.interaction = {
+      id: interaction.id,
+      type: interaction.type,
+      title: view.title,
+      arena: view,
+    };
+  }
+
   function performHealingCenterService(state, content, interaction) {
     state.party.forEach(function (monster) {
       monster.currentHp = monster.stats.hp;
@@ -817,12 +916,12 @@
         actionLabel: "Restore Party",
       };
       return;
+    } else if (interaction.type === "arena") {
+      buildArenaInteractionState(state, content, interaction);
+      return;
     } else if (interaction.type === "shop") {
       text = text || "The shop interface is not built yet, but this is where it will open.";
       state.message = "Visited " + label + ".";
-    } else if (interaction.type === "arena") {
-      text = text || "The arena challenge flow is not built yet, but this is where it will start.";
-      state.message = "Checked in at " + label + ".";
     } else if (interaction.type === "door") {
       text = text || "This door does not lead anywhere yet.";
       state.message = "Examined " + label + ".";
@@ -953,6 +1052,10 @@
       ui: {
         activePanel: "",
       },
+      arenaProgress: {
+        clearedArenaIds: [],
+        earnedCrests: [],
+      },
       battle: null,
       interaction: null,
       message: content.mapMetadata[starterTown.mapId]?.safezone
@@ -976,6 +1079,10 @@
       ui: {
         activePanel: "",
       },
+      arenaProgress: save.arenaProgress || {
+        clearedArenaIds: [],
+        earnedCrests: [],
+      },
       battle: null,
       interaction: null,
       message: "Loaded " + save.saveName + ".",
@@ -989,6 +1096,8 @@
       state.world.transitionCooldownUntil = 0;
     }
 
+    ensureArenaProgress(state);
+
     return state;
   }
 
@@ -1000,6 +1109,7 @@
       player: state.player,
       world: state.world,
       settings: state.settings,
+      arenaProgress: ensureArenaProgress(state),
       party: state.party,
       bank: state.bank,
       registry: state.registry,
@@ -1904,6 +2014,41 @@
       ].join("");
     }
 
+    if (state.interaction.type === "arena") {
+      const arena = state.interaction.arena || {
+        leaderName: "Arena Leader",
+        leaderTitle: "Leader",
+        crestName: "Unassigned Crest",
+        recommendedLevel: "TBD",
+        leaderPartySize: "TBD",
+        rewardText: "Trainer battle rewards will be configured here.",
+        introText: "Arena framework ready.",
+        arenaStatus: "Arena framework ready.",
+      };
+
+      return [
+        '<div class="battle-overlay">',
+        '<section class="battle-modal world-panel-modal">',
+        '<div class="battle-headings">',
+        '<div><span class="eyebrow">Arena</span><h2>' + escapeHtml(state.interaction.title) + "</h2><p>" + escapeHtml(arena.leaderTitle + " " + arena.leaderName) + "</p></div>",
+        "</div>",
+        '<div class="world-panel-body">' +
+          '<div class="battle-log"><p>' + escapeHtml(arena.introText) + '</p><p>' + escapeHtml(arena.arenaStatus) + "</p></div>" +
+          '<div class="panel-block">' +
+            "<p><strong>Leader:</strong> " + escapeHtml(arena.leaderName) + "</p>" +
+            "<p><strong>Title:</strong> " + escapeHtml(arena.leaderTitle) + "</p>" +
+            "<p><strong>Crest Reward:</strong> " + escapeHtml(arena.crestName) + "</p>" +
+            "<p><strong>Recommended Level:</strong> " + escapeHtml(String(arena.recommendedLevel)) + "</p>" +
+            "<p><strong>Leader Party Size:</strong> " + escapeHtml(String(arena.leaderPartySize)) + "</p>" +
+            "<p><strong>Reward Notes:</strong> " + escapeHtml(arena.rewardText) + "</p>" +
+          "</div>" +
+        "</div>" +
+        '<div class="battle-actions"><button class="primary-button" type="button" data-action="close-interaction">Close</button></div>',
+        "</section>",
+        "</div>",
+      ].join("");
+    }
+
     return [
       '<div class="battle-overlay">',
       '<section class="battle-modal">',
@@ -1953,12 +2098,14 @@
         '<ul class="compact-list">' + (availableMonsters || "<li><span>No monsters listed for this map yet.</span></li>") + "</ul>",
       ].join("");
     } else if (panel === "character") {
+      const arenaProgress = ensureArenaProgress(state);
       panelBody = [
         "<p>Name: <strong>" + escapeHtml(state.player.name) + "</strong></p>",
         "<p>Avatar: " + escapeHtml(state.player.avatarId || "avatar-1") + "</p>",
         "<p>Money: $" + state.player.money + "</p>",
         "<p>Experience: " + Number(state.player.experience || 0) + "</p>",
         "<p>Last Town: " + escapeHtml(state.player.lastTownId || "Unknown") + "</p>",
+        "<p>Crests Earned: " + arenaProgress.earnedCrests.length + "</p>",
         "<p>Support skills are still a placeholder, but this is where they will appear.</p>",
       ].join("");
     } else if (panel === "inventory") {
@@ -1985,6 +2132,13 @@
         '<ul class="compact-list">' + bankList + "</ul>",
       ].join("");
     } else if (panel === "registry") {
+      const earnedCrests = ensureArenaProgress(state).earnedCrests.map(function (crestId) {
+        const arena = ensureArenaCatalog(content).find(function (entry) {
+          return entry.crestId === crestId;
+        });
+        const label = arena?.crestName || crestId;
+        return "<li><span>" + escapeHtml(label) + "</span><strong>Crest</strong></li>";
+      }).join("");
       const seenList = state.registry.seen.map(function (monsterId) {
         const species = getSpecies(content, monsterId);
         const caught = state.registry.caught.includes(monsterId) ? "Caught" : "Seen";
@@ -1994,6 +2148,8 @@
         "<p>Seen: " + state.registry.seen.length + "</p>",
         "<p>Caught: " + state.registry.caught.length + "</p>",
         '<ul class="compact-list">' + (seenList || "<li><span>No monsters logged yet.</span></li>") + "</ul>",
+        "<h3>Crests</h3>",
+        '<ul class="compact-list">' + (earnedCrests || "<li><span>No crests earned yet.</span></li>") + "</ul>",
       ].join("");
     } else if (panel === "quests") {
       panelBody = "<p>Quest tracking is still planned work. This panel is ready for that system when you want it.</p>";
@@ -2050,6 +2206,24 @@
     const selectedInteraction = interactions.find(function (interaction) {
       return interaction.id === selectedInteractionId;
     }) || interactions[0] || null;
+    const arenaOptions = ['<option value="">Unlinked</option>'].concat(
+      ensureArenaCatalog(content).map(function (arena) {
+        const selected = selectedInteraction?.data?.arenaId === arena.id ? " selected" : "";
+        return '<option value="' + escapeHtml(arena.id) + '"' + selected + ">" + escapeHtml(arena.name || arena.id) + " · " + escapeHtml(arena.id) + "</option>";
+      })
+    ).join("");
+    const linkedArena = selectedInteraction?.data?.arenaId
+      ? getArena(content, selectedInteraction.data.arenaId)
+      : null;
+    const arenaLinkStatus = selectedInteraction?.type === "arena"
+      ? (
+          !selectedInteraction.data?.arenaId
+            ? '<p class="dev-helper-text dev-helper-text-warning">This arena interaction is not linked yet. Pick an Arena ID from the Arenas tab.</p>'
+            : linkedArena
+              ? '<p class="dev-helper-text dev-helper-text-success">Linked to arena: <strong>' + escapeHtml(linkedArena.name || linkedArena.id) + "</strong>.</p>"
+              : '<p class="dev-helper-text dev-helper-text-warning">Arena ID <strong>' + escapeHtml(selectedInteraction.data.arenaId) + "</strong> does not match any arena record yet.</p>"
+        )
+      : "";
 
     const mapOptions = Object.keys(content.maps).map(function (candidateId) {
       const selected = selectedTransition?.targetMapId === candidateId ? " selected" : "";
@@ -2174,9 +2348,10 @@
           '<label class="input-group"><span>Height</span><input type="number" step="1" data-dev-interaction-field="height" value="' + Number(selectedInteraction.height || 128) + '" /></label>',
           '<label class="input-group dev-input-group-wide"><span>Text</span><textarea rows="4" data-dev-interaction-field="text">' + escapeHtml(selectedInteraction.text || "") + '</textarea></label>',
           '<label class="input-group"><span>Shop ID</span><input data-dev-interaction-field="data.shopId" value="' + escapeHtml(selectedInteraction.data?.shopId || "") + '" /></label>',
-          '<label class="input-group"><span>Arena ID</span><input data-dev-interaction-field="data.arenaId" value="' + escapeHtml(selectedInteraction.data?.arenaId || "") + '" /></label>',
+          '<label class="input-group"><span>Linked Arena ID</span><select data-dev-interaction-field="data.arenaId">' + arenaOptions + '</select></label>',
           '<label class="input-group"><span>Crest ID</span><input data-dev-interaction-field="data.crestId" value="' + escapeHtml(selectedInteraction.data?.crestId || "") + '" /></label>',
           "</div>",
+          arenaLinkStatus,
           '<div class="title-actions">',
           '<button class="secondary-button" type="button" data-action="duplicate-interaction">Duplicate</button>',
           '<button class="secondary-button" type="button" data-action="delete-interaction">Delete</button>',
@@ -2327,6 +2502,26 @@
       ctx.fillStyle = "#fff";
       ctx.font = "12px sans-serif";
       ctx.fillText(label, x + 8, Math.max(20, y - 12));
+
+      if (interaction.type === "arena") {
+        const badgeX = x + width / 2;
+        const badgeY = y + height / 2;
+        const isLinked = Boolean(interaction.data?.arenaId && getArena(content, interaction.data.arenaId));
+        ctx.beginPath();
+        ctx.fillStyle = isLinked ? "rgba(185, 120, 0, 0.95)" : "rgba(220, 89, 64, 0.95)";
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 2;
+        ctx.arc(badgeX, badgeY, 12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 12px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("A", badgeX, badgeY + 1);
+        ctx.textAlign = "start";
+        ctx.textBaseline = "alphabetic";
+      }
 
       if (isSelected && (devToolsState.editorMode || "transitions") === "interactions") {
         drawResizeHandles(interaction);
@@ -2780,7 +2975,7 @@
       '<main class="dev-screen">',
       '<header class="game-topbar">',
       '<div><span class="eyebrow">Dev Tools</span><strong>Map Editor</strong></div>',
-      '<div class="topbar-stats"><button class="' + (devToolsState.section === "maps" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-maps">Maps</button><button class="' + (devToolsState.section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button><button class="' + (devToolsState.section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button><button class="secondary-button" type="button" data-action="back-to-title">Back</button><button class="secondary-button" type="button" data-action="load-folder">Load Project Folder</button></div>',
+      '<div class="topbar-stats"><button class="' + (devToolsState.section === "maps" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-maps">Maps</button><button class="' + (devToolsState.section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button><button class="' + (devToolsState.section === "arenas" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-arenas">Arenas</button><button class="' + (devToolsState.section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button><button class="secondary-button" type="button" data-action="back-to-title">Back</button><button class="secondary-button" type="button" data-action="load-folder">Load Project Folder</button></div>',
       "</header>",
       '<section class="dev-screen-layout">',
       '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>Maps</h2></div><ul class="compact-list dev-map-list">' + mapList + "</ul></aside>",
@@ -2932,7 +3127,7 @@
         '<main class="dev-screen">',
         '<header class="game-topbar">',
         '<div><span class="eyebrow">Dev Tools</span><strong>Monster Editor</strong></div>',
-        '<div class="topbar-stats"><button class="' + (devToolsState.section === "maps" ? "secondary-button" : "primary-button") + '" type="button" data-action="dev-section-maps">Maps</button><button class="' + (devToolsState.section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button><button class="' + (devToolsState.section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button><button class="secondary-button" type="button" data-action="back-to-title">Back</button><button class="secondary-button" type="button" data-action="load-folder">Load Project Folder</button></div>',
+        '<div class="topbar-stats"><button class="' + (devToolsState.section === "maps" ? "secondary-button" : "primary-button") + '" type="button" data-action="dev-section-maps">Maps</button><button class="' + (devToolsState.section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button><button class="' + (devToolsState.section === "arenas" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-arenas">Arenas</button><button class="' + (devToolsState.section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button><button class="secondary-button" type="button" data-action="back-to-title">Back</button><button class="secondary-button" type="button" data-action="load-folder">Load Project Folder</button></div>',
         '</header>',
         '<section class="dev-screen-layout">',
         '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>' + (monsterSubMode === "species" ? "Monster Species" : "Skills") + '</h2><button class="secondary-button" type="button" data-action="' + addAction + '">' + addLabel + '</button></div><ul class="compact-list dev-map-list">' + (sidebarItems || "<li>No entries yet.</li>") + '</ul></aside>',
@@ -2950,6 +3145,68 @@
     const rendered = renderMonsterDevToolsEditor(content, devToolsState);
     root.innerHTML = rendered.html;
     return rendered.validation;
+  }
+
+  function renderArenaDevToolsScreen(root, content, devToolsState) {
+    const arenas = ensureArenaCatalog(content);
+    syncArenaDevSelection(content, devToolsState);
+
+    const selectedArena = arenas.find(function (entry) {
+      return entry.id === devToolsState.selectedArenaId;
+    }) || arenas[0] || null;
+
+    const arenaItems = arenas.map(function (entry) {
+      const selected = entry.id === devToolsState.selectedArenaId ? " compact-list-selected" : "";
+      return '<li class="' + selected.trim() + '"><button type="button" class="link-button" data-dev-select-arena="' + entry.id + '"><strong>' + escapeHtml(entry.name || entry.id) + '</strong><span>' + escapeHtml(entry.id) + ' · ' + escapeHtml(entry.leaderTitle || "Leader") + " " + escapeHtml(entry.leaderName || "TBD") + "</span></button></li>";
+    }).join("");
+
+    const linkedMapOptions = ['<option value="">Unlinked</option>'].concat(
+      Object.keys(content.maps).map(function (mapId) {
+        const selected = selectedArena?.mapId === mapId ? " selected" : "";
+        const label = content.mapMetadata[mapId]?.displayName || mapId;
+        return '<option value="' + escapeHtml(mapId) + '"' + selected + ">" + escapeHtml(label) + "</option>";
+      })
+    ).join("");
+
+    const arenaEditor = selectedArena
+      ? [
+          '<section class="panel-block dev-editor-panel">',
+          '<div class="section-heading"><h2>Arena Settings</h2><div class="topbar-stats"><button class="secondary-button" type="button" data-action="duplicate-arena">Duplicate</button><button class="secondary-button" type="button" data-action="delete-arena">Delete</button></div></div>',
+          '<div class="form-grid">',
+          '<label class="input-group"><span>Arena ID</span><input data-dev-arena-field="id" value="' + escapeHtml(selectedArena.id || "") + '" /></label>',
+          '<label class="input-group"><span>Arena Name</span><input data-dev-arena-field="name" value="' + escapeHtml(selectedArena.name || "") + '" /></label>',
+          '<label class="input-group"><span>Leader Name</span><input data-dev-arena-field="leaderName" value="' + escapeHtml(selectedArena.leaderName || "") + '" /></label>',
+          '<label class="input-group"><span>Leader Title</span><input data-dev-arena-field="leaderTitle" value="' + escapeHtml(selectedArena.leaderTitle || "") + '" /></label>',
+          '<label class="input-group"><span>Crest ID</span><input data-dev-arena-field="crestId" value="' + escapeHtml(selectedArena.crestId || "") + '" /></label>',
+          '<label class="input-group"><span>Crest Name</span><input data-dev-arena-field="crestName" value="' + escapeHtml(selectedArena.crestName || "") + '" /></label>',
+          '<label class="input-group"><span>Recommended Level</span><input type="number" step="1" min="1" data-dev-arena-field="recommendedLevel" value="' + Number(selectedArena.recommendedLevel || 1) + '" /></label>',
+          '<label class="input-group"><span>Leader Party Size</span><input type="number" step="1" min="1" data-dev-arena-field="partySize" value="' + Number(selectedArena.partySize || 1) + '" /></label>',
+          '<label class="input-group"><span>Linked Map</span><select data-dev-arena-field="mapId">' + linkedMapOptions + '</select></label>',
+          '<label class="input-group dev-input-group-wide"><span>Description</span><textarea rows="4" data-dev-arena-field="description">' + escapeHtml(selectedArena.description || "") + '</textarea></label>',
+          '<label class="input-group dev-input-group-wide"><span>Reward Notes</span><textarea rows="4" data-dev-arena-field="rewardText">' + escapeHtml(selectedArena.rewardText || "") + '</textarea></label>',
+          '</div>',
+          '</section>',
+          '<section class="panel-block"><div class="section-heading"><h2>Preview</h2></div><p><strong>' + escapeHtml(selectedArena.name || selectedArena.id) + '</strong></p><p>' + escapeHtml((selectedArena.leaderTitle || "Leader") + " " + (selectedArena.leaderName || "TBD")) + '</p><p>Crest: ' + escapeHtml(selectedArena.crestName || selectedArena.crestId || "Unassigned") + '</p><p>Recommended Level: ' + escapeHtml(String(selectedArena.recommendedLevel || "TBD")) + ' · Party Size: ' + escapeHtml(String(selectedArena.partySize || "TBD")) + '</p><p>' + escapeHtml(selectedArena.description || "No arena description yet.") + '</p></section>',
+        ].join("")
+      : '<section class="panel-block dev-editor-panel"><h2>No Arena Selected</h2><p>Add a new arena to begin editing.</p></section>';
+
+    root.innerHTML = [
+      '<main class="dev-screen">',
+      '<header class="game-topbar">',
+      '<div><span class="eyebrow">Dev Tools</span><strong>Arena Editor</strong></div>',
+      '<div class="topbar-stats"><button class="' + (devToolsState.section === "maps" ? "secondary-button" : "primary-button") + '" type="button" data-action="dev-section-maps">Maps</button><button class="' + (devToolsState.section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button><button class="' + (devToolsState.section === "arenas" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-arenas">Arenas</button><button class="' + (devToolsState.section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button><button class="secondary-button" type="button" data-action="back-to-title">Back</button><button class="secondary-button" type="button" data-action="load-folder">Load Project Folder</button></div>',
+      '</header>',
+      '<section class="dev-screen-layout">',
+      '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>Arenas</h2><button class="secondary-button" type="button" data-action="add-arena">Add Arena</button></div><ul class="compact-list dev-map-list">' + (arenaItems || "<li>No arenas yet.</li>") + '</ul></aside>',
+      '<section class="dev-main">',
+      '<section class="panel-block dev-preview-controls"><div class="section-heading"><h2>Arena Tools</h2></div><p>Edit arena leader and crest metadata in-memory, then export <code>arenas.json</code> into <code>data/</code> and rebuild local content before reloading the game.</p><div class="title-actions"><button class="secondary-button" type="button" data-action="export-arenas-json">Export arenas.json</button></div></section>',
+      arenaEditor,
+      '</section>',
+      '</section>',
+      '</main>',
+    ].join("");
+
+    return null;
   }
 
   function drawTownDevPreview(canvas, content, devToolsState) {
@@ -3038,7 +3295,7 @@
       '<main class="dev-screen">',
       '<header class="game-topbar">',
       '<div><span class="eyebrow">Dev Tools</span><strong>Town Editor</strong></div>',
-      '<div class="topbar-stats"><button class="' + (devToolsState.section === "maps" ? "secondary-button" : "primary-button") + '" type="button" data-action="dev-section-maps">Maps</button><button class="' + (devToolsState.section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button><button class="' + (devToolsState.section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button><button class="secondary-button" type="button" data-action="back-to-title">Back</button><button class="secondary-button" type="button" data-action="load-folder">Load Project Folder</button></div>',
+      '<div class="topbar-stats"><button class="' + (devToolsState.section === "maps" ? "secondary-button" : "primary-button") + '" type="button" data-action="dev-section-maps">Maps</button><button class="' + (devToolsState.section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button><button class="' + (devToolsState.section === "arenas" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-arenas">Arenas</button><button class="' + (devToolsState.section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button><button class="secondary-button" type="button" data-action="back-to-title">Back</button><button class="secondary-button" type="button" data-action="load-folder">Load Project Folder</button></div>',
       "</header>",
       '<section class="dev-screen-layout">',
       '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>Towns</h2></div><ul class="compact-list dev-map-list">' + (townList || "<li>No town maps available.</li>") + "</ul></aside>",
@@ -3065,6 +3322,10 @@
   function renderDevToolsScreen(root, content, devToolsState) {
     if (devToolsState.section === "towns") {
       return renderTownDevToolsScreen(root, content, devToolsState);
+    }
+
+    if (devToolsState.section === "arenas") {
+      return renderArenaDevToolsScreen(root, content, devToolsState);
     }
 
     if (devToolsState.section === "monsters") {
@@ -3193,6 +3454,9 @@
     root.querySelector('[data-action="dev-section-towns"]')?.addEventListener("click", function () {
       app.setDevSection("towns");
     });
+    root.querySelector('[data-action="dev-section-arenas"]')?.addEventListener("click", function () {
+      app.setDevSection("arenas");
+    });
     root.querySelector('[data-action="dev-section-monsters"]')?.addEventListener("click", function () {
       app.setDevSection("monsters");
     });
@@ -3245,6 +3509,18 @@
     });
     root.querySelector('[data-action="export-skills-json"]')?.addEventListener("click", function () {
       app.exportSkillsJson();
+    });
+    root.querySelector('[data-action="add-arena"]')?.addEventListener("click", function () {
+      app.addArena();
+    });
+    root.querySelector('[data-action="duplicate-arena"]')?.addEventListener("click", function () {
+      app.duplicateArena();
+    });
+    root.querySelector('[data-action="delete-arena"]')?.addEventListener("click", function () {
+      app.deleteArena();
+    });
+    root.querySelector('[data-action="export-arenas-json"]')?.addEventListener("click", function () {
+      app.exportArenasJson();
     });
 
     root.querySelector('[data-action="add-transition"]')?.addEventListener("click", function () {
@@ -3340,6 +3616,11 @@
     root.querySelectorAll("[data-dev-select-skill]").forEach(function (button) {
       button.addEventListener("click", function () {
         app.selectSkill(button.getAttribute("data-dev-select-skill"));
+      });
+    });
+    root.querySelectorAll("[data-dev-select-arena]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.selectArena(button.getAttribute("data-dev-select-arena"));
       });
     });
 
@@ -3469,6 +3750,21 @@
         });
       }
     });
+    root.querySelectorAll("[data-dev-arena-field]").forEach(function (field) {
+      const useDeferredRender = isDeferredDevTextField(field);
+      const eventName = field.tagName === "SELECT" ? "change" : "input";
+      field.addEventListener(eventName, function () {
+        app.updateArenaField(field.getAttribute("data-dev-arena-field"), field.value, !useDeferredRender);
+        if (useDeferredRender) {
+          app.clearDeferredRender();
+        }
+      });
+      if (useDeferredRender) {
+        field.addEventListener("change", function () {
+          app.updateArenaField(field.getAttribute("data-dev-arena-field"), field.value);
+        });
+      }
+    });
     root.querySelectorAll("[data-dev-interaction-field]").forEach(function (field) {
       const useDeferredRender = isDeferredDevTextField(field);
       const eventName = field.tagName === "SELECT" ? "change" : "input";
@@ -3553,6 +3849,12 @@
             app.setDevSection("towns");
             return;
           }
+          if (action === "dev-section-arenas") {
+            event.preventDefault();
+            event.stopPropagation();
+            app.setDevSection("arenas");
+            return;
+          }
           if (action === "dev-section-monsters") {
             event.preventDefault();
             event.stopPropagation();
@@ -3612,6 +3914,12 @@
         const townEl = target.closest("[data-dev-select-town-map]");
         if (townEl instanceof HTMLElement) {
           app.selectTownMap(townEl.getAttribute("data-dev-select-town-map"));
+          return;
+        }
+
+        const arenaEl = target.closest("[data-dev-select-arena]");
+        if (arenaEl instanceof HTMLElement) {
+          app.selectArena(arenaEl.getAttribute("data-dev-select-arena"));
           return;
         }
 
@@ -3681,6 +3989,7 @@
         selectedTownMapId: Object.keys(content.maps).find(function (mapId) {
           return content.mapMetadata[mapId]?.isTown;
         }) || "",
+        selectedArenaId: ensureArenaCatalog(content)[0]?.id || "",
         selectedTransitionId: "",
         selectedSpawnId: "",
         selectedInteractionId: "",
@@ -3731,6 +4040,7 @@
         const interactions = getEditableInteractions(this.content.mapMetadata[this.devTools.selectedMapId]);
         this.devTools.selectedInteractionId = interactions[0]?.id || "";
         syncMonsterDevSelection(this.content, this.devTools);
+        syncArenaDevSelection(this.content, this.devTools);
         this.state = { screen: "dev-tools" };
         this.render();
       },
@@ -3922,8 +4232,10 @@
           validateContent(nextContent);
           this.content = nextContent;
           syncMonsterDevSelection(this.content, this.devTools);
+          syncArenaDevSelection(this.content, this.devTools);
           this.devTools.selectedMapId = Object.keys(nextContent.maps)[0] || "";
           this.devTools.selectedTownMapId = Object.keys(nextContent.maps).find((mapId) => nextContent.mapMetadata[mapId]?.isTown) || "";
+          this.devTools.selectedArenaId = ensureArenaCatalog(nextContent)[0]?.id || "";
           this.devTools.selectedTransitionId = nextContent.mapMetadata[this.devTools.selectedMapId]?.transitions?.[0]?.id || "";
           this.devTools.selectedSpawnId = getEditableVisibleSpawns(nextContent.mapMetadata[this.devTools.selectedMapId])[0]?.id || "";
           this.devTools.selectedInteractionId = getEditableInteractions(nextContent.mapMetadata[this.devTools.selectedMapId])[0]?.id || "";
@@ -3953,10 +4265,17 @@
         ensureTownEntryForMap(this.content, mapId);
         this.render();
       },
+      selectArena: function (arenaId) {
+        this.devTools.selectedArenaId = arenaId;
+        this.render();
+      },
       setDevSection: function (section) {
         this.devTools.section = section;
         if (section === "towns" && !this.devTools.selectedTownMapId) {
           this.devTools.selectedTownMapId = Object.keys(this.content.maps).find((mapId) => this.content.mapMetadata[mapId]?.isTown) || "";
+        }
+        if (section === "arenas") {
+          syncArenaDevSelection(this.content, this.devTools);
         }
         syncMonsterDevSelection(this.content, this.devTools);
         this.render();
@@ -4501,6 +4820,23 @@
           this.render();
         }
       },
+      updateArenaField: function (path, rawValue, shouldRender) {
+        const arena = ensureArenaCatalog(this.content).find((entry) => entry.id === this.devTools.selectedArenaId);
+        if (!arena) {
+          return;
+        }
+
+        const numericFields = new Set(["recommendedLevel", "partySize"]);
+        const value = numericFields.has(path) ? Number(rawValue || 0) : rawValue;
+        arena[path] = value;
+        if (path === "id") {
+          this.devTools.selectedArenaId = rawValue;
+        }
+
+        if (shouldRender !== false) {
+          this.render();
+        }
+      },
       toggleSpeciesSkill: function (skillId, checked) {
         const species = this.content.monsters.species.find((entry) => entry.id === this.devTools.selectedSpeciesId);
         if (!species) {
@@ -4554,6 +4890,47 @@
         const anchor = document.createElement("a");
         anchor.href = url;
         anchor.download = "towns.json";
+        anchor.click();
+        URL.revokeObjectURL(url);
+      },
+      addArena: function () {
+        const arenas = ensureArenaCatalog(this.content);
+        const next = createEmptyArena(arenas.length + 1);
+        arenas.push(next);
+        this.devTools.selectedArenaId = next.id;
+        this.devTools.section = "arenas";
+        this.render();
+      },
+      duplicateArena: function () {
+        const arenas = ensureArenaCatalog(this.content);
+        const current = arenas.find((entry) => entry.id === this.devTools.selectedArenaId);
+        if (!current) {
+          return;
+        }
+
+        const duplicate = JSON.parse(JSON.stringify(current));
+        duplicate.id = current.id + "-copy";
+        duplicate.name = current.name + " Copy";
+        duplicate.crestId = (current.crestId || current.id + "-crest") + "-copy";
+        duplicate.crestName = current.crestName ? current.crestName + " Copy" : "Copied Crest";
+        arenas.push(duplicate);
+        this.devTools.selectedArenaId = duplicate.id;
+        this.render();
+      },
+      deleteArena: function () {
+        this.content.arenas.arenas = ensureArenaCatalog(this.content).filter((entry) => entry.id !== this.devTools.selectedArenaId);
+        syncArenaDevSelection(this.content, this.devTools);
+        this.render();
+      },
+      exportArenasJson: function () {
+        const payload = {
+          arenas: ensureArenaCatalog(this.content),
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = "arenas.json";
         anchor.click();
         URL.revokeObjectURL(url);
       },
