@@ -1324,6 +1324,7 @@
       enemy,
       playerIndex: 0,
       log: ["A wild " + species.name + " approached in Lily Harbor."],
+      menu: "root",
       outcome: null,
     };
   }
@@ -1392,6 +1393,7 @@
       enemy: team[0],
       playerIndex: 0,
       log: [(arena.leaderTitle || "Leader") + " " + (arena.leaderName || "Arena Leader") + " challenges you to a battle."],
+      menu: "root",
       outcome: null,
     };
     state.message = "Arena battle started at " + (arena.name || interaction.label || "the arena") + ".";
@@ -1497,6 +1499,24 @@
     });
   }
 
+  function useBattleSkill(state, content, skillId) {
+    if (!state.battle || state.battle.outcome) {
+      return;
+    }
+
+    const skill = ensureSkillCatalog(content).find(function (entry) {
+      return entry.id === skillId;
+    });
+
+    if (skill) {
+      const activeMonster = state.party[state.battle.playerIndex];
+      const species = getSpecies(content, activeMonster.speciesId);
+      state.battle.log.unshift((species?.name || "Your monster") + " used " + skill.name + ".");
+    }
+
+    resolveBattleAttack(state, content);
+  }
+
   function resolveCatch(state, content) {
     if (!state.battle || state.battle.outcome || state.battle.type === "trainer") {
       return;
@@ -1538,6 +1558,50 @@
     }
 
     state.battle.log.unshift(species.name + " broke free.");
+    resolveEnemyCounter(state, content);
+  }
+
+  function resolveBefriend(state, content) {
+    if (!state.battle || state.battle.outcome || state.battle.type === "trainer") {
+      return;
+    }
+
+    const enemy = state.battle.enemy;
+    const species = getSpecies(content, enemy.speciesId);
+    const item = state.inventory.find(function (entry) {
+      return entry.itemId === "basic-orb" && entry.quantity > 0;
+    });
+
+    if (!item) {
+      state.battle.log.unshift("You have no Basic Orbs left to support a befriending attempt.");
+      return;
+    }
+
+    item.quantity -= 1;
+    const hpRatio = enemy.currentHp / enemy.maxHp;
+    const befriendChance = Math.max(0.25, 0.95 - hpRatio * 0.7);
+
+    if (Math.random() <= befriendChance) {
+      const befriended = createMonsterInstance(species, enemy.level);
+      befriended.variantId = enemy.variantId || befriended.variantId;
+      state.registry.seen = Array.from(new Set(state.registry.seen.concat(species.id)));
+      state.registry.caught = Array.from(new Set(state.registry.caught.concat(species.id)));
+
+      if (state.party.length < state.settings.partySize) {
+        state.party.push(befriended);
+        state.message = species.name + " joined your party as a new friend.";
+      } else {
+        state.bank.push(befriended);
+        state.message = species.name + " was sent to the bank because your party is full.";
+      }
+
+      markWildMonsterDefeated(state, enemy.wildMonsterId);
+      state.battle.outcome = "caught";
+      state.battle.log.unshift("Success. You befriended " + species.name + ".");
+      return;
+    }
+
+    state.battle.log.unshift(species.name + " was not ready to befriend you yet.");
     resolveEnemyCounter(state, content);
   }
 
@@ -2139,6 +2203,43 @@
     return remaining + "s";
   }
 
+  function getInventoryQuantity(state, itemId) {
+    return Number(state.inventory.find(function (entry) {
+      return entry.itemId === itemId;
+    })?.quantity || 0);
+  }
+
+  function renderBattleMonsterCard(content, monster, options) {
+    const species = getSpecies(content, monster.speciesId);
+    const variant = getSpeciesVariant(species, monster.variantId || "default");
+    const variantLabel = formatMonsterVariantLabel(variant?.id || monster.variantId || "default");
+    const sprite = variant?.sprite || "";
+    const maxHp = Number(options.maxHp || monster.maxHp || monster.stats?.hp || 1);
+    const currentHp = Number(options.currentHp || monster.currentHp || 0);
+    const hpPercent = Math.max(0, Math.min(100, (currentHp / Math.max(1, maxHp)) * 100));
+    const subtitle = options.subtitle
+      ? '<p class="battle-card-subtitle">' + escapeHtml(options.subtitle) + "</p>"
+      : "";
+    const visual = sprite
+      ? '<img class="battle-monster-sprite" src="' + escapeHtml(sprite) + '" alt="' + escapeHtml((species?.name || monster.speciesId) + " " + variantLabel) + '" />'
+      : '<div class="battle-monster-fallback">' + escapeHtml((species?.name || monster.speciesId || "?").slice(0, 1)) + "</div>";
+    const labelLine = "Lv " + Number(monster.level || 1) + " " + (species?.name || monster.speciesId);
+    const className = options.className ? " " + options.className : "";
+
+    return [
+      '<article class="battle-monster-card' + className + '">',
+      '<div class="battle-monster-meta">',
+      '<h3 class="battle-monster-name">' + escapeHtml(labelLine) + "</h3>",
+      '<p class="battle-card-variant">' + escapeHtml(variantLabel) + "</p>",
+      subtitle,
+      '<div class="battle-hp-row"><span>' + currentHp + "/" + maxHp + ' HP</span><span>' + Math.round(hpPercent) + "%</span></div>",
+      '<div class="battle-hp-bar"><span style="width:' + hpPercent + '%"></span></div>',
+      "</div>",
+      '<div class="battle-monster-visual"><div class="battle-monster-shadow"></div>' + visual + "</div>",
+      "</article>",
+    ].join("");
+  }
+
   function renderTitleScreen(root, content, saveSlots, selectedSlotId, onAction, notice) {
     const effectiveSelectedSlotId = selectedSlotId || saveSlots[0]?.slotId || "";
     const totalAvailableMonsters = content.monsters?.species?.length || 0;
@@ -2341,46 +2442,108 @@
     }
 
     const activeMonster = state.party[state.battle.playerIndex];
-    const activeSpecies = getSpecies(content, activeMonster.speciesId);
     const enemy = state.battle.enemy;
     const isTrainerBattle = state.battle.type === "trainer";
-    const battleLabel = isTrainerBattle ? "Trainer Battle" : "Wild";
-    const opponentLabel = isTrainerBattle
+    const enemySpecies = getSpecies(content, enemy.speciesId);
+    const enemyVariant = getSpeciesVariant(enemySpecies, enemy.variantId || "default");
+    const activeSpecies = getSpecies(content, activeMonster.speciesId);
+    const activeVariant = getSpeciesVariant(activeSpecies, activeMonster.variantId || "default");
+    const battleLabel = isTrainerBattle
       ? escapeHtml((state.battle.opponentTitle || "Leader") + " " + (state.battle.opponentName || "Trainer"))
-      : "";
+      : escapeHtml("Wild " + (enemySpecies?.name || enemy.speciesId) + " (" + formatMonsterVariantLabel(enemyVariant?.id || enemy.variantId || "default") + ")");
+    const tonicCount = getInventoryQuantity(state, "small-tonic");
+    const orbCount = getInventoryQuantity(state, "basic-orb");
+    const hasBench = state.party.length > 1;
+    const activeSkills = (activeMonster.skills || []).map(function (skillId) {
+      return ensureSkillCatalog(content).find(function (entry) {
+        return entry.id === skillId;
+      });
+    }).filter(Boolean);
+    const partyRoster = state.party.map(function (monster, index) {
+      const species = getSpecies(content, monster.speciesId);
+      const variant = getSpeciesVariant(species, monster.variantId || "default");
+      const disabled = index === state.battle.playerIndex || monster.currentHp <= 0 || state.battle.outcome;
+      return [
+        '<button class="battle-party-chip' + (index === state.battle.playerIndex ? " battle-party-chip-active" : "") + '" type="button" data-battle-swap-to="' + index + '"' + (disabled ? " disabled" : "") + '>',
+        '<strong>' + escapeHtml(species?.name || monster.speciesId) + "</strong>",
+        '<span>Lv ' + Number(monster.level || 1) + " · " + escapeHtml(formatMonsterVariantLabel(variant?.id || monster.variantId || "default")) + "</span>",
+        '<span>HP ' + Number(monster.currentHp || 0) + "/" + Number(monster.stats?.hp || 0) + "</span>",
+        "</button>",
+      ].join("");
+    }).join("");
 
     const outcomeButton = state.battle.outcome
       ? '<button class="primary-button" type="button" data-battle-action="close-battle">Return</button>'
       : "";
+    const menu = state.battle.menu || "root";
+    const isRootMenu = !state.battle.outcome && menu === "root";
+    let commandCopy = "Choose Fight, Switch, Item, Befriend, or Run.";
+    let actionPanel = "";
+    let rootActionPanel = "";
 
-    const actionButtons = isTrainerBattle
-      ? [
-          '<button type="button" data-battle-action="attack">Attack</button>',
-          '<button type="button" data-battle-action="item">Item</button>',
-          '<button type="button" data-battle-action="swap">Swap</button>',
-        ].join("")
-      : [
-          '<button type="button" data-battle-action="attack">Attack</button>',
-          '<button type="button" data-battle-action="item">Item</button>',
-          '<button type="button" data-battle-action="swap">Swap</button>',
-          '<button type="button" data-battle-action="catch">Catch</button>',
-          '<button type="button" data-battle-action="run">Run</button>',
-        ].join("");
+    if (state.battle.outcome) {
+      actionPanel = '<div class="battle-action-grid battle-action-grid-single">' + outcomeButton + "</div>";
+    } else if (menu === "fight") {
+      commandCopy = "Choose a skill to use.";
+      actionPanel = '<div class="battle-action-grid">' +
+        activeSkills.map(function (skill) {
+          return '<button type="button" class="battle-action-card" data-battle-skill="' + escapeHtml(skill.id) + '"><strong>' + escapeHtml(skill.name) + '</strong><span>' + escapeHtml(skill.kind || "skill") + " · Power " + Number(skill.power || 0) + "</span></button>";
+        }).join("") +
+        '<button type="button" class="battle-action-card battle-action-card-secondary" data-battle-action="back-menu"><strong>Back</strong><span>Return to commands</span></button>' +
+      "</div>";
+    } else if (menu === "switch") {
+      commandCopy = "Choose a party monster to switch into battle.";
+      actionPanel = '<div class="battle-action-grid battle-action-grid-single">' +
+        partyRoster +
+        '<button type="button" class="battle-action-card battle-action-card-secondary" data-battle-action="back-menu"><strong>Back</strong><span>Return to commands</span></button>' +
+      "</div>";
+    } else if (menu === "item") {
+      commandCopy = "Choose an item to use.";
+      actionPanel = '<div class="battle-action-grid">' +
+        '<button type="button" class="battle-action-card" data-battle-action="use-tonic"' + (tonicCount <= 0 ? " disabled" : "") + '><strong>Small Tonic</strong><span>x' + tonicCount + " · Recover 20 HP</span></button>" +
+        '<button type="button" class="battle-action-card battle-action-card-secondary" data-battle-action="back-menu"><strong>Back</strong><span>Return to commands</span></button>' +
+      "</div>";
+    } else {
+      actionPanel = '<div class="battle-action-grid battle-action-grid-single"><div class="battle-suboption-placeholder">Choose a command to continue.</div></div>';
+    }
+
+    if (!state.battle.outcome) {
+      rootActionPanel = '<div class="battle-action-grid battle-action-grid-root">' +
+        '<button type="button" class="battle-action-card battle-action-card-root' + (menu === "fight" ? " battle-action-card-selected" : "") + '" data-battle-action="open-fight-menu"><strong>Fight</strong><span>Skills</span></button>' +
+        '<button type="button" class="battle-action-card battle-action-card-root' + (menu === "switch" ? " battle-action-card-selected" : "") + '" data-battle-action="open-switch-menu"' + (!hasBench ? " disabled" : "") + '><strong>Switch</strong><span>Party</span></button>' +
+        '<button type="button" class="battle-action-card battle-action-card-root' + (menu === "item" ? " battle-action-card-selected" : "") + '" data-battle-action="open-item-menu"><strong>Item</strong><span>Support</span></button>' +
+        '<button type="button" class="battle-action-card battle-action-card-root' + (menu === "befriend" ? " battle-action-card-selected" : "") + '" data-battle-action="befriend"' + (isTrainerBattle || orbCount <= 0 ? " disabled" : "") + '><strong>Befriend</strong><span>Attempt</span></button>' +
+        '<button type="button" class="battle-action-card battle-action-card-root' + (menu === "run" ? " battle-action-card-selected" : "") + '" data-battle-action="run"' + (isTrainerBattle ? " disabled" : "") + '><strong>Run</strong><span>Leave</span></button>' +
+      "</div>";
+    }
 
     return [
       '<div class="battle-overlay">',
       '<section class="battle-modal">',
-      '<div class="battle-headings">',
-      '<div><span class="eyebrow">' + battleLabel + '</span><h2>' + enemy.name + " Lv " + enemy.level + "</h2><p>" + (opponentLabel ? opponentLabel + " · " : "") + "HP " + enemy.currentHp + "/" + enemy.maxHp + "</p></div>",
-      '<div><span class="eyebrow">Your Monster</span><h2>' + activeSpecies.name + " Lv " + activeMonster.level + "</h2><p>HP " + activeMonster.currentHp + "/" + activeMonster.stats.hp + "</p></div>",
+      '<div class="battle-headings battle-headings-stacked">',
+      '<div><p>' + escapeHtml(content.mapMetadata[state.world.currentMapId]?.displayName || state.world.currentMapId) + "</p></div>",
       "</div>",
-      '<div class="battle-log">' + state.battle.log.slice(0, 6).map(function (entry) {
-        return "<p>" + entry + "</p>";
-      }).join("") + "</div>",
-      '<div class="battle-actions">',
-      actionButtons,
-      outcomeButton,
-      "</div>",
+      '<section class="battle-stage">' +
+        renderBattleMonsterCard(content, enemy, {
+          className: "battle-monster-card-enemy",
+          maxHp: enemy.maxHp,
+          currentHp: enemy.currentHp,
+        }) +
+        renderBattleMonsterCard(content, activeMonster, {
+          className: "battle-monster-card-player",
+          maxHp: activeMonster.stats.hp,
+          currentHp: activeMonster.currentHp,
+        }) +
+      '</section>',
+      '<section class="battle-command-shell">' +
+        '<div class="battle-log battle-log-command"><p>' + escapeHtml(commandCopy) + '</p>' + state.battle.log.slice(0, 4).map(function (entry) {
+          return "<p>" + entry + "</p>";
+        }).join("") + "</div>" +
+        '<div class="battle-command-panel' + (isRootMenu ? " battle-command-panel-root" : "") + '">' +
+          rootActionPanel +
+          '<div class="battle-suboptions-shell">' + actionPanel + '</div>' +
+        '</div>' +
+      "</section>",
       "</section>",
       "</div>",
     ].join("");
@@ -3922,6 +4085,16 @@
         app.handleBattleAction(button.getAttribute("data-battle-action"));
       });
     });
+    root.querySelectorAll("[data-battle-skill]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.useBattleSkill(button.getAttribute("data-battle-skill"));
+      });
+    });
+    root.querySelectorAll("[data-battle-swap-to]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.swapBattleMonsterTo(Number(button.getAttribute("data-battle-swap-to")));
+      });
+    });
 
     root.querySelectorAll("[data-touch]").forEach(function (button) {
       const key = button.getAttribute("data-touch");
@@ -4753,26 +4926,75 @@
           return;
         }
 
-        if (action === "attack") {
+        if (action === "open-fight-menu") {
+          this.state.battle.menu = "fight";
+        } else if (action === "open-switch-menu") {
+          this.state.battle.menu = "switch";
+        } else if (action === "open-item-menu") {
+          this.state.battle.menu = "item";
+        } else if (action === "back-menu") {
+          this.state.battle.menu = "root";
+        } else if (action === "attack") {
           resolveBattleAttack(this.state, this.content);
-        } else if (action === "item") {
+        } else if (action === "item" || action === "use-tonic") {
           useTonic(this.state, this.content);
+          this.state.battle.menu = "root";
         } else if (action === "swap") {
           swapMonster(this.state, this.content);
+          this.state.battle.menu = "root";
         } else if (action === "catch") {
           if (this.state.battle.type === "trainer") {
             return;
           }
           resolveCatch(this.state, this.content);
+          this.state.battle.menu = "root";
+        } else if (action === "befriend") {
+          if (this.state.battle.type === "trainer") {
+            return;
+          }
+          resolveBefriend(this.state, this.content);
+          this.state.battle.menu = "root";
         } else if (action === "run") {
           if (this.state.battle.type === "trainer") {
             return;
           }
           attemptRun(this.state, this.content);
+          this.state.battle.menu = "root";
         } else if (action === "close-battle") {
           this.state.battle = null;
         }
 
+        this.render();
+      },
+      useBattleSkill: function (skillId) {
+        if (!this.state.battle || this.state.battle.outcome) {
+          return;
+        }
+
+        useBattleSkill(this.state, this.content, skillId);
+        if (this.state.battle) {
+          this.state.battle.menu = "root";
+        }
+        this.render();
+      },
+      swapBattleMonsterTo: function (partyIndex) {
+        if (!this.state.battle || this.state.battle.outcome) {
+          return;
+        }
+
+        if (partyIndex === this.state.battle.playerIndex) {
+          return;
+        }
+
+        const targetMonster = this.state.party[partyIndex];
+        if (!targetMonster || targetMonster.currentHp <= 0) {
+          return;
+        }
+
+        this.state.battle.playerIndex = partyIndex;
+        this.state.battle.log.unshift("You swapped to another monster.");
+        resolveEnemyCounter(this.state, this.content);
+        this.state.battle.menu = "root";
         this.render();
       },
       startArenaBattleFromInteraction: function () {
