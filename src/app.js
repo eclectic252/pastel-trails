@@ -3708,6 +3708,10 @@
     pushSelector("data-dev-town-field");
     pushSelector("data-dev-spawn-option-field");
     pushSelector("data-dev-interaction-field");
+    pushSelector("data-dev-character-field");
+    pushSelector("data-dev-arena-field");
+    pushSelector("data-dev-arena-team-field");
+    pushSelector("data-dev-arena-pool-field");
 
     if (!selectorParts.length) {
       return null;
@@ -5445,11 +5449,16 @@
       }
     });
     root.querySelectorAll("[data-dev-character-field]").forEach(function (field) {
-      field.addEventListener("change", function () {
-        app.updateCharacterSheetField(field.getAttribute("data-dev-character-field"), field.value);
+      const useDeferredRender = isDeferredDevTextField(field);
+      const eventName = field.tagName === "SELECT" ? "change" : "input";
+      field.addEventListener(eventName, function () {
+        app.updateCharacterSheetField(field.getAttribute("data-dev-character-field"), field.value, !useDeferredRender);
+        if (useDeferredRender) {
+          app.clearDeferredRender();
+        }
       });
-      if (field.tagName !== "SELECT") {
-        field.addEventListener("input", function () {
+      if (useDeferredRender) {
+        field.addEventListener("change", function () {
           app.updateCharacterSheetField(field.getAttribute("data-dev-character-field"), field.value);
         });
       }
@@ -6093,7 +6102,7 @@
         applyCharacterSheetToDevTools(this.content, this.devTools, sheetId);
         this.render();
       },
-      updateCharacterSheetField: function (field, rawValue) {
+      updateCharacterSheetField: function (field, rawValue, shouldRender) {
         if (field === "columns") {
           this.devTools.characterSheetColumns = Math.max(1, Number(rawValue || 1));
         } else if (field === "rows") {
@@ -6138,7 +6147,9 @@
 
         ensureCharacterDevSelection(this.devTools, this.content);
         syncDevToolsCharacterSheet(this.content, this.devTools);
-        this.render();
+        if (shouldRender !== false) {
+          this.render();
+        }
       },
       setDevEditorMode: function (mode) {
         this.devTools.editorMode = mode;
