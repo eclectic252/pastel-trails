@@ -8,6 +8,26 @@
   const VIEWPORT = { width: 960, height: 640 };
   const PLAYER_RADIUS = 16;
   const PLAYER_HITBOX = { width: 28, height: 28 };
+  const PLAYER_SPRITE_SHEET = "assets/Characters/Boardwalk girl sprite/boardwalk girlcheckbackground_transparent.png";
+  const PLAYER_SPRITE_COLUMNS = 4;
+  const PLAYER_SPRITE_ROWS = 4;
+  const PLAYER_WALK_FRAME_MS = 140;
+  const CHARACTER_SHEET_OPTIONS = [
+    {
+      id: "boardwalk-girl-check",
+      label: "Boardwalk Girl Check",
+      path: "assets/Characters/Boardwalk girl sprite/boardwalk girlcheckbackground_transparent.png",
+      columns: 4,
+      rows: 4,
+    },
+    {
+      id: "boardwalk-girl-original",
+      label: "Boardwalk Girl Original",
+      path: "assets/Characters/Boardwalk girl sprite/4x4walk sprite.png",
+      columns: 4,
+      rows: 4,
+    },
+  ];
   const WILD_RADIUS = 18;
   const WILD_RESPAWN_MS = 120000;
   const TRANSITION_COOLDOWN_MS = 600;
@@ -1179,6 +1199,12 @@
       lastTownId: starterTown.id,
       transitionCooldownUntil: 0,
       wildMonsters: [],
+      playerVisual: {
+        facing: "down",
+        isMoving: false,
+        frameIndex: 0,
+        frameTime: 0,
+      },
     };
 
     world.wildMonsters = createWildMonstersForMap(content, world.currentMapId, world.position);
@@ -1257,6 +1283,7 @@
       state.world.transitionCooldownUntil = 0;
     }
 
+    ensurePlayerVisualState(state);
     ensureWorldCameraState(state, content);
     ensureArenaProgress(state);
 
@@ -1266,6 +1293,7 @@
   function serializeState(state) {
     const world = Object.assign({}, state.world);
     delete world.camera;
+    delete world.playerVisual;
 
     return {
       slotId: state.currentSaveSlotId || "slot-1",
@@ -1294,6 +1322,74 @@
     return state.ui;
   }
 
+  function ensurePlayerVisualState(state) {
+    if (!state.world) {
+      return {
+        facing: "down",
+        isMoving: false,
+        frameIndex: 0,
+        frameTime: 0,
+      };
+    }
+
+    if (!state.world.playerVisual) {
+      state.world.playerVisual = {
+        facing: "down",
+        isMoving: false,
+        frameIndex: 0,
+        frameTime: 0,
+      };
+    }
+
+    if (!["down", "left", "right", "up"].includes(state.world.playerVisual.facing)) {
+      state.world.playerVisual.facing = "down";
+    }
+
+    if (typeof state.world.playerVisual.isMoving !== "boolean") {
+      state.world.playerVisual.isMoving = false;
+    }
+
+    if (typeof state.world.playerVisual.frameIndex !== "number") {
+      state.world.playerVisual.frameIndex = 0;
+    }
+
+    if (typeof state.world.playerVisual.frameTime !== "number") {
+      state.world.playerVisual.frameTime = 0;
+    }
+
+    return state.world.playerVisual;
+  }
+
+  function updatePlayerVisualState(state, deltaMs, dx, dy, moved) {
+    const visual = ensurePlayerVisualState(state);
+
+    if (dx < 0) {
+      visual.facing = "left";
+    } else if (dx > 0) {
+      visual.facing = "right";
+    } else if (dy < 0) {
+      visual.facing = "up";
+    } else if (dy > 0) {
+      visual.facing = "down";
+    }
+
+    visual.isMoving = Boolean(moved);
+
+    if (!visual.isMoving) {
+      visual.frameIndex = 0;
+      visual.frameTime = 0;
+      return visual;
+    }
+
+    visual.frameTime += deltaMs;
+    while (visual.frameTime >= PLAYER_WALK_FRAME_MS) {
+      visual.frameTime -= PLAYER_WALK_FRAME_MS;
+      visual.frameIndex = (visual.frameIndex + 1) % PLAYER_SPRITE_COLUMNS;
+    }
+
+    return visual;
+  }
+
   function calculateDamage(attacker, defender) {
     const base = attacker.stats.attack - Math.floor(defender.stats.defense / 2);
     return Math.max(1, base + Math.floor(Math.random() * 3));
@@ -1309,6 +1405,7 @@
     }
 
     const species = getSpecies(content, wildMonster.speciesId);
+    const mapLabel = content.mapMetadata[state.world.currentMapId]?.displayName || state.world.currentMapId;
     const enemy = {
       wildMonsterId: wildMonster.id,
       speciesId: wildMonster.speciesId,
@@ -1323,7 +1420,7 @@
     state.battle = {
       enemy,
       playerIndex: 0,
-      log: ["A wild " + species.name + " approached in Lily Harbor."],
+      log: ["A wild " + species.name + " approached in " + mapLabel + "."],
       menu: "root",
       outcome: null,
     };
@@ -1834,6 +1931,7 @@
 
   function movePlayer(state, content, deltaMs) {
     if (state.screen !== "world" || state.battle || state.interaction) {
+      updatePlayerVisualState(state, deltaMs, 0, 0, false);
       return;
     }
 
@@ -1846,12 +1944,15 @@
     if (keysDown.has("ArrowRight") || keysDown.has("d")) dx += 1;
 
     if (!dx && !dy) {
+      updatePlayerVisualState(state, deltaMs, 0, 0, false);
       return;
     }
 
     const length = Math.hypot(dx, dy) || 1;
     const speed = 260;
     const map = content.maps[state.world.currentMapId];
+    const previousX = state.world.position.x;
+    const previousY = state.world.position.y;
     const nextX = state.world.position.x + (dx / length) * speed * (deltaMs / 1000);
     const nextY = state.world.position.y + (dy / length) * speed * (deltaMs / 1000);
     const resolved = tryMoveAlongAxis(map, state.world.position.x, state.world.position.y, nextX, nextY);
@@ -1859,6 +1960,13 @@
     state.world.position.x = resolved.x;
     state.world.position.y = resolved.y;
     clampPlayerToMap(state, content);
+    updatePlayerVisualState(
+      state,
+      deltaMs,
+      dx,
+      dy,
+      Math.abs(state.world.position.x - previousX) > 0.01 || Math.abs(state.world.position.y - previousY) > 0.01
+    );
 
     const encountered = state.world.wildMonsters.find(function (monster) {
       return monster.active && Math.hypot(monster.x - state.world.position.x, monster.y - state.world.position.y) < 40;
@@ -2162,11 +2270,83 @@
     drawWildMonsterLabel();
   }
 
+  function drawPlayerSprite(ctx, state, content, camera) {
+    const runtimeCharacterConfig = ACTIVE_APP?.devTools?.selectedCharacterSheetId
+      ? ACTIVE_APP.devTools
+      : {
+          selectedCharacterSheetId: CHARACTER_SHEET_OPTIONS[0]?.id || "",
+          characterSheetColumns: PLAYER_SPRITE_COLUMNS,
+          characterSheetRows: PLAYER_SPRITE_ROWS,
+          characterSheetOffsetX: 0,
+          characterSheetOffsetY: 0,
+          characterSheetRowOffsets: Array.from({ length: PLAYER_SPRITE_ROWS }, function () {
+            return { x: 0, y: 0 };
+          }),
+          characterSheetFrameOffsets: Array.from({ length: PLAYER_SPRITE_ROWS }, function () {
+            return Array.from({ length: PLAYER_SPRITE_COLUMNS }, function () {
+              return { x: 0, y: 0 };
+            });
+          }),
+        };
+    ensureCharacterDevSelection(runtimeCharacterConfig);
+    const selectedSheet = getSelectedCharacterSheet(runtimeCharacterConfig);
+    const image = getImage(selectedSheet?.path || PLAYER_SPRITE_SHEET);
+    const map = content.maps[state.world.currentMapId];
+    const zoomScale = Math.max(0.1, Number(state.settings.zoom || 100) / 100);
+    const playerX = (state.world.position.x - camera.x) * zoomScale;
+    const playerY = (state.world.position.y - camera.y) * zoomScale;
+    const spriteSize = (map?.tileSize || 128) * zoomScale;
+    const drawX = Math.round(playerX - spriteSize / 2);
+    const drawY = Math.round(playerY - spriteSize / 2);
+    const visual = ensurePlayerVisualState(state);
+    const rowByFacing = {
+      down: 0,
+      left: 1,
+      right: 2,
+      up: 3,
+    };
+
+    if (image.complete && image.naturalWidth) {
+      const rowIndex = rowByFacing[visual.facing] ?? 0;
+      const frameIndex = Math.max(0, Math.min((runtimeCharacterConfig.characterSheetColumns || PLAYER_SPRITE_COLUMNS) - 1, visual.frameIndex || 0));
+      const sourceRect = getCharacterFrameSourceRect(runtimeCharacterConfig, image, rowIndex, frameIndex);
+      const useSmoothSampling = Math.abs(zoomScale - 1) > 0.001;
+
+      ctx.save();
+      ctx.imageSmoothingEnabled = useSmoothSampling;
+      if (useSmoothSampling) {
+        ctx.imageSmoothingQuality = "high";
+      }
+      ctx.drawImage(
+        image,
+        sourceRect.sx,
+        sourceRect.sy,
+        sourceRect.sw,
+        sourceRect.sh,
+        drawX,
+        drawY,
+        spriteSize,
+        spriteSize
+      );
+      ctx.restore();
+      return;
+    }
+
+    ctx.beginPath();
+    ctx.fillStyle = "#1b4f75";
+    ctx.arc(playerX, playerY, PLAYER_RADIUS, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 3;
+    ctx.arc(playerX, playerY, PLAYER_RADIUS + 6, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
   function drawWorld(canvas, state, content, devToolsState) {
     const ctx = canvas.getContext("2d");
     const map = content.maps[state.world.currentMapId];
     const camera = ensureWorldCameraState(state, content);
-    const zoomScale = Math.max(0.1, Number(state.settings.zoom || 100) / 100);
 
     drawMap(ctx, map, camera, "base");
     drawTransitionOverlay(ctx, state, content, camera, devToolsState);
@@ -2179,17 +2359,7 @@
       drawWildMonsterSprite(ctx, monster, content, camera);
     });
 
-    const playerX = (state.world.position.x - camera.x) * zoomScale;
-    const playerY = (state.world.position.y - camera.y) * zoomScale;
-    ctx.beginPath();
-    ctx.fillStyle = "#1b4f75";
-    ctx.arc(playerX, playerY, PLAYER_RADIUS, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = 3;
-    ctx.arc(playerX, playerY, PLAYER_RADIUS + 6, 0, Math.PI * 2);
-    ctx.stroke();
+    drawPlayerSprite(ctx, state, content, camera);
 
     drawMap(ctx, map, camera, "foreground");
   }
@@ -2209,7 +2379,7 @@
     })?.quantity || 0);
   }
 
-  function renderBattleMonsterCard(content, monster, options) {
+  function renderBattleMonsterHud(content, monster, options) {
     const species = getSpecies(content, monster.speciesId);
     const variant = getSpeciesVariant(species, monster.variantId || "default");
     const variantLabel = formatMonsterVariantLabel(variant?.id || monster.variantId || "default");
@@ -2217,26 +2387,67 @@
     const maxHp = Number(options.maxHp || monster.maxHp || monster.stats?.hp || 1);
     const currentHp = Number(options.currentHp || monster.currentHp || 0);
     const hpPercent = Math.max(0, Math.min(100, (currentHp / Math.max(1, maxHp)) * 100));
-    const subtitle = options.subtitle
-      ? '<p class="battle-card-subtitle">' + escapeHtml(options.subtitle) + "</p>"
-      : "";
     const visual = sprite
-      ? '<img class="battle-monster-sprite" src="' + escapeHtml(sprite) + '" alt="' + escapeHtml((species?.name || monster.speciesId) + " " + variantLabel) + '" />'
-      : '<div class="battle-monster-fallback">' + escapeHtml((species?.name || monster.speciesId || "?").slice(0, 1)) + "</div>";
-    const labelLine = "Lv " + Number(monster.level || 1) + " " + (species?.name || monster.speciesId);
-    const className = options.className ? " " + options.className : "";
+      ? '<img class="battle-hud-sprite" src="' + escapeHtml(sprite) + '" alt="' + escapeHtml((species?.name || monster.speciesId) + " " + variantLabel) + '" />'
+      : '<div class="battle-hud-fallback">' + escapeHtml((species?.name || monster.speciesId || "?").slice(0, 1)) + "</div>";
+    const badgeSideClass = options.badgeSide === "right"
+      ? " battle-hud-level-badge-right"
+      : " battle-hud-level-badge-left";
 
     return [
-      '<article class="battle-monster-card' + className + '">',
-      '<div class="battle-monster-meta">',
-      '<h3 class="battle-monster-name">' + escapeHtml(labelLine) + "</h3>",
-      '<p class="battle-card-variant">' + escapeHtml(variantLabel) + "</p>",
-      subtitle,
-      '<div class="battle-hp-row"><span>' + currentHp + "/" + maxHp + ' HP</span><span>' + Math.round(hpPercent) + "%</span></div>",
-      '<div class="battle-hp-bar"><span style="width:' + hpPercent + '%"></span></div>',
+      '<article class="battle-hud">',
+      '<div class="battle-hud-icon">' + visual + '<span class="battle-hud-level-badge' + badgeSideClass + '">Lv ' + Number(monster.level || 1) + "</span></div>",
+      '<div class="battle-hud-body">',
+      '<h3 class="battle-hud-name">' + escapeHtml(species?.name || monster.speciesId) + " (" + escapeHtml(variantLabel) + ")" + "</h3>",
+      '<div class="battle-hp-bar battle-hp-bar-hud"><span style="width:' + hpPercent + '%"></span></div>',
+      '<div class="battle-hp-row"><span>' + currentHp + "/" + maxHp + ' HP</span></div>',
       "</div>",
-      '<div class="battle-monster-visual"><div class="battle-monster-shadow"></div>' + visual + "</div>",
       "</article>",
+    ].join("");
+  }
+
+  function renderBattlePartySlot(content, monster, options) {
+    if (!monster) {
+      return '<div class="battle-party-slot battle-party-slot-empty"></div>';
+    }
+
+    const species = getSpecies(content, monster.speciesId);
+    const variant = getSpeciesVariant(species, monster.variantId || "default");
+    const sprite = variant?.sprite || "";
+    const maxHp = Number(options.maxHp || monster.maxHp || monster.stats?.hp || 1);
+    const currentHp = Number(options.currentHp || monster.currentHp || 0);
+    const hpPercent = Math.max(0, Math.min(100, (currentHp / Math.max(1, maxHp)) * 100));
+    const activeClass = options.active ? " battle-party-slot-active" : "";
+    const visual = sprite
+      ? '<img class="battle-party-slot-sprite" src="' + escapeHtml(sprite) + '" alt="' + escapeHtml(species?.name || monster.speciesId) + '" />'
+      : '<div class="battle-party-slot-fallback">' + escapeHtml((species?.name || monster.speciesId || "?").slice(0, 1)) + "</div>";
+
+    return [
+      '<div class="battle-party-slot' + activeClass + '">',
+      '<div class="battle-party-slot-top battle-party-slot-top-' + escapeHtml(options.side || "left") + '">',
+      '<div class="battle-party-slot-visual">' + visual + '<span class="battle-party-slot-level-badge">Lv ' + Number(monster.level || 1) + '</span></div>',
+      '</div>',
+      '<div class="battle-party-slot-meta">',
+      '<strong>' + escapeHtml(species?.name || monster.speciesId) + '</strong>',
+      '</div>',
+      '<div class="battle-hp-bar battle-party-slot-hp"><span style="width:' + hpPercent + '%"></span></div>',
+      '</div>',
+    ].join("");
+  }
+
+  function renderBattleBattler(content, monster, className) {
+    const species = getSpecies(content, monster.speciesId);
+    const variant = getSpeciesVariant(species, monster.variantId || "default");
+    const sprite = variant?.sprite || "";
+    const visual = sprite
+      ? '<img class="battle-battler-sprite" src="' + escapeHtml(sprite) + '" alt="' + escapeHtml(species?.name || monster.speciesId) + '" />'
+      : '<div class="battle-battler-fallback">' + escapeHtml((species?.name || monster.speciesId || "?").slice(0, 1)) + "</div>";
+
+    return [
+      '<div class="battle-battler ' + className + '">',
+      '<div class="battle-battler-shadow"></div>',
+      visual,
+      '</div>',
     ].join("");
   }
 
@@ -2445,20 +2656,36 @@
     const enemy = state.battle.enemy;
     const isTrainerBattle = state.battle.type === "trainer";
     const enemySpecies = getSpecies(content, enemy.speciesId);
-    const enemyVariant = getSpeciesVariant(enemySpecies, enemy.variantId || "default");
-    const activeSpecies = getSpecies(content, activeMonster.speciesId);
-    const activeVariant = getSpeciesVariant(activeSpecies, activeMonster.variantId || "default");
-    const battleLabel = isTrainerBattle
-      ? escapeHtml((state.battle.opponentTitle || "Leader") + " " + (state.battle.opponentName || "Trainer"))
-      : escapeHtml("Wild " + (enemySpecies?.name || enemy.speciesId) + " (" + formatMonsterVariantLabel(enemyVariant?.id || enemy.variantId || "default") + ")");
+    const fightType = isTrainerBattle ? (state.battle.opponentTitle || "Arena Leader") : "Wild";
+    const locationLabel = content.mapMetadata[state.world.currentMapId]?.displayName || state.world.currentMapId;
     const tonicCount = getInventoryQuantity(state, "small-tonic");
     const orbCount = getInventoryQuantity(state, "basic-orb");
     const hasBench = state.party.length > 1;
+    const enemyRoster = isTrainerBattle && Array.isArray(state.battle.enemyQueue) && state.battle.enemyQueue.length
+      ? state.battle.enemyQueue
+      : [enemy];
+    const enemyActiveIndex = isTrainerBattle ? Number(state.battle.enemyIndex || 0) : 0;
     const activeSkills = (activeMonster.skills || []).map(function (skillId) {
       return ensureSkillCatalog(content).find(function (entry) {
         return entry.id === skillId;
       });
     }).filter(Boolean);
+    const enemyPartySlots = enemyRoster.map(function (monster, index) {
+      return renderBattlePartySlot(content, monster, {
+        active: index === enemyActiveIndex,
+        currentHp: monster.currentHp,
+        maxHp: monster.maxHp || monster.stats?.hp,
+        side: "left",
+      });
+    }).join("");
+    const playerPartySlots = state.party.map(function (monster, index) {
+      return renderBattlePartySlot(content, monster, {
+        active: index === state.battle.playerIndex,
+        currentHp: monster.currentHp,
+        maxHp: monster.stats?.hp,
+        side: "right",
+      });
+    }).join("");
     const partyRoster = state.party.map(function (monster, index) {
       const species = getSpecies(content, monster.speciesId);
       const variant = getSpeciesVariant(species, monster.variantId || "default");
@@ -2520,20 +2747,26 @@
     return [
       '<div class="battle-overlay">',
       '<section class="battle-modal">',
-      '<div class="battle-headings battle-headings-stacked">',
-      '<div><p>' + escapeHtml(content.mapMetadata[state.world.currentMapId]?.displayName || state.world.currentMapId) + "</p></div>",
-      "</div>",
+      '<section class="battle-topbar">',
+      renderBattleMonsterHud(content, enemy, {
+        currentHp: enemy.currentHp,
+        maxHp: enemy.maxHp,
+        badgeSide: "left",
+      }) +
+      '<div class="battle-fight-pill"><strong>' + escapeHtml(fightType) + '</strong><span>' + escapeHtml(locationLabel) + '</span></div>' +
+      renderBattleMonsterHud(content, activeMonster, {
+        currentHp: activeMonster.currentHp,
+        maxHp: activeMonster.stats.hp,
+        badgeSide: "right",
+      }) +
+      '</section>',
       '<section class="battle-stage">' +
-        renderBattleMonsterCard(content, enemy, {
-          className: "battle-monster-card-enemy",
-          maxHp: enemy.maxHp,
-          currentHp: enemy.currentHp,
-        }) +
-        renderBattleMonsterCard(content, activeMonster, {
-          className: "battle-monster-card-player",
-          maxHp: activeMonster.stats.hp,
-          currentHp: activeMonster.currentHp,
-        }) +
+        '<aside class="battle-party-rail battle-party-rail-opponent">' + enemyPartySlots + '</aside>' +
+        '<div class="battle-field">' +
+          renderBattleBattler(content, enemy, "battle-battler-enemy") +
+          renderBattleBattler(content, activeMonster, "battle-battler-player") +
+        '</div>' +
+        '<aside class="battle-party-rail battle-party-rail-player">' + playerPartySlots + '</aside>' +
       '</section>',
       '<section class="battle-command-shell">' +
         '<div class="battle-log battle-log-command"><p>' + escapeHtml(commandCopy) + '</p>' + state.battle.log.slice(0, 4).map(function (entry) {
@@ -3436,6 +3669,88 @@
     devToolsState.selectedPreviewVariantId = selectedVariant?.id || "";
   }
 
+  function ensureCharacterDevSelection(devToolsState) {
+    if (!CHARACTER_SHEET_OPTIONS.find(function (entry) { return entry.id === devToolsState.selectedCharacterSheetId; })) {
+      devToolsState.selectedCharacterSheetId = CHARACTER_SHEET_OPTIONS[0]?.id || "";
+    }
+
+    const sheet = CHARACTER_SHEET_OPTIONS.find(function (entry) {
+      return entry.id === devToolsState.selectedCharacterSheetId;
+    }) || CHARACTER_SHEET_OPTIONS[0] || null;
+
+    if (typeof devToolsState.characterSheetColumns !== "number" || devToolsState.characterSheetColumns < 1) {
+      devToolsState.characterSheetColumns = sheet?.columns || 4;
+    }
+    if (typeof devToolsState.characterSheetRows !== "number" || devToolsState.characterSheetRows < 1) {
+      devToolsState.characterSheetRows = sheet?.rows || 4;
+    }
+    if (typeof devToolsState.characterSheetOffsetX !== "number") {
+      devToolsState.characterSheetOffsetX = 0;
+    }
+    if (typeof devToolsState.characterSheetOffsetY !== "number") {
+      devToolsState.characterSheetOffsetY = 0;
+    }
+    if (typeof devToolsState.characterSheetSelectedRow !== "number" || devToolsState.characterSheetSelectedRow < 0) {
+      devToolsState.characterSheetSelectedRow = 0;
+    }
+    if (typeof devToolsState.characterSheetPreviewScale !== "number" || devToolsState.characterSheetPreviewScale <= 0) {
+      devToolsState.characterSheetPreviewScale = 2;
+    }
+    if (typeof devToolsState.characterSheetSelectedFrame !== "number" || devToolsState.characterSheetSelectedFrame < 0) {
+      devToolsState.characterSheetSelectedFrame = 0;
+    }
+    if (!devToolsState.characterSheetAnimation) {
+      devToolsState.characterSheetAnimation = {
+        frameIndex: 0,
+        frameTime: 0,
+      };
+    }
+    if (!Array.isArray(devToolsState.characterSheetRowOffsets)) {
+      devToolsState.characterSheetRowOffsets = [];
+    }
+    if (!Array.isArray(devToolsState.characterSheetFrameOffsets)) {
+      devToolsState.characterSheetFrameOffsets = [];
+    }
+
+    while (devToolsState.characterSheetRowOffsets.length < devToolsState.characterSheetRows) {
+      devToolsState.characterSheetRowOffsets.push({ x: 0, y: 0 });
+    }
+    devToolsState.characterSheetRowOffsets = devToolsState.characterSheetRowOffsets.slice(0, devToolsState.characterSheetRows).map(function (entry) {
+      return {
+        x: Number(entry?.x || 0),
+        y: Number(entry?.y || 0),
+      };
+    });
+
+    while (devToolsState.characterSheetFrameOffsets.length < devToolsState.characterSheetRows) {
+      devToolsState.characterSheetFrameOffsets.push([]);
+    }
+    devToolsState.characterSheetFrameOffsets = devToolsState.characterSheetFrameOffsets.slice(0, devToolsState.characterSheetRows).map(function (row) {
+      const normalizedRow = Array.isArray(row) ? row.slice(0, devToolsState.characterSheetColumns) : [];
+      while (normalizedRow.length < devToolsState.characterSheetColumns) {
+        normalizedRow.push({ x: 0, y: 0 });
+      }
+      return normalizedRow.map(function (entry) {
+        return {
+          x: Number(entry?.x || 0),
+          y: Number(entry?.y || 0),
+        };
+      });
+    });
+
+    devToolsState.characterSheetSelectedRow = Math.max(0, Math.min(devToolsState.characterSheetRows - 1, devToolsState.characterSheetSelectedRow));
+    devToolsState.characterSheetSelectedFrame = Math.max(0, Math.min(devToolsState.characterSheetColumns - 1, devToolsState.characterSheetSelectedFrame));
+    return sheet;
+  }
+
+  function getCharacterRowOffset(characterConfig, rowIndex) {
+    return characterConfig.characterSheetRowOffsets?.[rowIndex] || { x: 0, y: 0 };
+  }
+
+  function getCharacterFrameOffset(characterConfig, rowIndex, frameIndex) {
+    return characterConfig.characterSheetFrameOffsets?.[rowIndex]?.[frameIndex] || { x: 0, y: 0 };
+  }
+
   function validateMonsterEditorContent(content) {
     ensureMonsterEditorContent(content);
 
@@ -3568,7 +3883,7 @@
       '<main class="dev-screen">',
       '<header class="game-topbar">',
       '<div><span class="eyebrow">Dev Tools</span><strong>Map Editor</strong></div>',
-      '<div class="topbar-stats"><button class="' + (devToolsState.section === "maps" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-maps">Maps</button><button class="' + (devToolsState.section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button><button class="' + (devToolsState.section === "arenas" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-arenas">Arenas</button><button class="' + (devToolsState.section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button><button class="secondary-button" type="button" data-action="back-to-title">Back</button><button class="secondary-button" type="button" data-action="load-folder">Load Project Folder</button></div>',
+      '<div class="topbar-stats"><button class="' + (devToolsState.section === "maps" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-maps">Maps</button><button class="' + (devToolsState.section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button><button class="' + (devToolsState.section === "arenas" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-arenas">Arenas</button><button class="' + (devToolsState.section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button><button class="' + (devToolsState.section === "characters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-characters">Characters</button><button class="secondary-button" type="button" data-action="back-to-title">Back</button><button class="secondary-button" type="button" data-action="load-folder">Load Project Folder</button></div>',
       "</header>",
       '<section class="dev-screen-layout">',
       '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>Maps</h2></div><ul class="compact-list dev-map-list">' + mapList + "</ul></aside>",
@@ -3720,7 +4035,7 @@
         '<main class="dev-screen">',
         '<header class="game-topbar">',
         '<div><span class="eyebrow">Dev Tools</span><strong>Monster Editor</strong></div>',
-        '<div class="topbar-stats"><button class="' + (devToolsState.section === "maps" ? "secondary-button" : "primary-button") + '" type="button" data-action="dev-section-maps">Maps</button><button class="' + (devToolsState.section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button><button class="' + (devToolsState.section === "arenas" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-arenas">Arenas</button><button class="' + (devToolsState.section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button><button class="secondary-button" type="button" data-action="back-to-title">Back</button><button class="secondary-button" type="button" data-action="load-folder">Load Project Folder</button></div>',
+        '<div class="topbar-stats"><button class="' + (devToolsState.section === "maps" ? "secondary-button" : "primary-button") + '" type="button" data-action="dev-section-maps">Maps</button><button class="' + (devToolsState.section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button><button class="' + (devToolsState.section === "arenas" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-arenas">Arenas</button><button class="' + (devToolsState.section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button><button class="' + (devToolsState.section === "characters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-characters">Characters</button><button class="secondary-button" type="button" data-action="back-to-title">Back</button><button class="secondary-button" type="button" data-action="load-folder">Load Project Folder</button></div>',
         '</header>',
         '<section class="dev-screen-layout">',
         '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>' + (monsterSubMode === "species" ? "Monster Species" : "Skills") + '</h2><button class="secondary-button" type="button" data-action="' + addAction + '">' + addLabel + '</button></div><ul class="compact-list dev-map-list">' + (sidebarItems || "<li>No entries yet.</li>") + '</ul></aside>',
@@ -3852,7 +4167,7 @@
       '<main class="dev-screen">',
       '<header class="game-topbar">',
       '<div><span class="eyebrow">Dev Tools</span><strong>Arena Editor</strong></div>',
-      '<div class="topbar-stats"><button class="' + (devToolsState.section === "maps" ? "secondary-button" : "primary-button") + '" type="button" data-action="dev-section-maps">Maps</button><button class="' + (devToolsState.section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button><button class="' + (devToolsState.section === "arenas" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-arenas">Arenas</button><button class="' + (devToolsState.section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button><button class="secondary-button" type="button" data-action="back-to-title">Back</button><button class="secondary-button" type="button" data-action="load-folder">Load Project Folder</button></div>',
+      '<div class="topbar-stats"><button class="' + (devToolsState.section === "maps" ? "secondary-button" : "primary-button") + '" type="button" data-action="dev-section-maps">Maps</button><button class="' + (devToolsState.section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button><button class="' + (devToolsState.section === "arenas" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-arenas">Arenas</button><button class="' + (devToolsState.section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button><button class="' + (devToolsState.section === "characters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-characters">Characters</button><button class="secondary-button" type="button" data-action="back-to-title">Back</button><button class="secondary-button" type="button" data-action="load-folder">Load Project Folder</button></div>',
       '</header>',
       '<section class="dev-screen-layout">',
       '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>Arenas</h2><button class="secondary-button" type="button" data-action="add-arena">Add Arena</button></div><ul class="compact-list dev-map-list">' + (arenaItems || "<li>No arenas yet.</li>") + '</ul></aside>',
@@ -3953,7 +4268,7 @@
       '<main class="dev-screen">',
       '<header class="game-topbar">',
       '<div><span class="eyebrow">Dev Tools</span><strong>Town Editor</strong></div>',
-      '<div class="topbar-stats"><button class="' + (devToolsState.section === "maps" ? "secondary-button" : "primary-button") + '" type="button" data-action="dev-section-maps">Maps</button><button class="' + (devToolsState.section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button><button class="' + (devToolsState.section === "arenas" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-arenas">Arenas</button><button class="' + (devToolsState.section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button><button class="secondary-button" type="button" data-action="back-to-title">Back</button><button class="secondary-button" type="button" data-action="load-folder">Load Project Folder</button></div>',
+      '<div class="topbar-stats"><button class="' + (devToolsState.section === "maps" ? "secondary-button" : "primary-button") + '" type="button" data-action="dev-section-maps">Maps</button><button class="' + (devToolsState.section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button><button class="' + (devToolsState.section === "arenas" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-arenas">Arenas</button><button class="' + (devToolsState.section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button><button class="' + (devToolsState.section === "characters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-characters">Characters</button><button class="secondary-button" type="button" data-action="back-to-title">Back</button><button class="secondary-button" type="button" data-action="load-folder">Load Project Folder</button></div>',
       "</header>",
       '<section class="dev-screen-layout">',
       '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>Towns</h2></div><ul class="compact-list dev-map-list">' + (townList || "<li>No town maps available.</li>") + "</ul></aside>",
@@ -3977,7 +4292,261 @@
     return null;
   }
 
+  function renderCharacterDevToolsScreen(root, content, devToolsState) {
+    const sheet = ensureCharacterDevSelection(devToolsState);
+    const selectedRow = devToolsState.characterSheetSelectedRow || 0;
+    const selectedFrame = devToolsState.characterSheetSelectedFrame || 0;
+    const directionLabels = ["Down", "Left", "Right", "Up"];
+    const sidebarItems = CHARACTER_SHEET_OPTIONS.map(function (entry) {
+      const selected = entry.id === devToolsState.selectedCharacterSheetId ? " compact-list-selected" : "";
+      return '<li class="' + selected.trim() + '"><button type="button" class="link-button" data-dev-select-character-sheet="' + escapeHtml(entry.id) + '"><strong>' + escapeHtml(entry.label) + '</strong><span>' + escapeHtml(entry.path) + "</span></button></li>";
+    }).join("");
+    const rowOptions = Array.from({ length: Math.max(1, devToolsState.characterSheetRows || 1) }).map(function (_, index) {
+      const selected = index === selectedRow ? " selected" : "";
+      const label = directionLabels[index] || ("Row " + (index + 1));
+      return '<option value="' + index + '"' + selected + ">" + escapeHtml(label) + "</option>";
+    }).join("");
+    const frameOptions = Array.from({ length: Math.max(1, devToolsState.characterSheetColumns || 1) }).map(function (_, index) {
+      const selected = index === selectedFrame ? " selected" : "";
+      return '<option value="' + index + '"' + selected + ">Frame " + (index + 1) + "</option>";
+    }).join("");
+    const selectedRowOffset = getCharacterRowOffset(devToolsState, selectedRow);
+    const selectedFrameOffset = getCharacterFrameOffset(devToolsState, selectedRow, selectedFrame);
+
+    root.innerHTML = [
+      '<main class="dev-screen">',
+      '<header class="game-topbar">',
+      '<div><span class="eyebrow">Dev Tools</span><strong>Character Sprite Checker</strong></div>',
+      '<div class="topbar-stats"><button class="' + (devToolsState.section === "maps" ? "secondary-button" : "primary-button") + '" type="button" data-action="dev-section-maps">Maps</button><button class="' + (devToolsState.section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button><button class="' + (devToolsState.section === "arenas" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-arenas">Arenas</button><button class="' + (devToolsState.section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button><button class="' + (devToolsState.section === "characters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-characters">Characters</button><button class="secondary-button" type="button" data-action="back-to-title">Back</button><button class="secondary-button" type="button" data-action="load-folder">Load Project Folder</button></div>',
+      '</header>',
+      '<section class="dev-screen-layout">',
+      '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>Sprite Sheets</h2></div><ul class="compact-list dev-map-list">' + sidebarItems + '</ul></aside>',
+      '<section class="dev-main">',
+      '<section class="panel-block dev-editor-panel">',
+      '<div class="section-heading"><h2>Sheet Settings</h2></div>',
+      '<div class="form-grid">',
+      '<label class="input-group"><span>Columns</span><input type="number" min="1" step="1" data-dev-character-field="columns" value="' + Number(devToolsState.characterSheetColumns || sheet?.columns || 4) + '" /></label>',
+      '<label class="input-group"><span>Rows</span><input type="number" min="1" step="1" data-dev-character-field="rows" value="' + Number(devToolsState.characterSheetRows || sheet?.rows || 4) + '" /></label>',
+      '<label class="input-group"><span>Offset X</span><input type="number" step="1" data-dev-character-field="offsetX" value="' + Number(devToolsState.characterSheetOffsetX || 0) + '" /></label>',
+      '<label class="input-group"><span>Offset Y</span><input type="number" step="1" data-dev-character-field="offsetY" value="' + Number(devToolsState.characterSheetOffsetY || 0) + '" /></label>',
+      '<label class="input-group"><span>Preview Scale</span><input type="number" min="1" max="6" step="1" data-dev-character-field="previewScale" value="' + Number(devToolsState.characterSheetPreviewScale || 2) + '" /></label>',
+      '<label class="input-group"><span>Active Row</span><select data-dev-character-field="selectedRow">' + rowOptions + '</select></label>',
+      '<label class="input-group"><span>Active Frame</span><select data-dev-character-field="selectedFrame">' + frameOptions + '</select></label>',
+      '<label class="input-group"><span>Row Offset X</span><input type="number" step="1" data-dev-character-field="rowOffsetX" value="' + Number(selectedRowOffset.x || 0) + '" /></label>',
+      '<label class="input-group"><span>Row Offset Y</span><input type="number" step="1" data-dev-character-field="rowOffsetY" value="' + Number(selectedRowOffset.y || 0) + '" /></label>',
+      '<label class="input-group"><span>Frame Offset X</span><input type="number" step="1" data-dev-character-field="frameOffsetX" value="' + Number(selectedFrameOffset.x || 0) + '" /></label>',
+      '<label class="input-group"><span>Frame Offset Y</span><input type="number" step="1" data-dev-character-field="frameOffsetY" value="' + Number(selectedFrameOffset.y || 0) + '" /></label>',
+      '</div>',
+      '<p class="dev-helper-text">Use global offsets for the whole sheet, row offsets for one direction row, and frame offsets for individual cells. The live player renderer uses these values too while this session is open.</p>',
+      '</section>',
+      '<section class="dev-preview-grid dev-character-preview-grid">',
+      '<section class="map-panel dev-map-panel"><div class="section-heading"><h2>Full Sheet</h2><span>' + escapeHtml(sheet?.label || "Sheet") + '</span></div><div class="dev-canvas-scroll"><canvas class="dev-character-sheet-canvas" width="720" height="520"></canvas></div><div class="map-caption">Grid overlay shows how the current columns, rows, and offsets will be cut.</div></section>',
+      '<section class="map-panel dev-map-panel"><div class="section-heading"><h2>Selected Row Frames</h2><span>' + escapeHtml(directionLabels[selectedRow] || ("Row " + (selectedRow + 1))) + '</span></div><div class="dev-canvas-scroll"><canvas class="dev-character-row-canvas" width="720" height="220"></canvas></div><div class="map-caption">Each frame from the selected row is previewed at the current scale.</div></section>',
+      '</section>',
+      '<section class="panel-block dev-editor-panel"><div class="section-heading"><h2>Walk Preview</h2><span>Animated</span></div><div class="dev-character-animation-wrap"><canvas class="dev-character-animation-canvas" width="720" height="240"></canvas></div><div class="map-caption">Animated loop for the selected row, using the same four-frame walk sequence as the game.</div></section>',
+      '</section>',
+      '</section>',
+      '</main>',
+    ].join("");
+
+    return null;
+  }
+
+  function getSelectedCharacterSheet(devToolsState) {
+    return CHARACTER_SHEET_OPTIONS.find(function (entry) {
+      return entry.id === devToolsState.selectedCharacterSheetId;
+    }) || CHARACTER_SHEET_OPTIONS[0] || null;
+  }
+
+  function getCharacterSheetMetrics(devToolsState, image) {
+    const columns = Math.max(1, Number(devToolsState.characterSheetColumns || 4));
+    const rows = Math.max(1, Number(devToolsState.characterSheetRows || 4));
+    const offsetX = Number(devToolsState.characterSheetOffsetX || 0);
+    const offsetY = Number(devToolsState.characterSheetOffsetY || 0);
+    const frameWidth = Math.floor((image.naturalWidth - offsetX) / columns);
+    const frameHeight = Math.floor((image.naturalHeight - offsetY) / rows);
+    return {
+      columns,
+      rows,
+      offsetX,
+      offsetY,
+      frameWidth,
+      frameHeight,
+    };
+  }
+
+  function getCharacterFrameSourceRect(characterConfig, image, rowIndex, frameIndex) {
+    const metrics = getCharacterSheetMetrics(characterConfig, image);
+    const rowOffset = getCharacterRowOffset(characterConfig, rowIndex);
+    const frameOffset = getCharacterFrameOffset(characterConfig, rowIndex, frameIndex);
+    return {
+      sx: metrics.offsetX + frameIndex * metrics.frameWidth + rowOffset.x + frameOffset.x,
+      sy: metrics.offsetY + rowIndex * metrics.frameHeight + rowOffset.y + frameOffset.y,
+      sw: metrics.frameWidth,
+      sh: metrics.frameHeight,
+      metrics,
+    };
+  }
+
+  function drawCharacterSheetGrid(canvas, devToolsState) {
+    const sheet = getSelectedCharacterSheet(devToolsState);
+    const ctx = canvas.getContext("2d");
+    const image = getImage(sheet?.path || "");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#f4efe8";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    if (!image.complete || !image.naturalWidth) {
+      ctx.fillStyle = "#6a5044";
+      ctx.font = "20px sans-serif";
+      ctx.fillText("Loading sprite sheet...", 36, 48);
+      return;
+    }
+
+    const scale = Math.min((canvas.width - 32) / image.naturalWidth, (canvas.height - 32) / image.naturalHeight);
+    const drawWidth = image.naturalWidth * scale;
+    const drawHeight = image.naturalHeight * scale;
+    const drawX = Math.round((canvas.width - drawWidth) / 2);
+    const drawY = Math.round((canvas.height - drawHeight) / 2);
+    const metrics = getCharacterSheetMetrics(devToolsState, image);
+    const selectedRow = Math.max(0, Math.min(metrics.rows - 1, Number(devToolsState.characterSheetSelectedRow || 0)));
+
+    ctx.drawImage(image, drawX, drawY, drawWidth, drawHeight);
+
+    ctx.save();
+    ctx.strokeStyle = "rgba(47, 121, 147, 0.35)";
+    ctx.lineWidth = 1;
+    for (let column = 0; column <= metrics.columns; column += 1) {
+      const x = drawX + (metrics.offsetX + metrics.frameWidth * column) * scale;
+      ctx.beginPath();
+      ctx.moveTo(x, drawY + metrics.offsetY * scale);
+      ctx.lineTo(x, drawY + (metrics.offsetY + metrics.frameHeight * metrics.rows) * scale);
+      ctx.stroke();
+    }
+    for (let row = 0; row <= metrics.rows; row += 1) {
+      const y = drawY + (metrics.offsetY + metrics.frameHeight * row) * scale;
+      ctx.beginPath();
+      ctx.moveTo(drawX + metrics.offsetX * scale, y);
+      ctx.lineTo(drawX + (metrics.offsetX + metrics.frameWidth * metrics.columns) * scale, y);
+      ctx.stroke();
+    }
+
+    for (let column = 0; column < metrics.columns; column += 1) {
+      const sourceRect = getCharacterFrameSourceRect(devToolsState, image, selectedRow, column);
+      const isSelectedFrame = column === Number(devToolsState.characterSheetSelectedFrame || 0);
+      ctx.fillStyle = isSelectedFrame ? "rgba(246, 151, 178, 0.24)" : "rgba(47, 121, 147, 0.12)";
+      ctx.strokeStyle = isSelectedFrame ? "rgba(214, 92, 136, 0.95)" : "rgba(47, 121, 147, 0.85)";
+      ctx.lineWidth = isSelectedFrame ? 3 : 2;
+      ctx.fillRect(drawX + sourceRect.sx * scale, drawY + sourceRect.sy * scale, sourceRect.sw * scale, sourceRect.sh * scale);
+      ctx.strokeRect(drawX + sourceRect.sx * scale, drawY + sourceRect.sy * scale, sourceRect.sw * scale, sourceRect.sh * scale);
+    }
+    ctx.restore();
+  }
+
+  function drawCharacterRowFrames(canvas, devToolsState) {
+    const sheet = getSelectedCharacterSheet(devToolsState);
+    const ctx = canvas.getContext("2d");
+    const image = getImage(sheet?.path || "");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#f4efe8";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    if (!image.complete || !image.naturalWidth) {
+      ctx.fillStyle = "#6a5044";
+      ctx.font = "20px sans-serif";
+      ctx.fillText("Loading row preview...", 36, 48);
+      return;
+    }
+
+    const metrics = getCharacterSheetMetrics(devToolsState, image);
+    const selectedRow = Math.max(0, Math.min(metrics.rows - 1, Number(devToolsState.characterSheetSelectedRow || 0)));
+    const previewScale = Math.max(1, Number(devToolsState.characterSheetPreviewScale || 2));
+    const padding = 18;
+    const slotWidth = Math.floor((canvas.width - padding * (metrics.columns + 1)) / metrics.columns);
+
+    for (let column = 0; column < metrics.columns; column += 1) {
+      const dx = padding + column * (slotWidth + padding);
+      const dy = Math.round((canvas.height - metrics.frameHeight * previewScale) / 2);
+      const sourceRect = getCharacterFrameSourceRect(devToolsState, image, selectedRow, column);
+      ctx.fillStyle = "rgba(255, 255, 255, 0.72)";
+      ctx.fillRect(dx - 6, dy - 6, metrics.frameWidth * previewScale + 12, metrics.frameHeight * previewScale + 12);
+      ctx.drawImage(
+        image,
+        sourceRect.sx,
+        sourceRect.sy,
+        sourceRect.sw,
+        sourceRect.sh,
+        dx,
+        dy,
+        metrics.frameWidth * previewScale,
+        metrics.frameHeight * previewScale
+      );
+      ctx.fillStyle = "#6a5044";
+      ctx.font = "14px sans-serif";
+      ctx.fillText("Frame " + (column + 1), dx, dy + metrics.frameHeight * previewScale + 22);
+    }
+  }
+
+  function drawCharacterAnimationPreview(canvas, devToolsState) {
+    const sheet = getSelectedCharacterSheet(devToolsState);
+    const ctx = canvas.getContext("2d");
+    const image = getImage(sheet?.path || "");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#f4efe8";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    if (!image.complete || !image.naturalWidth) {
+      ctx.fillStyle = "#6a5044";
+      ctx.font = "20px sans-serif";
+      ctx.fillText("Loading animation preview...", 36, 48);
+      return;
+    }
+
+    const metrics = getCharacterSheetMetrics(devToolsState, image);
+    const selectedRow = Math.max(0, Math.min(metrics.rows - 1, Number(devToolsState.characterSheetSelectedRow || 0)));
+    const animation = devToolsState.characterSheetAnimation || { frameIndex: 0 };
+    const previewScale = Math.max(1, Number(devToolsState.characterSheetPreviewScale || 2));
+    const dx = Math.round((canvas.width - metrics.frameWidth * previewScale) / 2);
+    const dy = Math.round((canvas.height - metrics.frameHeight * previewScale) / 2);
+    const sourceRect = getCharacterFrameSourceRect(devToolsState, image, selectedRow, Math.max(0, Math.min(metrics.columns - 1, animation.frameIndex || 0)));
+
+    ctx.fillStyle = "rgba(167, 205, 145, 0.28)";
+    ctx.beginPath();
+    ctx.ellipse(canvas.width / 2, dy + metrics.frameHeight * previewScale - 6, 54, 16, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.drawImage(
+      image,
+      sourceRect.sx,
+      sourceRect.sy,
+      sourceRect.sw,
+      sourceRect.sh,
+      dx,
+      dy,
+      metrics.frameWidth * previewScale,
+      metrics.frameHeight * previewScale
+    );
+  }
+
+  function drawCharacterDevCanvases(root, devToolsState) {
+    const sheetCanvas = root.querySelector(".dev-character-sheet-canvas");
+    const rowCanvas = root.querySelector(".dev-character-row-canvas");
+    const animationCanvas = root.querySelector(".dev-character-animation-canvas");
+    if (sheetCanvas) {
+      drawCharacterSheetGrid(sheetCanvas, devToolsState);
+    }
+    if (rowCanvas) {
+      drawCharacterRowFrames(rowCanvas, devToolsState);
+    }
+    if (animationCanvas) {
+      drawCharacterAnimationPreview(animationCanvas, devToolsState);
+    }
+  }
+
   function renderDevToolsScreen(root, content, devToolsState) {
+    if (devToolsState.section === "characters") {
+      return renderCharacterDevToolsScreen(root, content, devToolsState);
+    }
+
     if (devToolsState.section === "towns") {
       return renderTownDevToolsScreen(root, content, devToolsState);
     }
@@ -4130,6 +4699,9 @@
     });
     root.querySelector('[data-action="dev-section-monsters"]')?.addEventListener("click", function () {
       app.setDevSection("monsters");
+    });
+    root.querySelector('[data-action="dev-section-characters"]')?.addEventListener("click", function () {
+      app.setDevSection("characters");
     });
     root.querySelector('[data-action="load-folder"]')?.addEventListener("click", function () {
       app.loadProjectFolder(true);
@@ -4308,6 +4880,11 @@
     root.querySelectorAll("[data-dev-select-arena]").forEach(function (button) {
       button.addEventListener("click", function () {
         app.selectArena(button.getAttribute("data-dev-select-arena"));
+      });
+    });
+    root.querySelectorAll("[data-dev-select-character-sheet]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.selectCharacterSheet(button.getAttribute("data-dev-select-character-sheet"));
       });
     });
 
@@ -4496,6 +5073,16 @@
         });
       }
     });
+    root.querySelectorAll("[data-dev-character-field]").forEach(function (field) {
+      field.addEventListener("change", function () {
+        app.updateCharacterSheetField(field.getAttribute("data-dev-character-field"), field.value);
+      });
+      if (field.tagName !== "SELECT") {
+        field.addEventListener("input", function () {
+          app.updateCharacterSheetField(field.getAttribute("data-dev-character-field"), field.value);
+        });
+      }
+    });
     root.querySelectorAll('[data-action="toggle-species-skill"]').forEach(function (field) {
       field.addEventListener("change", function () {
         app.toggleSpeciesSkill(field.getAttribute("data-skill-id"), field.checked);
@@ -4575,6 +5162,12 @@
             event.preventDefault();
             event.stopPropagation();
             app.setDevSection("monsters");
+            return;
+          }
+          if (action === "dev-section-characters") {
+            event.preventDefault();
+            event.stopPropagation();
+            app.setDevSection("characters");
             return;
           }
           if (action === "mode-transitions") {
@@ -4668,6 +5261,14 @@
           event.preventDefault();
           event.stopPropagation();
           app.selectSkill(skillEl.getAttribute("data-dev-select-skill"));
+          return;
+        }
+
+        const characterSheetEl = target.closest("[data-dev-select-character-sheet]");
+        if (characterSheetEl instanceof HTMLElement) {
+          event.preventDefault();
+          event.stopPropagation();
+          app.selectCharacterSheet(characterSheetEl.getAttribute("data-dev-select-character-sheet"));
         }
       }
     }, true);
@@ -4687,6 +5288,12 @@
       if (target.matches("[data-action='select-preview-variant']")) {
         event.stopPropagation();
         app.selectPreviewVariant(target.value);
+        return;
+      }
+
+      if (target.matches("[data-dev-character-field]")) {
+        event.stopPropagation();
+        app.updateCharacterSheetField(target.getAttribute("data-dev-character-field"), target.value);
         return;
       }
     }, true);
@@ -4714,6 +5321,17 @@
         selectedSpeciesId: content.monsters?.species?.[0]?.id || "",
         selectedSkillId: ensureSkillCatalog(content)[0]?.id || "",
         selectedPreviewVariantId: content.monsters?.species?.[0]?.variants?.[0]?.id || "",
+        selectedCharacterSheetId: CHARACTER_SHEET_OPTIONS[0]?.id || "",
+        characterSheetColumns: CHARACTER_SHEET_OPTIONS[0]?.columns || 4,
+        characterSheetRows: CHARACTER_SHEET_OPTIONS[0]?.rows || 4,
+        characterSheetOffsetX: 0,
+        characterSheetOffsetY: 0,
+        characterSheetSelectedRow: 0,
+        characterSheetPreviewScale: 2,
+        characterSheetAnimation: {
+          frameIndex: 0,
+          frameTime: 0,
+        },
         previewZoom: 100,
         previewScroll: {
           source: { left: 0, top: 0 },
@@ -4762,6 +5380,7 @@
         this.devTools.selectedInteractionId = interactions[0]?.id || "";
         syncMonsterDevSelection(this.content, this.devTools);
         syncArenaDevSelection(this.content, this.devTools);
+        ensureCharacterDevSelection(this.devTools);
         this.state = { screen: "dev-tools" };
         this.render();
       },
@@ -5079,6 +5698,51 @@
           syncArenaDevSelection(this.content, this.devTools);
         }
         syncMonsterDevSelection(this.content, this.devTools);
+        ensureCharacterDevSelection(this.devTools);
+        this.render();
+      },
+      selectCharacterSheet: function (sheetId) {
+        this.devTools.selectedCharacterSheetId = sheetId;
+        const sheet = ensureCharacterDevSelection(this.devTools);
+        this.devTools.characterSheetColumns = sheet?.columns || this.devTools.characterSheetColumns;
+        this.devTools.characterSheetRows = sheet?.rows || this.devTools.characterSheetRows;
+        this.devTools.characterSheetSelectedRow = 0;
+        this.devTools.characterSheetAnimation.frameIndex = 0;
+        this.devTools.characterSheetAnimation.frameTime = 0;
+        this.render();
+      },
+      updateCharacterSheetField: function (field, rawValue) {
+        if (field === "columns") {
+          this.devTools.characterSheetColumns = Math.max(1, Number(rawValue || 1));
+        } else if (field === "rows") {
+          this.devTools.characterSheetRows = Math.max(1, Number(rawValue || 1));
+        } else if (field === "offsetX") {
+          this.devTools.characterSheetOffsetX = Number(rawValue || 0);
+        } else if (field === "offsetY") {
+          this.devTools.characterSheetOffsetY = Number(rawValue || 0);
+        } else if (field === "selectedRow") {
+          this.devTools.characterSheetSelectedRow = Math.max(0, Number(rawValue || 0));
+          this.devTools.characterSheetAnimation.frameIndex = 0;
+          this.devTools.characterSheetAnimation.frameTime = 0;
+        } else if (field === "selectedFrame") {
+          this.devTools.characterSheetSelectedFrame = Math.max(0, Number(rawValue || 0));
+        } else if (field === "rowOffsetX") {
+          ensureCharacterDevSelection(this.devTools);
+          this.devTools.characterSheetRowOffsets[this.devTools.characterSheetSelectedRow].x = Number(rawValue || 0);
+        } else if (field === "rowOffsetY") {
+          ensureCharacterDevSelection(this.devTools);
+          this.devTools.characterSheetRowOffsets[this.devTools.characterSheetSelectedRow].y = Number(rawValue || 0);
+        } else if (field === "frameOffsetX") {
+          ensureCharacterDevSelection(this.devTools);
+          this.devTools.characterSheetFrameOffsets[this.devTools.characterSheetSelectedRow][this.devTools.characterSheetSelectedFrame].x = Number(rawValue || 0);
+        } else if (field === "frameOffsetY") {
+          ensureCharacterDevSelection(this.devTools);
+          this.devTools.characterSheetFrameOffsets[this.devTools.characterSheetSelectedRow][this.devTools.characterSheetSelectedFrame].y = Number(rawValue || 0);
+        } else if (field === "previewScale") {
+          this.devTools.characterSheetPreviewScale = Math.max(1, Number(rawValue || 1));
+        }
+
+        ensureCharacterDevSelection(this.devTools);
         this.render();
       },
       setDevEditorMode: function (mode) {
@@ -6021,6 +6685,17 @@
         }
       },
       update: function (deltaMs) {
+        if (this.state.screen === "dev-tools" && this.devTools.section === "characters") {
+          ensureCharacterDevSelection(this.devTools);
+          this.devTools.characterSheetAnimation.frameTime += deltaMs;
+          while (this.devTools.characterSheetAnimation.frameTime >= PLAYER_WALK_FRAME_MS) {
+            this.devTools.characterSheetAnimation.frameTime -= PLAYER_WALK_FRAME_MS;
+            this.devTools.characterSheetAnimation.frameIndex = (this.devTools.characterSheetAnimation.frameIndex + 1) % Math.max(1, this.devTools.characterSheetColumns || 4);
+          }
+          drawCharacterDevCanvases(root, this.devTools);
+          return;
+        }
+
         if (this.state.screen !== "world") {
           return;
         }
@@ -6090,6 +6765,9 @@
 
         if (this.state.screen === "dev-tools") {
           renderDevToolsScreen(root, this.content, this.devTools);
+          if (this.devTools.section === "characters") {
+            drawCharacterDevCanvases(root, this.devTools);
+          }
           attachDevToolsHandlers(root, this);
           this.restoreDevPreviewScroll();
           restoreFocusableState(root, focusState);
