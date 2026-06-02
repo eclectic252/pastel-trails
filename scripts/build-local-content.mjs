@@ -58,6 +58,79 @@ async function collectJsonFiles(directoryPath) {
   return files;
 }
 
+async function collectPngFiles(directoryPath) {
+  const entries = await fs.readdir(directoryPath, { withFileTypes: true });
+  const files = [];
+
+  for (const entry of entries) {
+    if (entry.name.startsWith(".")) {
+      continue;
+    }
+
+    const absolutePath = path.join(directoryPath, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...await collectPngFiles(absolutePath));
+      continue;
+    }
+
+    if (entry.isFile() && entry.name.toLowerCase().endsWith(".png")) {
+      files.push(absolutePath);
+    }
+  }
+
+  return files;
+}
+
+function prettifyCharacterSheetLabel(pathValue) {
+  const baseName = String(pathValue || "")
+    .split("/")
+    .pop()
+    .replace(/\.[^.]+$/, "")
+    .replace(/[_-]+/g, " ")
+    .trim();
+  return baseName
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+async function loadCharacterSheets() {
+  const saved = await readOptionalJson("data/character-sheets.json", { sheets: [] });
+  const spriteRoot = path.join(projectRoot, "assets", "Characters", "Boardwalk girl sprite");
+  let discovered = [];
+
+  try {
+    const pngFiles = await collectPngFiles(spriteRoot);
+    discovered = pngFiles.map((absolutePath) => {
+      const relativePath = path.relative(projectRoot, absolutePath).split(path.sep).join("/");
+      const savedEntry = (saved.sheets || []).find((entry) => entry.path === relativePath);
+      const baseId = path.basename(relativePath, path.extname(relativePath))
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "");
+
+      return {
+        id: savedEntry?.id || baseId,
+        label: savedEntry?.label || prettifyCharacterSheetLabel(relativePath),
+        playerLabel: savedEntry?.playerLabel || savedEntry?.label || prettifyCharacterSheetLabel(relativePath),
+        playerSelectable: savedEntry?.playerSelectable ?? true,
+        path: relativePath,
+        columns: savedEntry?.columns || 4,
+        rows: savedEntry?.rows || 4,
+        offsetX: savedEntry?.offsetX || 0,
+        offsetY: savedEntry?.offsetY || 0,
+        rowOffsets: savedEntry?.rowOffsets || [],
+        frameOffsets: savedEntry?.frameOffsets || [],
+      };
+    });
+  } catch {
+    discovered = saved.sheets || [];
+  }
+
+  return { sheets: discovered };
+}
+
 function getCollisionProfile(layerName, tileSize) {
   const value = String(layerName || "").toLowerCase();
   const half = tileSize / 2;
@@ -162,7 +235,7 @@ async function loadMapMetadata(mapIds, maps) {
 }
 
 async function buildLocalContent() {
-  const [settings, themes, items, skills, monsters, towns, arenas, trainers, maps] = await Promise.all([
+  const [settings, themes, items, skills, monsters, towns, arenas, trainers, characterSheets, maps] = await Promise.all([
     readJson("data/settings.json"),
     readJson("data/themes.json"),
     readJson("data/items.json"),
@@ -181,6 +254,7 @@ async function buildLocalContent() {
     readJson("data/towns.json"),
     readOptionalJson("data/arenas.json", { arenas: [] }),
     readJson("data/trainers.json"),
+    loadCharacterSheets(),
     loadMaps(),
   ]);
 
@@ -195,6 +269,7 @@ async function buildLocalContent() {
     towns,
     arenas,
     trainers,
+    characterSheets,
     maps,
     mapMetadata,
   };

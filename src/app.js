@@ -28,6 +28,22 @@
       rows: 4,
     },
   ];
+
+  function prettifyCharacterSheetLabel(pathValue) {
+    const baseName = String(pathValue || "")
+      .split("/")
+      .pop()
+      .replace(/\.[^.]+$/, "")
+      .replace(/[_-]+/g, " ")
+      .trim();
+    return baseName
+      .split(/\s+/)
+      .filter(Boolean)
+      .map(function (part) {
+        return part.charAt(0).toUpperCase() + part.slice(1);
+      })
+      .join(" ");
+  }
   const WILD_RADIUS = 18;
   const WILD_RESPAWN_MS = 120000;
   const TRANSITION_COOLDOWN_MS = 600;
@@ -85,6 +101,29 @@
           includeInStarterSelection: true,
         },
       ],
+    },
+    characterSheets: {
+      sheets: CHARACTER_SHEET_OPTIONS.map(function (entry) {
+        return {
+          id: entry.id,
+          label: entry.label,
+          playerLabel: entry.label,
+          playerSelectable: true,
+          path: entry.path,
+          columns: entry.columns,
+          rows: entry.rows,
+          offsetX: 0,
+          offsetY: 0,
+          rowOffsets: Array.from({ length: entry.rows }, function () {
+            return { x: 0, y: 0 };
+          }),
+          frameOffsets: Array.from({ length: entry.rows }, function () {
+            return Array.from({ length: entry.columns }, function () {
+              return { x: 0, y: 0, width: 0, height: 0 };
+            });
+          }),
+        };
+      }),
     },
     arenas: { arenas: [] },
     trainers: { trainers: [] },
@@ -238,6 +277,51 @@
       };
     });
 
+    const sourceSheets = rawContent.characterSheets?.sheets?.length
+      ? rawContent.characterSheets.sheets
+      : CHARACTER_SHEET_OPTIONS;
+    const characterSheets = {
+      sheets: sourceSheets.map(function (option) {
+        const saved = (rawContent.characterSheets?.sheets || []).find(function (entry) {
+          return entry.id === option.id;
+        }) || {};
+        const rows = Math.max(1, Number(saved.rows || option.rows || 4));
+        const columns = Math.max(1, Number(saved.columns || option.columns || 4));
+        const rowOffsets = Array.from({ length: rows }, function (_, rowIndex) {
+          const entry = saved.rowOffsets?.[rowIndex] || {};
+          return {
+            x: Number(entry.x || 0),
+            y: Number(entry.y || 0),
+          };
+        });
+        const frameOffsets = Array.from({ length: rows }, function (_, rowIndex) {
+          return Array.from({ length: columns }, function (_, columnIndex) {
+            const entry = saved.frameOffsets?.[rowIndex]?.[columnIndex] || {};
+            return {
+              x: Number(entry.x || 0),
+              y: Number(entry.y || 0),
+              width: Number(entry.width || 0),
+              height: Number(entry.height || 0),
+            };
+          });
+        });
+
+        return {
+          id: option.id,
+          label: saved.label || option.label || prettifyCharacterSheetLabel(option.path || option.id),
+          playerLabel: saved.playerLabel || option.playerLabel || saved.label || option.label || prettifyCharacterSheetLabel(option.path || option.id),
+          playerSelectable: saved.playerSelectable ?? option.playerSelectable ?? true,
+          path: saved.path || option.path,
+          columns,
+          rows,
+          offsetX: Number(saved.offsetX || 0),
+          offsetY: Number(saved.offsetY || 0),
+          rowOffsets,
+          frameOffsets,
+        };
+      }),
+    };
+
     return {
       settings: rawContent.settings,
       themes: rawContent.themes,
@@ -255,6 +339,7 @@
           };
         }),
       },
+      characterSheets,
       arenas: rawContent.arenas || JSON.parse(JSON.stringify(fallbackContent.arenas)),
       trainers: rawContent.trainers,
       maps,
@@ -321,6 +406,42 @@
     return files;
   }
 
+  async function loadCharacterSheetsFromDirectory(rootHandle) {
+    const discoveredSheets = [];
+
+    try {
+      const assetsHandle = await rootHandle.getDirectoryHandle("assets");
+      const charactersHandle = await assetsHandle.getDirectoryHandle("Characters");
+      const spriteFolderHandle = await charactersHandle.getDirectoryHandle("Boardwalk girl sprite");
+
+      for await (const [name, handle] of spriteFolderHandle.entries()) {
+        if (handle.kind !== "file" || !name.toLowerCase().endsWith(".png")) {
+          continue;
+        }
+
+        const path = ["assets", "Characters", "Boardwalk girl sprite", name].join("/");
+        const existing = CHARACTER_SHEET_OPTIONS.find(function (entry) {
+          return entry.path === path;
+        });
+        const baseId = name.replace(/\.[^.]+$/, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+        discoveredSheets.push({
+          id: existing?.id || baseId,
+          label: existing?.label || prettifyCharacterSheetLabel(name),
+          path,
+          columns: existing?.columns || 4,
+          rows: existing?.rows || 4,
+        });
+      }
+    } catch {
+      return JSON.parse(JSON.stringify(fallbackContent.characterSheets));
+    }
+
+    return {
+      sheets: discoveredSheets.length ? discoveredSheets : JSON.parse(JSON.stringify(fallbackContent.characterSheets.sheets)),
+    };
+  }
+
   async function loadAuthoredMapsFromAssets(rootHandle) {
     const assetsHandle = await rootHandle.getDirectoryHandle("assets");
     const mapsHandle = await assetsHandle.getDirectoryHandle("Maps");
@@ -349,6 +470,22 @@
     const towns = await readJsonFromHandle(rootHandle, ["data", "towns.json"]);
     const arenas = await tryReadJsonFromHandle(rootHandle, ["data", "arenas.json"]) || JSON.parse(JSON.stringify(fallbackContent.arenas));
     const trainers = await readJsonFromHandle(rootHandle, ["data", "trainers.json"]);
+    const discoveredCharacterSheets = await loadCharacterSheetsFromDirectory(rootHandle);
+    const characterSheetsData = await tryReadJsonFromHandle(rootHandle, ["data", "character-sheets.json"]);
+    const characterSheets = {
+      sheets: discoveredCharacterSheets.sheets.map(function (discovered) {
+        const saved = (characterSheetsData?.sheets || []).find(function (entry) {
+          return entry.id === discovered.id || entry.path === discovered.path;
+        }) || {};
+        return Object.assign({}, discovered, saved, {
+          id: saved.id || discovered.id,
+          label: saved.label || discovered.label,
+          playerLabel: saved.playerLabel || discovered.playerLabel || discovered.label,
+          playerSelectable: saved.playerSelectable ?? discovered.playerSelectable ?? true,
+          path: discovered.path,
+        });
+      }),
+    };
 
     const maps = await loadAuthoredMapsFromAssets(rootHandle);
     const mapMetadata = {};
@@ -356,7 +493,7 @@
       mapMetadata[mapId] = await tryReadJsonFromHandle(rootHandle, ["data", "map-metadata", mapId + ".meta.json"]) || {};
     }
 
-    return normalizeContent({ settings, themes, items, skills, monsters, towns, arenas, trainers, maps, mapMetadata }, "directory");
+    return normalizeContent({ settings, themes, items, skills, monsters, towns, arenas, trainers, characterSheets, maps, mapMetadata }, "directory");
   }
 
   function loadEmbeddedContent() {
@@ -1159,11 +1296,12 @@
 
   function buildNewGameSetup(content) {
     const starterTowns = getStarterTownOptions(content);
+    const avatarOptions = getPlayerAvatarOptions(content);
     return {
       screen: "new-game",
       starterSpeciesId: content.monsters.species[0].id,
       townId: starterTowns[0].id,
-      avatarId: "avatar-1",
+      avatarId: avatarOptions[0]?.id || "",
       playerName: "Player",
       saveName: "",
       message: "Choose your starter, town, and avatar before beginning.",
@@ -2057,7 +2195,9 @@
     return canvas;
   }
 
-  function getCachedWorldLayerCanvas(map, phase) {
+  const WORLD_LAYER_CHUNK_HEIGHT = 2048;
+
+  function getCachedWorldLayerChunks(map, phase) {
     const tileSize = map.tileSize;
     const image = getImage(map.image);
 
@@ -2077,7 +2217,7 @@
       cached.imageWidth === image.naturalWidth &&
       cached.imageHeight === image.naturalHeight
     ) {
-      return cached.canvas;
+      return cached;
     }
 
     const columns = Math.floor(image.naturalWidth / tileSize);
@@ -2086,9 +2226,22 @@
         (phase === "foreground" ? isFrontOfPlayerLayer(layer.name) : !isFrontOfPlayerLayer(layer.name));
     });
 
-    const layerCanvas = createScratchCanvas(worldWidth, worldHeight);
-    const layerCtx = layerCanvas.getContext("2d");
-    layerCtx.imageSmoothingEnabled = false;
+    const chunks = [];
+    const chunkCount = Math.max(1, Math.ceil(worldHeight / WORLD_LAYER_CHUNK_HEIGHT));
+
+    for (let chunkIndex = 0; chunkIndex < chunkCount; chunkIndex += 1) {
+      const chunkY = chunkIndex * WORLD_LAYER_CHUNK_HEIGHT;
+      const chunkHeight = Math.min(WORLD_LAYER_CHUNK_HEIGHT, worldHeight - chunkY);
+      const chunkCanvas = createScratchCanvas(worldWidth, chunkHeight);
+      const chunkCtx = chunkCanvas.getContext("2d");
+      chunkCtx.imageSmoothingEnabled = false;
+      chunks.push({
+        canvas: chunkCanvas,
+        ctx: chunkCtx,
+        y: chunkY,
+        height: chunkHeight,
+      });
+    }
 
     renderLayers.forEach(function (layer) {
       layer.positions.forEach(function (tile) {
@@ -2096,19 +2249,27 @@
         const worldY = tile.y * tileSize;
         const sx = (tile.id % columns) * tileSize;
         const sy = Math.floor(tile.id / columns) * tileSize;
-        layerCtx.drawImage(image, sx, sy, tileSize, tileSize, worldX, worldY, tileSize, tileSize);
+        const chunkIndex = Math.max(0, Math.min(chunks.length - 1, Math.floor(worldY / WORLD_LAYER_CHUNK_HEIGHT)));
+        const chunk = chunks[chunkIndex];
+        chunk.ctx.drawImage(image, sx, sy, tileSize, tileSize, worldX, worldY - chunk.y, tileSize, tileSize);
       });
     });
 
     map[cacheKey] = {
-      canvas: layerCanvas,
+      chunks: chunks.map(function (chunk) {
+        return {
+          canvas: chunk.canvas,
+          y: chunk.y,
+          height: chunk.height,
+        };
+      }),
       width: worldWidth,
       height: worldHeight,
       imageWidth: image.naturalWidth,
       imageHeight: image.naturalHeight,
     };
 
-    return layerCanvas;
+    return map[cacheKey];
   }
 
   function drawMap(ctx, map, camera, phase) {
@@ -2124,7 +2285,7 @@
       ctx.fillRect(0, 0, VIEWPORT.width, VIEWPORT.height);
     }
 
-    const layerCanvas = getCachedWorldLayerCanvas(map, phase);
+    const layerCache = getCachedWorldLayerChunks(map, phase);
     const worldWidth = map.mapWidth * map.tileSize;
     const worldHeight = map.mapHeight * map.tileSize;
     const visibleWorldWidth = Math.min(worldWidth, VIEWPORT.width / zoomScale);
@@ -2132,18 +2293,40 @@
     const sourceX = Math.max(0, Math.min(worldWidth - visibleWorldWidth, camera.x));
     const sourceY = Math.max(0, Math.min(worldHeight - visibleWorldHeight, camera.y));
 
-    if (layerCanvas) {
-      ctx.drawImage(
-        layerCanvas,
-        sourceX,
-        sourceY,
-        visibleWorldWidth,
-        visibleWorldHeight,
-        0,
-        0,
-        VIEWPORT.width,
-        VIEWPORT.height
-      );
+    if (layerCache?.chunks?.length) {
+      layerCache.chunks.forEach(function (chunk) {
+        const chunkTop = chunk.y;
+        const chunkBottom = chunk.y + chunk.height;
+        const sourceBottom = sourceY + visibleWorldHeight;
+
+        if (chunkBottom <= sourceY || chunkTop >= sourceBottom) {
+          return;
+        }
+
+        const overlapTop = Math.max(sourceY, chunkTop);
+        const overlapBottom = Math.min(sourceBottom, chunkBottom);
+        const overlapHeight = overlapBottom - overlapTop;
+
+        if (overlapHeight <= 0) {
+          return;
+        }
+
+        const chunkSourceY = overlapTop - chunkTop;
+        const destY = ((overlapTop - sourceY) / visibleWorldHeight) * VIEWPORT.height;
+        const destHeight = (overlapHeight / visibleWorldHeight) * VIEWPORT.height;
+
+        ctx.drawImage(
+          chunk.canvas,
+          sourceX,
+          chunkSourceY,
+          visibleWorldWidth,
+          overlapHeight,
+          0,
+          destY,
+          VIEWPORT.width,
+          destHeight
+        );
+      });
       return;
     }
 
@@ -2271,25 +2454,27 @@
   }
 
   function drawPlayerSprite(ctx, state, content, camera) {
-    const runtimeCharacterConfig = ACTIVE_APP?.devTools?.selectedCharacterSheetId
+    const activeAvatarId = state.player?.avatarId || ACTIVE_APP?.devTools?.selectedCharacterSheetId || CHARACTER_SHEET_OPTIONS[0]?.id || "";
+    const persistedSheet = getCharacterSheetConfig(content, activeAvatarId);
+    const runtimeCharacterConfig = ACTIVE_APP?.state?.screen === "dev-tools" && ACTIVE_APP?.devTools?.section === "characters"
       ? ACTIVE_APP.devTools
       : {
-          selectedCharacterSheetId: CHARACTER_SHEET_OPTIONS[0]?.id || "",
-          characterSheetColumns: PLAYER_SPRITE_COLUMNS,
-          characterSheetRows: PLAYER_SPRITE_ROWS,
-          characterSheetOffsetX: 0,
-          characterSheetOffsetY: 0,
-          characterSheetRowOffsets: Array.from({ length: PLAYER_SPRITE_ROWS }, function () {
+          selectedCharacterSheetId: persistedSheet?.id || CHARACTER_SHEET_OPTIONS[0]?.id || "",
+          characterSheetColumns: persistedSheet?.columns || PLAYER_SPRITE_COLUMNS,
+          characterSheetRows: persistedSheet?.rows || PLAYER_SPRITE_ROWS,
+          characterSheetOffsetX: persistedSheet?.offsetX || 0,
+          characterSheetOffsetY: persistedSheet?.offsetY || 0,
+          characterSheetRowOffsets: JSON.parse(JSON.stringify(persistedSheet?.rowOffsets || Array.from({ length: PLAYER_SPRITE_ROWS }, function () {
             return { x: 0, y: 0 };
-          }),
-          characterSheetFrameOffsets: Array.from({ length: PLAYER_SPRITE_ROWS }, function () {
+          }))),
+          characterSheetFrameOffsets: JSON.parse(JSON.stringify(persistedSheet?.frameOffsets || Array.from({ length: PLAYER_SPRITE_ROWS }, function () {
             return Array.from({ length: PLAYER_SPRITE_COLUMNS }, function () {
-              return { x: 0, y: 0 };
+              return { x: 0, y: 0, width: 0, height: 0 };
             });
-          }),
+          }))),
         };
-    ensureCharacterDevSelection(runtimeCharacterConfig);
-    const selectedSheet = getSelectedCharacterSheet(runtimeCharacterConfig);
+    ensureCharacterDevSelection(runtimeCharacterConfig, content);
+    const selectedSheet = getSelectedCharacterSheet(runtimeCharacterConfig, content);
     const image = getImage(selectedSheet?.path || PLAYER_SPRITE_SHEET);
     const map = content.maps[state.world.currentMapId];
     const zoomScale = Math.max(0.1, Number(state.settings.zoom || 100) / 100);
@@ -2557,18 +2742,15 @@
       );
     }).join("");
 
-    const avatars = [
-      { id: "avatar-1", label: "Navigator", accent: "#236e8f" },
-      { id: "avatar-2", label: "Scout", accent: "#f08b6e" },
-      { id: "avatar-3", label: "Caretaker", accent: "#60a36f" },
-    ];
+    const avatars = getPlayerAvatarOptions(content);
 
     const avatarCards = avatars.map(function (avatar) {
       const selected = setup.avatarId === avatar.id ? " avatar-card-selected" : "";
+      const visual = renderAvatarPreviewMarkup(avatar);
       return (
         '<button class="avatar-card' + selected + '" type="button" data-select-avatar="' + avatar.id + '">' +
-        '<span class="avatar-swatch" style="background:' + avatar.accent + '"></span>' +
-        "<strong>" + avatar.label + "</strong>" +
+        visual +
+        "<strong>" + escapeHtml(avatar.playerLabel || avatar.label || avatar.id) + "</strong>" +
         "</button>"
       );
     }).join("");
@@ -2900,9 +3082,10 @@
       ].join("");
     } else if (panel === "character") {
       const arenaProgress = ensureArenaProgress(state);
+      const currentAvatar = getCharacterSheetConfig(content, state.player.avatarId || "");
       panelBody = [
         "<p>Name: <strong>" + escapeHtml(state.player.name) + "</strong></p>",
-        "<p>Avatar: " + escapeHtml(state.player.avatarId || "avatar-1") + "</p>",
+        "<p>Avatar: " + escapeHtml(currentAvatar?.playerLabel || currentAvatar?.label || state.player.avatarId || "Unknown") + "</p>",
         "<p>Money: $" + state.player.money + "</p>",
         "<p>Experience: " + Number(state.player.experience || 0) + "</p>",
         "<p>Last Town: " + escapeHtml(state.player.lastTownId || "Unknown") + "</p>",
@@ -2977,6 +3160,10 @@
     } else if (panel === "quests") {
       panelBody = "<p>Quest tracking is still planned work. This panel is ready for that system when you want it.</p>";
     } else if (panel === "settings") {
+      const avatarOptions = getPlayerAvatarOptions(content).map(function (sheet) {
+        const selected = state.player.avatarId === sheet.id ? " selected" : "";
+        return '<option value="' + escapeHtml(sheet.id) + '"' + selected + '>' + escapeHtml(sheet.playerLabel || sheet.label || sheet.id) + "</option>";
+      }).join("");
       const themeOptions = (content.themes.themes || []).map(function (theme) {
         const selected = state.settings.theme === theme.id ? " selected" : "";
         return '<option value="' + escapeHtml(theme.id) + '"' + selected + ">" + escapeHtml(theme.label) + "</option>";
@@ -2989,6 +3176,7 @@
       panelBody = [
         '<div class="form-grid">',
         '<label class="input-group"><span>Theme</span><select data-world-setting="theme">' + themeOptions + "</select></label>",
+        '<label class="input-group"><span>Sprite Avatar</span><select data-world-player-field="avatarId">' + avatarOptions + "</select></label>",
         '<label class="input-group"><span>Map Zoom</span><select data-world-setting="zoom">' + zoomOptions + "</select></label>",
         '<label class="input-group"><span>Party Size</span><input type="number" min="1" max="12" data-world-setting="partySize" value="' + Number(state.settings.partySize) + '" /></label>',
         '<label class="input-group"><span>Arena Leader Min Level</span><input type="number" min="1" max="999" data-world-setting="arenaLeaderMinLevel" value="' + Number(state.settings.arenaLeaderMinLevel || 1) + '" /></label>',
@@ -3669,14 +3857,15 @@
     devToolsState.selectedPreviewVariantId = selectedVariant?.id || "";
   }
 
-  function ensureCharacterDevSelection(devToolsState) {
-    if (!CHARACTER_SHEET_OPTIONS.find(function (entry) { return entry.id === devToolsState.selectedCharacterSheetId; })) {
-      devToolsState.selectedCharacterSheetId = CHARACTER_SHEET_OPTIONS[0]?.id || "";
+  function ensureCharacterDevSelection(devToolsState, content) {
+    const availableSheets = getAvailableCharacterSheets(content);
+    if (!availableSheets.find(function (entry) { return entry.id === devToolsState.selectedCharacterSheetId; })) {
+      devToolsState.selectedCharacterSheetId = availableSheets[0]?.id || "";
     }
 
-    const sheet = CHARACTER_SHEET_OPTIONS.find(function (entry) {
+    const sheet = availableSheets.find(function (entry) {
       return entry.id === devToolsState.selectedCharacterSheetId;
-    }) || CHARACTER_SHEET_OPTIONS[0] || null;
+    }) || availableSheets[0] || null;
 
     if (typeof devToolsState.characterSheetColumns !== "number" || devToolsState.characterSheetColumns < 1) {
       devToolsState.characterSheetColumns = sheet?.columns || 4;
@@ -3694,10 +3883,19 @@
       devToolsState.characterSheetSelectedRow = 0;
     }
     if (typeof devToolsState.characterSheetPreviewScale !== "number" || devToolsState.characterSheetPreviewScale <= 0) {
-      devToolsState.characterSheetPreviewScale = 2;
+      devToolsState.characterSheetPreviewScale = 1.5;
     }
     if (typeof devToolsState.characterSheetSelectedFrame !== "number" || devToolsState.characterSheetSelectedFrame < 0) {
       devToolsState.characterSheetSelectedFrame = 0;
+    }
+    if (typeof devToolsState.characterSheetPlayerLabel !== "string") {
+      devToolsState.characterSheetPlayerLabel = sheet?.playerLabel || sheet?.label || "";
+    }
+    if (typeof devToolsState.characterSheetPlayerSelectable !== "boolean") {
+      devToolsState.characterSheetPlayerSelectable = !!sheet?.playerSelectable;
+    }
+    if (typeof devToolsState.characterSheetCompareRow !== "number" || devToolsState.characterSheetCompareRow < 0) {
+      devToolsState.characterSheetCompareRow = Math.min(1, Math.max(0, (sheet?.rows || devToolsState.characterSheetRows || 1) - 1));
     }
     if (!devToolsState.characterSheetAnimation) {
       devToolsState.characterSheetAnimation = {
@@ -3728,19 +3926,98 @@
     devToolsState.characterSheetFrameOffsets = devToolsState.characterSheetFrameOffsets.slice(0, devToolsState.characterSheetRows).map(function (row) {
       const normalizedRow = Array.isArray(row) ? row.slice(0, devToolsState.characterSheetColumns) : [];
       while (normalizedRow.length < devToolsState.characterSheetColumns) {
-        normalizedRow.push({ x: 0, y: 0 });
+        normalizedRow.push({ x: 0, y: 0, width: 0, height: 0 });
       }
       return normalizedRow.map(function (entry) {
         return {
           x: Number(entry?.x || 0),
           y: Number(entry?.y || 0),
+          width: Number(entry?.width || 0),
+          height: Number(entry?.height || 0),
         };
       });
     });
 
     devToolsState.characterSheetSelectedRow = Math.max(0, Math.min(devToolsState.characterSheetRows - 1, devToolsState.characterSheetSelectedRow));
     devToolsState.characterSheetSelectedFrame = Math.max(0, Math.min(devToolsState.characterSheetColumns - 1, devToolsState.characterSheetSelectedFrame));
+    devToolsState.characterSheetCompareRow = Math.max(0, Math.min(devToolsState.characterSheetRows - 1, devToolsState.characterSheetCompareRow));
     return sheet;
+  }
+
+  function ensureCharacterSheetCatalog(content) {
+    if (!content.characterSheets || !Array.isArray(content.characterSheets.sheets)) {
+      content.characterSheets = JSON.parse(JSON.stringify(fallbackContent.characterSheets));
+    }
+
+    return content.characterSheets.sheets;
+  }
+
+  function getAvailableCharacterSheets(content) {
+    return (content && ensureCharacterSheetCatalog(content).length
+      ? ensureCharacterSheetCatalog(content)
+      : CHARACTER_SHEET_OPTIONS);
+  }
+
+  function getPlayerAvatarOptions(content) {
+    const selectable = getAvailableCharacterSheets(content).filter(function (entry) {
+      return entry.playerSelectable;
+    });
+    return selectable.length ? selectable : getAvailableCharacterSheets(content).slice(0, 1);
+  }
+
+  function renderAvatarPreviewMarkup(sheet) {
+    if (!sheet?.path) {
+      return '<span class="avatar-swatch"></span>';
+    }
+
+    const columns = Math.max(1, Number(sheet.columns || 4));
+    const rows = Math.max(1, Number(sheet.rows || 4));
+    return '<span class="avatar-preview-sprite" style="background-image:url(\'' + escapeHtml(sheet.path) + '\');background-size:' + (columns * 100) + '% ' + (rows * 100) + '%;background-position:0% 0%;"></span>';
+  }
+
+  function getCharacterSheetConfig(content, sheetId) {
+    return getAvailableCharacterSheets(content).find(function (entry) {
+      return entry.id === sheetId;
+    }) || getAvailableCharacterSheets(content)[0] || null;
+  }
+
+  function applyCharacterSheetToDevTools(content, devToolsState, sheetId) {
+    const config = getCharacterSheetConfig(content, sheetId) || CHARACTER_SHEET_OPTIONS[0] || null;
+    devToolsState.selectedCharacterSheetId = config?.id || CHARACTER_SHEET_OPTIONS[0]?.id || "";
+    devToolsState.characterSheetColumns = Math.max(1, Number(config?.columns || 4));
+    devToolsState.characterSheetRows = Math.max(1, Number(config?.rows || 4));
+    devToolsState.characterSheetOffsetX = Number(config?.offsetX || 0);
+    devToolsState.characterSheetOffsetY = Number(config?.offsetY || 0);
+    devToolsState.characterSheetPlayerLabel = config?.playerLabel || config?.label || "";
+    devToolsState.characterSheetPlayerSelectable = !!config?.playerSelectable;
+    devToolsState.characterSheetRowOffsets = JSON.parse(JSON.stringify(config?.rowOffsets || []));
+    devToolsState.characterSheetFrameOffsets = JSON.parse(JSON.stringify(config?.frameOffsets || []));
+    devToolsState.characterSheetSelectedRow = 0;
+    devToolsState.characterSheetSelectedFrame = 0;
+    devToolsState.characterSheetCompareRow = Math.min(1, Math.max(0, devToolsState.characterSheetRows - 1));
+    if (!devToolsState.characterSheetAnimation) {
+      devToolsState.characterSheetAnimation = { frameIndex: 0, frameTime: 0 };
+    } else {
+      devToolsState.characterSheetAnimation.frameIndex = 0;
+      devToolsState.characterSheetAnimation.frameTime = 0;
+    }
+    ensureCharacterDevSelection(devToolsState, content);
+  }
+
+  function syncDevToolsCharacterSheet(content, devToolsState) {
+    const sheet = getCharacterSheetConfig(content, devToolsState.selectedCharacterSheetId);
+    if (!sheet) {
+      return;
+    }
+
+    sheet.columns = Math.max(1, Number(devToolsState.characterSheetColumns || sheet.columns || 4));
+    sheet.rows = Math.max(1, Number(devToolsState.characterSheetRows || sheet.rows || 4));
+    sheet.offsetX = Number(devToolsState.characterSheetOffsetX || 0);
+    sheet.offsetY = Number(devToolsState.characterSheetOffsetY || 0);
+    sheet.playerLabel = String(devToolsState.characterSheetPlayerLabel || sheet.playerLabel || sheet.label || "");
+    sheet.playerSelectable = !!devToolsState.characterSheetPlayerSelectable;
+    sheet.rowOffsets = JSON.parse(JSON.stringify(devToolsState.characterSheetRowOffsets || []));
+    sheet.frameOffsets = JSON.parse(JSON.stringify(devToolsState.characterSheetFrameOffsets || []));
   }
 
   function getCharacterRowOffset(characterConfig, rowIndex) {
@@ -3748,7 +4025,7 @@
   }
 
   function getCharacterFrameOffset(characterConfig, rowIndex, frameIndex) {
-    return characterConfig.characterSheetFrameOffsets?.[rowIndex]?.[frameIndex] || { x: 0, y: 0 };
+    return characterConfig.characterSheetFrameOffsets?.[rowIndex]?.[frameIndex] || { x: 0, y: 0, width: 0, height: 0 };
   }
 
   function validateMonsterEditorContent(content) {
@@ -4293,16 +4570,22 @@
   }
 
   function renderCharacterDevToolsScreen(root, content, devToolsState) {
-    const sheet = ensureCharacterDevSelection(devToolsState);
+    const sheet = ensureCharacterDevSelection(devToolsState, content);
     const selectedRow = devToolsState.characterSheetSelectedRow || 0;
     const selectedFrame = devToolsState.characterSheetSelectedFrame || 0;
+    const compareRow = typeof devToolsState.characterSheetCompareRow === "number" ? devToolsState.characterSheetCompareRow : Math.min(1, Math.max(1, (devToolsState.characterSheetRows || 1) - 1));
     const directionLabels = ["Down", "Left", "Right", "Up"];
-    const sidebarItems = CHARACTER_SHEET_OPTIONS.map(function (entry) {
+    const sidebarItems = getAvailableCharacterSheets(content).map(function (entry) {
       const selected = entry.id === devToolsState.selectedCharacterSheetId ? " compact-list-selected" : "";
       return '<li class="' + selected.trim() + '"><button type="button" class="link-button" data-dev-select-character-sheet="' + escapeHtml(entry.id) + '"><strong>' + escapeHtml(entry.label) + '</strong><span>' + escapeHtml(entry.path) + "</span></button></li>";
     }).join("");
     const rowOptions = Array.from({ length: Math.max(1, devToolsState.characterSheetRows || 1) }).map(function (_, index) {
       const selected = index === selectedRow ? " selected" : "";
+      const label = directionLabels[index] || ("Row " + (index + 1));
+      return '<option value="' + index + '"' + selected + ">" + escapeHtml(label) + "</option>";
+    }).join("");
+    const compareRowOptions = Array.from({ length: Math.max(1, devToolsState.characterSheetRows || 1) }).map(function (_, index) {
+      const selected = index === compareRow ? " selected" : "";
       const label = directionLabels[index] || ("Row " + (index + 1));
       return '<option value="' + index + '"' + selected + ">" + escapeHtml(label) + "</option>";
     }).join("");
@@ -4329,21 +4612,34 @@
       '<label class="input-group"><span>Rows</span><input type="number" min="1" step="1" data-dev-character-field="rows" value="' + Number(devToolsState.characterSheetRows || sheet?.rows || 4) + '" /></label>',
       '<label class="input-group"><span>Offset X</span><input type="number" step="1" data-dev-character-field="offsetX" value="' + Number(devToolsState.characterSheetOffsetX || 0) + '" /></label>',
       '<label class="input-group"><span>Offset Y</span><input type="number" step="1" data-dev-character-field="offsetY" value="' + Number(devToolsState.characterSheetOffsetY || 0) + '" /></label>',
-      '<label class="input-group"><span>Preview Scale</span><input type="number" min="1" max="6" step="1" data-dev-character-field="previewScale" value="' + Number(devToolsState.characterSheetPreviewScale || 2) + '" /></label>',
+      '<label class="input-group"><span>Preview Scale</span><input type="number" min="0.5" max="6" step="0.25" data-dev-character-field="previewScale" value="' + Number(devToolsState.characterSheetPreviewScale || 1.5) + '" /></label>',
+      '<label class="input-group"><span>Player Avatar Label</span><input type="text" data-dev-character-field="playerLabel" value="' + escapeHtml(devToolsState.characterSheetPlayerLabel || sheet?.label || "") + '" /></label>',
+      '<label class="input-group"><span>Available To Player</span><select data-dev-character-field="playerSelectable"><option value="true"' + (devToolsState.characterSheetPlayerSelectable ? " selected" : "") + '>Yes</option><option value="false"' + (!devToolsState.characterSheetPlayerSelectable ? " selected" : "") + '>No</option></select></label>',
       '<label class="input-group"><span>Active Row</span><select data-dev-character-field="selectedRow">' + rowOptions + '</select></label>',
+      '<label class="input-group"><span>Compare Row</span><select data-dev-character-field="compareRow">' + compareRowOptions + '</select></label>',
       '<label class="input-group"><span>Active Frame</span><select data-dev-character-field="selectedFrame">' + frameOptions + '</select></label>',
-      '<label class="input-group"><span>Row Offset X</span><input type="number" step="1" data-dev-character-field="rowOffsetX" value="' + Number(selectedRowOffset.x || 0) + '" /></label>',
-      '<label class="input-group"><span>Row Offset Y</span><input type="number" step="1" data-dev-character-field="rowOffsetY" value="' + Number(selectedRowOffset.y || 0) + '" /></label>',
-      '<label class="input-group"><span>Frame Offset X</span><input type="number" step="1" data-dev-character-field="frameOffsetX" value="' + Number(selectedFrameOffset.x || 0) + '" /></label>',
-      '<label class="input-group"><span>Frame Offset Y</span><input type="number" step="1" data-dev-character-field="frameOffsetY" value="' + Number(selectedFrameOffset.y || 0) + '" /></label>',
+      '<label class="input-group"><span>Row Shift X (all frames)</span><input type="number" step="1" data-dev-character-field="rowOffsetX" value="' + Number(selectedRowOffset.x || 0) + '" /></label>',
+      '<label class="input-group"><span>Row Shift Y (all frames)</span><input type="number" step="1" data-dev-character-field="rowOffsetY" value="' + Number(selectedRowOffset.y || 0) + '" /></label>',
+      '<label class="input-group"><span>Frame Cut X</span><input type="number" step="1" data-dev-character-field="frameOffsetX" value="' + Number(selectedFrameOffset.x || 0) + '" /></label>',
+      '<label class="input-group"><span>Frame Cut Y</span><input type="number" step="1" data-dev-character-field="frameOffsetY" value="' + Number(selectedFrameOffset.y || 0) + '" /></label>',
+      '<label class="input-group"><span>Frame Cut Width</span><input type="number" step="1" data-dev-character-field="frameWidthAdjust" value="' + Number(selectedFrameOffset.width || 0) + '" /></label>',
+      '<label class="input-group"><span>Frame Cut Height</span><input type="number" step="1" data-dev-character-field="frameHeightAdjust" value="' + Number(selectedFrameOffset.height || 0) + '" /></label>',
       '</div>',
-      '<p class="dev-helper-text">Use global offsets for the whole sheet, row offsets for one direction row, and frame offsets for individual cells. The live player renderer uses these values too while this session is open.</p>',
+      '<p class="dev-helper-text">Use global offsets for the whole sheet, row offsets for one direction row, and frame cut values for individual cells. Frame cut X/Y/Width/Height only affects the selected frame, so you can fix one drifted frame without moving its neighbors.</p>',
+      '<div class="title-actions"><button class="secondary-button" type="button" data-action="export-character-sheets-json">Export character-sheets.json</button></div>',
       '</section>',
       '<section class="dev-preview-grid dev-character-preview-grid">',
-      '<section class="map-panel dev-map-panel"><div class="section-heading"><h2>Full Sheet</h2><span>' + escapeHtml(sheet?.label || "Sheet") + '</span></div><div class="dev-canvas-scroll"><canvas class="dev-character-sheet-canvas" width="720" height="520"></canvas></div><div class="map-caption">Grid overlay shows how the current columns, rows, and offsets will be cut.</div></section>',
-      '<section class="map-panel dev-map-panel"><div class="section-heading"><h2>Selected Row Frames</h2><span>' + escapeHtml(directionLabels[selectedRow] || ("Row " + (selectedRow + 1))) + '</span></div><div class="dev-canvas-scroll"><canvas class="dev-character-row-canvas" width="720" height="220"></canvas></div><div class="map-caption">Each frame from the selected row is previewed at the current scale.</div></section>',
+      '<section class="map-panel dev-map-panel"><div class="section-heading"><h2>Full Sheet</h2><span>' + escapeHtml(sheet?.label || "Sheet") + '</span></div><div class="dev-canvas-scroll" data-preview-role="character-sheet"><canvas class="dev-character-sheet-canvas" width="720" height="520"></canvas></div><div class="map-caption">Grid overlay shows how the current columns, rows, and offsets will be cut.</div></section>',
+      '<section class="map-panel dev-map-panel"><div class="section-heading"><h2>Selected Row Frames</h2><span>' + escapeHtml(directionLabels[selectedRow] || ("Row " + (selectedRow + 1))) + '</span></div><div class="dev-canvas-scroll" data-preview-role="character-row"><canvas class="dev-character-row-canvas" width="720" height="220"></canvas></div><div class="map-caption">Frames from the selected row are stacked with transparency so you can compare centering and drift.</div></section>',
       '</section>',
-      '<section class="panel-block dev-editor-panel"><div class="section-heading"><h2>Walk Preview</h2><span>Animated</span></div><div class="dev-character-animation-wrap"><canvas class="dev-character-animation-canvas" width="720" height="240"></canvas></div><div class="map-caption">Animated loop for the selected row, using the same four-frame walk sequence as the game.</div></section>',
+      '<section class="panel-block dev-editor-panel">' +
+      '<div class="section-heading"><h2>Walk Comparison</h2><span>' + escapeHtml((directionLabels[selectedRow] || ("Row " + (selectedRow + 1))) + " vs " + (directionLabels[compareRow] || ("Row " + (compareRow + 1)))) + '</span></div>' +
+      '<div class="dev-character-compare-strip">' +
+      '<div class="dev-character-compare-item"><div class="dev-character-compare-label">' + escapeHtml(directionLabels[selectedRow] || ("Row " + (selectedRow + 1))) + '</div><div class="dev-character-animation-wrap dev-canvas-scroll" data-preview-role="character-animation-primary"><canvas class="dev-character-animation-canvas" width="720" height="180"></canvas></div></div>' +
+      '<div class="dev-character-compare-item"><div class="dev-character-compare-label">' + escapeHtml(directionLabels[compareRow] || ("Row " + (compareRow + 1))) + '</div><div class="dev-character-animation-wrap dev-canvas-scroll" data-preview-role="character-animation-compare"><canvas class="dev-character-animation-compare-canvas" width="720" height="180"></canvas></div></div>' +
+      '</div>' +
+      '<div class="map-caption">Animated loops for the active row and comparison row, shown side by side in one shared preview area.</div>' +
+      '</section>',
       '</section>',
       '</section>',
       '</main>',
@@ -4352,10 +4648,10 @@
     return null;
   }
 
-  function getSelectedCharacterSheet(devToolsState) {
-    return CHARACTER_SHEET_OPTIONS.find(function (entry) {
+  function getSelectedCharacterSheet(devToolsState, content) {
+    return getAvailableCharacterSheets(content).find(function (entry) {
       return entry.id === devToolsState.selectedCharacterSheetId;
-    }) || CHARACTER_SHEET_OPTIONS[0] || null;
+    }) || getAvailableCharacterSheets(content)[0] || null;
   }
 
   function getCharacterSheetMetrics(devToolsState, image) {
@@ -4379,17 +4675,19 @@
     const metrics = getCharacterSheetMetrics(characterConfig, image);
     const rowOffset = getCharacterRowOffset(characterConfig, rowIndex);
     const frameOffset = getCharacterFrameOffset(characterConfig, rowIndex, frameIndex);
+    const baseX = metrics.offsetX + frameIndex * metrics.frameWidth + rowOffset.x;
+    const baseY = metrics.offsetY + rowIndex * metrics.frameHeight + rowOffset.y;
     return {
-      sx: metrics.offsetX + frameIndex * metrics.frameWidth + rowOffset.x + frameOffset.x,
-      sy: metrics.offsetY + rowIndex * metrics.frameHeight + rowOffset.y + frameOffset.y,
-      sw: metrics.frameWidth,
-      sh: metrics.frameHeight,
+      sx: baseX + Number(frameOffset.x || 0),
+      sy: baseY + Number(frameOffset.y || 0),
+      sw: Math.max(1, metrics.frameWidth + frameOffset.width),
+      sh: Math.max(1, metrics.frameHeight + frameOffset.height),
       metrics,
     };
   }
 
   function drawCharacterSheetGrid(canvas, devToolsState) {
-    const sheet = getSelectedCharacterSheet(devToolsState);
+    const sheet = getSelectedCharacterSheet(devToolsState, ACTIVE_APP?.content);
     const ctx = canvas.getContext("2d");
     const image = getImage(sheet?.path || "");
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -4444,7 +4742,7 @@
   }
 
   function drawCharacterRowFrames(canvas, devToolsState) {
-    const sheet = getSelectedCharacterSheet(devToolsState);
+    const sheet = getSelectedCharacterSheet(devToolsState, ACTIVE_APP?.content);
     const ctx = canvas.getContext("2d");
     const image = getImage(sheet?.path || "");
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -4460,16 +4758,49 @@
 
     const metrics = getCharacterSheetMetrics(devToolsState, image);
     const selectedRow = Math.max(0, Math.min(metrics.rows - 1, Number(devToolsState.characterSheetSelectedRow || 0)));
-    const previewScale = Math.max(1, Number(devToolsState.characterSheetPreviewScale || 2));
-    const padding = 18;
-    const slotWidth = Math.floor((canvas.width - padding * (metrics.columns + 1)) / metrics.columns);
+    const frameRects = Array.from({ length: metrics.columns }, function (_, column) {
+      return getCharacterFrameSourceRect(devToolsState, image, selectedRow, column);
+    });
+    const maxFrameWidth = Math.max.apply(null, frameRects.map(function (rect) { return rect.sw; }));
+    const maxFrameHeight = Math.max.apply(null, frameRects.map(function (rect) { return rect.sh; }));
+    const requestedScale = Math.max(0.5, Number(devToolsState.characterSheetPreviewScale || 1.5));
+    const maxPreviewWidth = canvas.width - 80;
+    const maxPreviewHeight = canvas.height - 78;
+    const fitScale = Math.min(maxPreviewWidth / maxFrameWidth, maxPreviewHeight / maxFrameHeight);
+    const previewScale = Math.max(0.35, Math.min(requestedScale, fitScale));
+    const centerX = Math.round(canvas.width / 2);
+    const centerY = Math.round((canvas.height - 26) / 2);
+    const colors = ["#f08b6e", "#7da8d8", "#9ac47a", "#c38dd9", "#d9b16f", "#5eb7ab"];
+    const selectedFrame = Math.max(0, Math.min(metrics.columns - 1, Number(devToolsState.characterSheetSelectedFrame || 0)));
 
-    for (let column = 0; column < metrics.columns; column += 1) {
-      const dx = padding + column * (slotWidth + padding);
-      const dy = Math.round((canvas.height - metrics.frameHeight * previewScale) / 2);
-      const sourceRect = getCharacterFrameSourceRect(devToolsState, image, selectedRow, column);
-      ctx.fillStyle = "rgba(255, 255, 255, 0.72)";
-      ctx.fillRect(dx - 6, dy - 6, metrics.frameWidth * previewScale + 12, metrics.frameHeight * previewScale + 12);
+    ctx.save();
+    ctx.fillStyle = "rgba(255, 255, 255, 0.78)";
+    ctx.strokeStyle = "rgba(57, 79, 91, 0.14)";
+    ctx.lineWidth = 1.5;
+    ctx.fillRect(
+      Math.round(centerX - (maxFrameWidth * previewScale) / 2) - 10,
+      Math.round(centerY - (maxFrameHeight * previewScale) / 2) - 10,
+      Math.round(maxFrameWidth * previewScale) + 20,
+      Math.round(maxFrameHeight * previewScale) + 20
+    );
+    ctx.strokeRect(
+      Math.round(centerX - (maxFrameWidth * previewScale) / 2) - 10,
+      Math.round(centerY - (maxFrameHeight * previewScale) / 2) - 10,
+      Math.round(maxFrameWidth * previewScale) + 20,
+      Math.round(maxFrameHeight * previewScale) + 20
+    );
+    ctx.restore();
+
+    frameRects.forEach(function (sourceRect, column) {
+      const color = colors[column % colors.length];
+      const drawWidth = sourceRect.sw * previewScale;
+      const drawHeight = sourceRect.sh * previewScale;
+      const dx = Math.round(centerX - drawWidth / 2);
+      const dy = Math.round(centerY - drawHeight / 2);
+      const isSelected = column === selectedFrame;
+
+      ctx.save();
+      ctx.globalAlpha = isSelected ? 0.92 : 0.26;
       ctx.drawImage(
         image,
         sourceRect.sx,
@@ -4478,17 +4809,33 @@
         sourceRect.sh,
         dx,
         dy,
-        metrics.frameWidth * previewScale,
-        metrics.frameHeight * previewScale
+        drawWidth,
+        drawHeight
       );
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = isSelected ? 3 : 1.5;
+      ctx.strokeRect(dx, dy, drawWidth, drawHeight);
+      ctx.restore();
+    });
+
+    frameRects.forEach(function (_, column) {
+      const color = colors[column % colors.length];
+      const legendX = 18 + column * 172;
+      const legendY = canvas.height - 28;
+      const isSelected = column === selectedFrame;
+      ctx.fillStyle = color;
+      ctx.globalAlpha = isSelected ? 1 : 0.45;
+      ctx.fillRect(legendX, legendY - 10, 14, 14);
+      ctx.globalAlpha = 1;
       ctx.fillStyle = "#6a5044";
-      ctx.font = "14px sans-serif";
-      ctx.fillText("Frame " + (column + 1), dx, dy + metrics.frameHeight * previewScale + 22);
-    }
+      ctx.font = (isSelected ? "700 " : "500 ") + '13px sans-serif';
+      ctx.fillText("Frame " + (column + 1), legendX + 22, legendY + 1);
+    });
   }
 
-  function drawCharacterAnimationPreview(canvas, devToolsState) {
-    const sheet = getSelectedCharacterSheet(devToolsState);
+  function drawCharacterAnimationPreview(canvas, devToolsState, rowOverride) {
+    const sheet = getSelectedCharacterSheet(devToolsState, ACTIVE_APP?.content);
     const ctx = canvas.getContext("2d");
     const image = getImage(sheet?.path || "");
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -4503,16 +4850,20 @@
     }
 
     const metrics = getCharacterSheetMetrics(devToolsState, image);
-    const selectedRow = Math.max(0, Math.min(metrics.rows - 1, Number(devToolsState.characterSheetSelectedRow || 0)));
+    const selectedRow = Math.max(0, Math.min(metrics.rows - 1, Number(typeof rowOverride === "number" ? rowOverride : (devToolsState.characterSheetSelectedRow || 0))));
     const animation = devToolsState.characterSheetAnimation || { frameIndex: 0 };
-    const previewScale = Math.max(1, Number(devToolsState.characterSheetPreviewScale || 2));
-    const dx = Math.round((canvas.width - metrics.frameWidth * previewScale) / 2);
-    const dy = Math.round((canvas.height - metrics.frameHeight * previewScale) / 2);
     const sourceRect = getCharacterFrameSourceRect(devToolsState, image, selectedRow, Math.max(0, Math.min(metrics.columns - 1, animation.frameIndex || 0)));
+    const requestedScale = Math.max(0.5, Number(devToolsState.characterSheetPreviewScale || 1.5));
+    const maxPreviewWidth = canvas.width - 72;
+    const maxPreviewHeight = canvas.height - 52;
+    const fitScale = Math.min(maxPreviewWidth / sourceRect.sw, maxPreviewHeight / sourceRect.sh);
+    const previewScale = Math.max(0.4, Math.min(requestedScale, fitScale));
+    const dx = Math.round((canvas.width - sourceRect.sw * previewScale) / 2);
+    const dy = Math.round((canvas.height - sourceRect.sh * previewScale) / 2) - 2;
 
     ctx.fillStyle = "rgba(167, 205, 145, 0.28)";
     ctx.beginPath();
-    ctx.ellipse(canvas.width / 2, dy + metrics.frameHeight * previewScale - 6, 54, 16, 0, 0, Math.PI * 2);
+    ctx.ellipse(canvas.width / 2, dy + sourceRect.sh * previewScale - 4, 36, 10, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.drawImage(
       image,
@@ -4522,8 +4873,8 @@
       sourceRect.sh,
       dx,
       dy,
-      metrics.frameWidth * previewScale,
-      metrics.frameHeight * previewScale
+      sourceRect.sw * previewScale,
+      sourceRect.sh * previewScale
     );
   }
 
@@ -4531,6 +4882,7 @@
     const sheetCanvas = root.querySelector(".dev-character-sheet-canvas");
     const rowCanvas = root.querySelector(".dev-character-row-canvas");
     const animationCanvas = root.querySelector(".dev-character-animation-canvas");
+    const compareAnimationCanvas = root.querySelector(".dev-character-animation-compare-canvas");
     if (sheetCanvas) {
       drawCharacterSheetGrid(sheetCanvas, devToolsState);
     }
@@ -4538,7 +4890,10 @@
       drawCharacterRowFrames(rowCanvas, devToolsState);
     }
     if (animationCanvas) {
-      drawCharacterAnimationPreview(animationCanvas, devToolsState);
+      drawCharacterAnimationPreview(animationCanvas, devToolsState, devToolsState.characterSheetSelectedRow || 0);
+    }
+    if (compareAnimationCanvas) {
+      drawCharacterAnimationPreview(compareAnimationCanvas, devToolsState, devToolsState.characterSheetCompareRow || 0);
     }
   }
 
@@ -4646,6 +5001,11 @@
       const eventName = field.tagName === "SELECT" ? "change" : "input";
       field.addEventListener(eventName, function () {
         app.updateWorldSetting(field.getAttribute("data-world-setting"), field.value);
+      });
+    });
+    root.querySelectorAll("[data-world-player-field]").forEach(function (field) {
+      field.addEventListener("change", function () {
+        app.updateWorldPlayerField(field.getAttribute("data-world-player-field"), field.value);
       });
     });
 
@@ -4839,6 +5199,9 @@
     });
     root.querySelector('[data-action="export-towns-json"]')?.addEventListener("click", function () {
       app.exportTownsJson();
+    });
+    root.querySelector('[data-action="export-character-sheets-json"]')?.addEventListener("click", function () {
+      app.exportCharacterSheetsJson();
     });
 
     root.querySelectorAll("[data-dev-select-map]").forEach(function (button) {
@@ -5321,13 +5684,14 @@
         selectedSpeciesId: content.monsters?.species?.[0]?.id || "",
         selectedSkillId: ensureSkillCatalog(content)[0]?.id || "",
         selectedPreviewVariantId: content.monsters?.species?.[0]?.variants?.[0]?.id || "",
-        selectedCharacterSheetId: CHARACTER_SHEET_OPTIONS[0]?.id || "",
-        characterSheetColumns: CHARACTER_SHEET_OPTIONS[0]?.columns || 4,
-        characterSheetRows: CHARACTER_SHEET_OPTIONS[0]?.rows || 4,
+        selectedCharacterSheetId: getCharacterSheetConfig(content, CHARACTER_SHEET_OPTIONS[0]?.id || "")?.id || CHARACTER_SHEET_OPTIONS[0]?.id || "",
+        characterSheetColumns: getCharacterSheetConfig(content, CHARACTER_SHEET_OPTIONS[0]?.id || "")?.columns || CHARACTER_SHEET_OPTIONS[0]?.columns || 4,
+        characterSheetRows: getCharacterSheetConfig(content, CHARACTER_SHEET_OPTIONS[0]?.id || "")?.rows || CHARACTER_SHEET_OPTIONS[0]?.rows || 4,
         characterSheetOffsetX: 0,
         characterSheetOffsetY: 0,
         characterSheetSelectedRow: 0,
-        characterSheetPreviewScale: 2,
+        characterSheetCompareRow: 1,
+        characterSheetPreviewScale: 1.5,
         characterSheetAnimation: {
           frameIndex: 0,
           frameTime: 0,
@@ -5336,6 +5700,9 @@
         previewScroll: {
           source: { left: 0, top: 0 },
           target: { left: 0, top: 0 },
+          "character-sheet": { left: 0, top: 0 },
+          "character-row": { left: 0, top: 0 },
+          "character-animation": { left: 0, top: 0 },
         },
         drag: null,
       },
@@ -5380,7 +5747,7 @@
         this.devTools.selectedInteractionId = interactions[0]?.id || "";
         syncMonsterDevSelection(this.content, this.devTools);
         syncArenaDevSelection(this.content, this.devTools);
-        ensureCharacterDevSelection(this.devTools);
+        ensureCharacterDevSelection(this.devTools, this.content);
         this.state = { screen: "dev-tools" };
         this.render();
       },
@@ -5466,6 +5833,19 @@
           this.state.settings[key] = rawValue === "true";
         } else {
           this.state.settings[key] = rawValue;
+        }
+
+        this.render();
+      },
+      updateWorldPlayerField: function (key, rawValue) {
+        if (this.state.screen !== "world") {
+          return;
+        }
+
+        if (key === "avatarId") {
+          this.state.player.avatarId = rawValue;
+        } else {
+          this.state.player[key] = rawValue;
         }
 
         this.render();
@@ -5698,17 +6078,11 @@
           syncArenaDevSelection(this.content, this.devTools);
         }
         syncMonsterDevSelection(this.content, this.devTools);
-        ensureCharacterDevSelection(this.devTools);
+        applyCharacterSheetToDevTools(this.content, this.devTools, this.devTools.selectedCharacterSheetId);
         this.render();
       },
       selectCharacterSheet: function (sheetId) {
-        this.devTools.selectedCharacterSheetId = sheetId;
-        const sheet = ensureCharacterDevSelection(this.devTools);
-        this.devTools.characterSheetColumns = sheet?.columns || this.devTools.characterSheetColumns;
-        this.devTools.characterSheetRows = sheet?.rows || this.devTools.characterSheetRows;
-        this.devTools.characterSheetSelectedRow = 0;
-        this.devTools.characterSheetAnimation.frameIndex = 0;
-        this.devTools.characterSheetAnimation.frameTime = 0;
+        applyCharacterSheetToDevTools(this.content, this.devTools, sheetId);
         this.render();
       },
       updateCharacterSheetField: function (field, rawValue) {
@@ -5720,29 +6094,42 @@
           this.devTools.characterSheetOffsetX = Number(rawValue || 0);
         } else if (field === "offsetY") {
           this.devTools.characterSheetOffsetY = Number(rawValue || 0);
+        } else if (field === "playerLabel") {
+          this.devTools.characterSheetPlayerLabel = String(rawValue || "");
+        } else if (field === "playerSelectable") {
+          this.devTools.characterSheetPlayerSelectable = rawValue === "true";
         } else if (field === "selectedRow") {
           this.devTools.characterSheetSelectedRow = Math.max(0, Number(rawValue || 0));
           this.devTools.characterSheetAnimation.frameIndex = 0;
           this.devTools.characterSheetAnimation.frameTime = 0;
+        } else if (field === "compareRow") {
+          this.devTools.characterSheetCompareRow = Math.max(0, Number(rawValue || 0));
         } else if (field === "selectedFrame") {
           this.devTools.characterSheetSelectedFrame = Math.max(0, Number(rawValue || 0));
         } else if (field === "rowOffsetX") {
-          ensureCharacterDevSelection(this.devTools);
+          ensureCharacterDevSelection(this.devTools, this.content);
           this.devTools.characterSheetRowOffsets[this.devTools.characterSheetSelectedRow].x = Number(rawValue || 0);
         } else if (field === "rowOffsetY") {
-          ensureCharacterDevSelection(this.devTools);
+          ensureCharacterDevSelection(this.devTools, this.content);
           this.devTools.characterSheetRowOffsets[this.devTools.characterSheetSelectedRow].y = Number(rawValue || 0);
         } else if (field === "frameOffsetX") {
-          ensureCharacterDevSelection(this.devTools);
+          ensureCharacterDevSelection(this.devTools, this.content);
           this.devTools.characterSheetFrameOffsets[this.devTools.characterSheetSelectedRow][this.devTools.characterSheetSelectedFrame].x = Number(rawValue || 0);
         } else if (field === "frameOffsetY") {
-          ensureCharacterDevSelection(this.devTools);
+          ensureCharacterDevSelection(this.devTools, this.content);
           this.devTools.characterSheetFrameOffsets[this.devTools.characterSheetSelectedRow][this.devTools.characterSheetSelectedFrame].y = Number(rawValue || 0);
+        } else if (field === "frameWidthAdjust") {
+          ensureCharacterDevSelection(this.devTools, this.content);
+          this.devTools.characterSheetFrameOffsets[this.devTools.characterSheetSelectedRow][this.devTools.characterSheetSelectedFrame].width = Number(rawValue || 0);
+        } else if (field === "frameHeightAdjust") {
+          ensureCharacterDevSelection(this.devTools, this.content);
+          this.devTools.characterSheetFrameOffsets[this.devTools.characterSheetSelectedRow][this.devTools.characterSheetSelectedFrame].height = Number(rawValue || 0);
         } else if (field === "previewScale") {
-          this.devTools.characterSheetPreviewScale = Math.max(1, Number(rawValue || 1));
+          this.devTools.characterSheetPreviewScale = Math.max(0.5, Number(rawValue || 0.5));
         }
 
-        ensureCharacterDevSelection(this.devTools);
+        ensureCharacterDevSelection(this.devTools, this.content);
+        syncDevToolsCharacterSheet(this.content, this.devTools);
         this.render();
       },
       setDevEditorMode: function (mode) {
@@ -5766,41 +6153,29 @@
         if (this.state.screen !== "dev-tools") {
           return;
         }
-
-        const sourceScroller = root.querySelector('[data-preview-role="source"]');
-        const targetScroller = root.querySelector('[data-preview-role="target"]');
-
-        if (sourceScroller) {
-          this.devTools.previewScroll.source = {
-            left: sourceScroller.scrollLeft,
-            top: sourceScroller.scrollTop,
+        root.querySelectorAll("[data-preview-role]").forEach((scroller) => {
+          const role = scroller.getAttribute("data-preview-role");
+          if (!role) {
+            return;
+          }
+          this.devTools.previewScroll[role] = {
+            left: scroller.scrollLeft,
+            top: scroller.scrollTop,
           };
-        }
-
-        if (targetScroller) {
-          this.devTools.previewScroll.target = {
-            left: targetScroller.scrollLeft,
-            top: targetScroller.scrollTop,
-          };
-        }
+        });
       },
       restoreDevPreviewScroll: function () {
         if (this.state.screen !== "dev-tools") {
           return;
         }
-
-        const sourceScroller = root.querySelector('[data-preview-role="source"]');
-        const targetScroller = root.querySelector('[data-preview-role="target"]');
-
-        if (sourceScroller) {
-          sourceScroller.scrollLeft = this.devTools.previewScroll.source?.left || 0;
-          sourceScroller.scrollTop = this.devTools.previewScroll.source?.top || 0;
-        }
-
-        if (targetScroller) {
-          targetScroller.scrollLeft = this.devTools.previewScroll.target?.left || 0;
-          targetScroller.scrollTop = this.devTools.previewScroll.target?.top || 0;
-        }
+        root.querySelectorAll("[data-preview-role]").forEach((scroller) => {
+          const role = scroller.getAttribute("data-preview-role");
+          if (!role) {
+            return;
+          }
+          scroller.scrollLeft = this.devTools.previewScroll[role]?.left || 0;
+          scroller.scrollTop = this.devTools.previewScroll[role]?.top || 0;
+        });
       },
       selectTransition: function (transitionId) {
         this.devTools.selectedTransitionId = transitionId;
@@ -6358,6 +6733,24 @@
         anchor.click();
         URL.revokeObjectURL(url);
       },
+      exportCharacterSheetsJson: function () {
+        syncDevToolsCharacterSheet(this.content, this.devTools);
+        const payload = {
+          sheets: ensureCharacterSheetCatalog(this.content),
+        };
+
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = "character-sheets.json";
+        anchor.click();
+        URL.revokeObjectURL(url);
+        this.state.message = "Exported character-sheets.json.";
+        if (this.state.screen === "world") {
+          this.render();
+        }
+      },
       addArenaTeamMember: function () {
         const arena = ensureArenaCatalog(this.content).find((entry) => entry.id === this.devTools.selectedArenaId);
         if (!arena) {
@@ -6686,7 +7079,7 @@
       },
       update: function (deltaMs) {
         if (this.state.screen === "dev-tools" && this.devTools.section === "characters") {
-          ensureCharacterDevSelection(this.devTools);
+          ensureCharacterDevSelection(this.devTools, this.content);
           this.devTools.characterSheetAnimation.frameTime += deltaMs;
           while (this.devTools.characterSheetAnimation.frameTime >= PLAYER_WALK_FRAME_MS) {
             this.devTools.characterSheetAnimation.frameTime -= PLAYER_WALK_FRAME_MS;

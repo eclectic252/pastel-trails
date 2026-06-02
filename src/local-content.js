@@ -263,6 +263,171 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
   "trainers": {
     "trainers": []
   },
+  "characterSheets": {
+    "sheets": [
+      {
+        "id": "dawn-blue-overalls",
+        "label": "Dawn Blue Overalls",
+        "playerLabel": "Dawn Blue Overalls",
+        "playerSelectable": true,
+        "path": "assets/Characters/Boardwalk girl sprite/Dawn_Blue_Overalls.png",
+        "columns": 4,
+        "rows": 4,
+        "offsetX": 0,
+        "offsetY": 0,
+        "rowOffsets": [],
+        "frameOffsets": []
+      },
+      {
+        "id": "dawn-tan-overalls",
+        "label": "Dawn Tan Overalls",
+        "playerLabel": "Dawn Tan Overalls",
+        "playerSelectable": true,
+        "path": "assets/Characters/Boardwalk girl sprite/Dawn_Tan_overalls.png",
+        "columns": 4,
+        "rows": 4,
+        "offsetX": 0,
+        "offsetY": 0,
+        "rowOffsets": [],
+        "frameOffsets": []
+      },
+      {
+        "id": "boardwalk-girl-check",
+        "label": "Boardwalk Girl Check",
+        "playerLabel": "Boardwalk Girl",
+        "playerSelectable": true,
+        "path": "assets/Characters/Boardwalk girl sprite/boardwalk girlcheckbackground_transparent.png",
+        "columns": 4,
+        "rows": 4,
+        "offsetX": 0,
+        "offsetY": 0,
+        "rowOffsets": [
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "frameOffsets": [
+          [
+            {
+              "x": 53,
+              "y": 6,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 28,
+              "y": 6,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -14,
+              "y": 6,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -45,
+              "y": 6,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 58,
+              "y": 3,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 25,
+              "y": 3,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -20,
+              "y": 3,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -45,
+              "y": 3,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 42,
+              "y": -7,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 5,
+              "y": -7,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -24,
+              "y": -7,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -59,
+              "y": -7,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 44,
+              "y": -25,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 12,
+              "y": -25,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -19,
+              "y": -25,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -50,
+              "y": -25,
+              "width": 0,
+              "height": 0
+            }
+          ]
+        ]
+      }
+    ]
+  },
   "maps": {
     "bougainvillea-town": {
       "id": "bougainvillea-town",

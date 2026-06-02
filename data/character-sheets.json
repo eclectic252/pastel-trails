@@ -1,0 +1,274 @@
+{
+  "sheets": [
+    {
+      "id": "boardwalk-girl-check",
+      "label": "Boardwalk Girl Check",
+      "playerLabel": "Boardwalk Girl",
+      "playerSelectable": true,
+      "path": "assets/Characters/Boardwalk girl sprite/boardwalk girlcheckbackground_transparent.png",
+      "columns": 4,
+      "rows": 4,
+      "offsetX": 0,
+      "offsetY": 0,
+      "rowOffsets": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "frameOffsets": [
+        [
+          {
+            "x": 53,
+            "y": 6,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 28,
+            "y": 6,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -14,
+            "y": 6,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -45,
+            "y": 6,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 58,
+            "y": 3,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 25,
+            "y": 3,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -20,
+            "y": 3,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -45,
+            "y": 3,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 42,
+            "y": -7,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 5,
+            "y": -7,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -24,
+            "y": -7,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -59,
+            "y": -7,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 44,
+            "y": -25,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 12,
+            "y": -25,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -19,
+            "y": -25,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -50,
+            "y": -25,
+            "width": 0,
+            "height": 0
+          }
+        ]
+      ]
+    },
+    {
+      "id": "boardwalk-girl-original",
+      "label": "Boardwalk Girl Original",
+      "playerLabel": "Boardwalk Girl Original",
+      "playerSelectable": true,
+      "path": "assets/Characters/Boardwalk girl sprite/4x4walk sprite.png",
+      "columns": 4,
+      "rows": 4,
+      "offsetX": 0,
+      "offsetY": 0,
+      "rowOffsets": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "frameOffsets": [
+        [
+          {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ]
+      ]
+    }
+  ]
+}
