@@ -2704,6 +2704,8 @@
       "</main>",
     ].join("");
 
+    drawAvatarPreviewCanvases(root, content);
+
     root.querySelector('[data-action="new-game"]')?.addEventListener("click", function () {
       onAction("new-game");
     });
@@ -2787,6 +2789,8 @@
       "</section>",
       "</main>",
     ].join("");
+
+    drawAvatarPreviewCanvases(root, content);
 
     root.querySelectorAll("[data-select-starter]").forEach(function (button) {
       button.addEventListener("click", function () {
@@ -3982,9 +3986,7 @@
       return '<span class="avatar-swatch"></span>';
     }
 
-    const columns = Math.max(1, Number(sheet.columns || 4));
-    const rows = Math.max(1, Number(sheet.rows || 4));
-    return '<span class="' + escapeHtml(className || "avatar-preview-sprite") + '" style="background-image:url(\'' + escapeHtml(sheet.path) + '\');background-size:' + (columns * 100) + '% ' + (rows * 100) + '%;background-position:0% 0%;"></span>';
+    return '<canvas class="' + escapeHtml(className || "avatar-preview-sprite") + '" data-avatar-preview-sheet="' + escapeHtml(sheet.id || "") + '"></canvas>';
   }
 
   function getCharacterSheetConfig(content, sheetId) {
@@ -4696,6 +4698,87 @@
       sh: Math.max(1, metrics.frameHeight + frameOffset.height),
       metrics,
     };
+  }
+
+  function buildCharacterSheetRenderConfig(sheet) {
+    return {
+      characterSheetColumns: Math.max(1, Number(sheet?.columns || 4)),
+      characterSheetRows: Math.max(1, Number(sheet?.rows || 4)),
+      characterSheetOffsetX: Number(sheet?.offsetX || 0),
+      characterSheetOffsetY: Number(sheet?.offsetY || 0),
+      characterSheetRowOffsets: sheet?.rowOffsets || [],
+      characterSheetFrameOffsets: sheet?.frameOffsets || [],
+    };
+  }
+
+  function drawAvatarPreviewCanvas(canvas, content, sheetId) {
+    if (!(canvas instanceof HTMLCanvasElement)) {
+      return;
+    }
+
+    const sheet = getCharacterSheetConfig(content, sheetId);
+    const ctx = canvas.getContext("2d");
+    const cssWidth = Math.max(1, Math.round(canvas.clientWidth || Number(canvas.width) || 96));
+    const cssHeight = Math.max(1, Math.round(canvas.clientHeight || Number(canvas.height) || 96));
+    const pixelRatio = window.devicePixelRatio || 1;
+    const nextWidth = Math.max(1, Math.round(cssWidth * pixelRatio));
+    const nextHeight = Math.max(1, Math.round(cssHeight * pixelRatio));
+
+    if (canvas.width !== nextWidth || canvas.height !== nextHeight) {
+      canvas.width = nextWidth;
+      canvas.height = nextHeight;
+    }
+
+    ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    ctx.clearRect(0, 0, cssWidth, cssHeight);
+    ctx.fillStyle = "rgba(214, 237, 246, 0.45)";
+    ctx.fillRect(0, 0, cssWidth, cssHeight);
+
+    if (!sheet?.path) {
+      return;
+    }
+
+    const image = getImage(sheet.path);
+    if (!image.complete || !image.naturalWidth) {
+      ctx.fillStyle = "#6a5044";
+      ctx.font = "600 12px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("Loading...", cssWidth / 2, cssHeight / 2);
+      return;
+    }
+
+    const renderConfig = buildCharacterSheetRenderConfig(sheet);
+    const sourceRect = getCharacterFrameSourceRect(renderConfig, image, 0, 0);
+    const padding = Math.max(6, Math.round(Math.min(cssWidth, cssHeight) * 0.08));
+    const scale = Math.min(
+      (cssWidth - padding * 2) / sourceRect.sw,
+      (cssHeight - padding * 2) / sourceRect.sh
+    );
+    const drawWidth = sourceRect.sw * scale;
+    const drawHeight = sourceRect.sh * scale;
+    const drawX = Math.round((cssWidth - drawWidth) / 2);
+    const drawY = Math.round((cssHeight - drawHeight) / 2);
+
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(
+      image,
+      sourceRect.sx,
+      sourceRect.sy,
+      sourceRect.sw,
+      sourceRect.sh,
+      drawX,
+      drawY,
+      drawWidth,
+      drawHeight
+    );
+  }
+
+  function drawAvatarPreviewCanvases(root, content) {
+    root.querySelectorAll("[data-avatar-preview-sheet]").forEach(function (canvas) {
+      drawAvatarPreviewCanvas(canvas, content, canvas.getAttribute("data-avatar-preview-sheet") || "");
+    });
   }
 
   function drawCharacterSheetGrid(canvas, devToolsState) {
