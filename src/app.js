@@ -541,6 +541,7 @@
         saveName: save.saveName,
         updatedAt: save.updatedAt,
         playerName: save.player?.name || "Player",
+        avatarId: save.player?.avatarId || "",
         currentMapId: save.world?.currentMapId || "",
         money: save.player.money,
         caughtCount: uniqueCaught.length,
@@ -1390,12 +1391,14 @@
   }
 
   function hydrateStateFromSave(save, content) {
+    const avatarOptions = getPlayerAvatarOptions(content);
+    const fallbackAvatarId = avatarOptions[0]?.id || "";
     const state = {
       screen: "world",
       currentSaveSlotId: save.slotId,
       currentSaveName: save.saveName,
       settings: Object.assign({}, content.settings.defaults, save.settings),
-      player: save.player,
+      player: Object.assign({ avatarId: fallbackAvatarId }, save.player || {}),
       world: Object.assign({}, save.world),
       party: save.party,
       bank: save.bank || [],
@@ -2665,6 +2668,8 @@
         ? '<ul class="save-list">' + saveSlots.map(function (slot) {
             const selected = slot.slotId === effectiveSelectedSlotId ? " save-list-selected" : "";
             const locationName = content.mapMetadata?.[slot.currentMapId]?.displayName || slot.currentMapId || "Unknown";
+            const avatarSheet = getCharacterSheetConfig(content, slot.avatarId || "");
+            const avatarMarkup = renderAvatarPreviewMarkup(avatarSheet, "save-avatar-sprite");
             const partyMarkup = (slot.party || []).map(function (monster) {
               const species = getSpecies(content, monster.speciesId);
               const variant = getSpeciesVariant(species, monster.variantId || "default");
@@ -2683,9 +2688,12 @@
             }).join("");
             return '<li class="' + selected.trim() + '">' +
               '<button class="link-button save-slot-button" type="button" data-action="select-save-slot" data-slot-id="' + escapeHtml(slot.slotId) + '">' +
+              avatarMarkup +
+              '<div class="save-slot-content">' +
               '<strong>' + escapeHtml((slot.playerName || "Player") + " - " + locationName) + '</strong>' +
               '<span>$' + Number(slot.money || 0) + " · " + Number(slot.caughtCount || 0) + " / " + totalAvailableMonsters + " caught · " + Number(slot.crestCount || 0) + " / " + totalAvailableCrests + " crests</span>" +
               (partyMarkup ? '<div class="save-party-strip">' + partyMarkup + "</div>" : "") +
+              "</div>" +
               "</button>" +
               '<button class="secondary-button" type="button" data-action="load-save-slot" data-slot-id="' + escapeHtml(slot.slotId) + '">Load</button>' +
               "</li>";
@@ -3965,14 +3973,14 @@
     return selectable.length ? selectable : getAvailableCharacterSheets(content).slice(0, 1);
   }
 
-  function renderAvatarPreviewMarkup(sheet) {
+  function renderAvatarPreviewMarkup(sheet, className) {
     if (!sheet?.path) {
       return '<span class="avatar-swatch"></span>';
     }
 
     const columns = Math.max(1, Number(sheet.columns || 4));
     const rows = Math.max(1, Number(sheet.rows || 4));
-    return '<span class="avatar-preview-sprite" style="background-image:url(\'' + escapeHtml(sheet.path) + '\');background-size:' + (columns * 100) + '% ' + (rows * 100) + '%;background-position:0% 0%;"></span>';
+    return '<span class="' + escapeHtml(className || "avatar-preview-sprite") + '" style="background-image:url(\'' + escapeHtml(sheet.path) + '\');background-size:' + (columns * 100) + '% ' + (rows * 100) + '%;background-position:0% 0%;"></span>';
   }
 
   function getCharacterSheetConfig(content, sheetId) {

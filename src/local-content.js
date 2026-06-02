@@ -266,141 +266,6 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
   "characterSheets": {
     "sheets": [
       {
-        "id": "dawn-blue-overalls",
-        "label": "Dawn Blue Overalls",
-        "playerLabel": "Dawn Blue Overalls",
-        "playerSelectable": true,
-        "path": "assets/Characters/Boardwalk girl sprite/Dawn_Blue_Overalls.png",
-        "columns": 4,
-        "rows": 4,
-        "offsetX": 0,
-        "offsetY": 0,
-        "rowOffsets": [
-          {
-            "x": 0,
-            "y": 0
-          },
-          {
-            "x": 0,
-            "y": 0
-          },
-          {
-            "x": 0,
-            "y": 0
-          },
-          {
-            "x": 0,
-            "y": 0
-          }
-        ],
-        "frameOffsets": [
-          [
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            }
-          ],
-          [
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            }
-          ],
-          [
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            }
-          ],
-          [
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            }
-          ]
-        ]
-      },
-      {
         "id": "dawn-tan-overalls",
         "label": "Dawn Tan Overalls",
         "playerLabel": "Dawn Tan Overalls",
@@ -682,6 +547,32 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             }
           ]
         ]
+      },
+      {
+        "id": "dawn-view-blue-walksheet-v4-fullsize-transparent",
+        "label": "Dawn View Blue Walksheet V4 Fullsize Transparent",
+        "playerLabel": "Dawn View Blue Walksheet V4 Fullsize Transparent",
+        "playerSelectable": true,
+        "path": "assets/Characters/Boardwalk girl sprite/dawn_view_blue_walksheet_v4_fullsize_transparent.png",
+        "columns": 4,
+        "rows": 4,
+        "offsetX": 0,
+        "offsetY": 0,
+        "rowOffsets": [],
+        "frameOffsets": []
+      },
+      {
+        "id": "dawn-view-blue-walksheet-v5-fullsize-transparent",
+        "label": "Dawn View Blue Walksheet V5 Fullsize Transparent",
+        "playerLabel": "Dawn View Blue Walksheet V5 Fullsize Transparent",
+        "playerSelectable": true,
+        "path": "assets/Characters/Boardwalk girl sprite/dawn_view_blue_walksheet_v5_fullsize_transparent.png",
+        "columns": 4,
+        "rows": 4,
+        "offsetX": 0,
+        "offsetY": 0,
+        "rowOffsets": [],
+        "frameOffsets": []
       }
     ]
   },
