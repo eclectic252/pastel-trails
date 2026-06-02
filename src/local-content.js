@@ -404,14 +404,136 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "id": "heather-walk",
         "label": "Heather Walk",
         "playerLabel": "Heather Walk",
-        "playerSelectable": true,
+        "playerSelectable": false,
         "path": "assets/Characters/Boardwalk girl sprite/Heather_walk.png",
         "columns": 4,
         "rows": 4,
         "offsetX": 0,
         "offsetY": 0,
-        "rowOffsets": [],
-        "frameOffsets": []
+        "rowOffsets": [
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "frameOffsets": [
+          [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ]
+        ]
       },
       {
         "id": "boardwalk-girl-check",
@@ -552,14 +674,136 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "id": "dawn-view-blue-walksheet-v4-fullsize-transparent",
         "label": "Dawn View Blue Walksheet V4 Fullsize Transparent",
         "playerLabel": "Dawn View Blue Walksheet V4 Fullsize Transparent",
-        "playerSelectable": true,
+        "playerSelectable": false,
         "path": "assets/Characters/Boardwalk girl sprite/dawn_view_blue_walksheet_v4_fullsize_transparent.png",
         "columns": 4,
         "rows": 4,
         "offsetX": 0,
         "offsetY": 0,
-        "rowOffsets": [],
-        "frameOffsets": []
+        "rowOffsets": [
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "frameOffsets": [
+          [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ]
+        ]
       },
       {
         "id": "dawn-view-blue-walksheet-v5-fullsize-transparent",
@@ -571,8 +815,130 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "rows": 4,
         "offsetX": 0,
         "offsetY": 0,
-        "rowOffsets": [],
-        "frameOffsets": []
+        "rowOffsets": [
+          {
+            "x": 0,
+            "y": 16
+          },
+          {
+            "x": 0,
+            "y": 9
+          },
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 0,
+            "y": -8
+          }
+        ],
+        "frameOffsets": [
+          [
+            {
+              "x": 59,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 25,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -11,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -44,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 58,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 11,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -11,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -43,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 52,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 23,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -14,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -46,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 71,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 36,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -33,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ]
+        ]
       }
     ]
   },
