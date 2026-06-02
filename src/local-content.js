@@ -275,8 +275,130 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "rows": 4,
         "offsetX": 0,
         "offsetY": 0,
-        "rowOffsets": [],
-        "frameOffsets": []
+        "rowOffsets": [
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "frameOffsets": [
+          [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ]
+        ]
       },
       {
         "id": "dawn-tan-overalls",
@@ -284,6 +406,141 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "playerLabel": "Dawn Tan Overalls",
         "playerSelectable": true,
         "path": "assets/Characters/Boardwalk girl sprite/Dawn_Tan_overalls.png",
+        "columns": 4,
+        "rows": 4,
+        "offsetX": 0,
+        "offsetY": 0,
+        "rowOffsets": [
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 0,
+            "y": 1
+          },
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "frameOffsets": [
+          [
+            {
+              "x": 48,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 21,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -2,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -34,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 52,
+              "y": -5,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 21,
+              "y": -5,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 3,
+              "y": -5,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -25,
+              "y": -5,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 49,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 17,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -25,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 45,
+              "y": -13,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 14,
+              "y": -13,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -7,
+              "y": -13,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -35,
+              "y": -13,
+              "width": 0,
+              "height": 0
+            }
+          ]
+        ]
+      },
+      {
+        "id": "heather-walk",
+        "label": "Heather Walk",
+        "playerLabel": "Heather Walk",
+        "playerSelectable": true,
+        "path": "assets/Characters/Boardwalk girl sprite/Heather_walk.png",
         "columns": 4,
         "rows": 4,
         "offsetX": 0,
