@@ -268,7 +268,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       {
         "id": "dawn-tan-overalls",
         "label": "Dawn Tan Overalls",
-        "playerLabel": "Dawn Tan Overalls",
+        "playerLabel": "Tan Overalls",
         "playerSelectable": true,
         "path": "assets/Characters/Boardwalk girl sprite/Dawn_Tan_overalls.png",
         "columns": 4,
@@ -808,7 +808,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       {
         "id": "dawn-view-blue-walksheet-v5-fullsize-transparent",
         "label": "Dawn View Blue Walksheet V5 Fullsize Transparent",
-        "playerLabel": "Dawn View Blue Walksheet V5 Fullsize Transparent",
+        "playerLabel": "Blue Flower Overalls",
         "playerSelectable": true,
         "path": "assets/Characters/Boardwalk girl sprite/dawn_view_blue_walksheet_v5_fullsize_transparent.png",
         "columns": 4,
