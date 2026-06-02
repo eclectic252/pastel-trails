@@ -108,15 +108,15 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "variants": [
           {
             "id": "default",
-            "sprite": "assets/monsters/Fluffram/highland-cow-classic-ready.png"
+            "sprite": "assets/Monsters/Fluffram/highland-cow-classic-ready.png"
           },
           {
             "id": "snow",
-            "sprite": "assets/monsters/Fluffram/highland-cow-snow-ready.png"
+            "sprite": "assets/Monsters/Fluffram/highland-cow-snow-ready.png"
           },
           {
             "id": "glam",
-            "sprite": "assets/monsters/Fluffram/highland-cow-glam-ready.png"
+            "sprite": "assets/Monsters/Fluffram/highland-cow-glam-ready.png"
           }
         ]
       },
@@ -156,15 +156,15 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "variants": [
           {
             "id": "default",
-            "sprite": "assets/monsters/Pawlit/meadowmew-golden-ready.png"
+            "sprite": "assets/Monsters/Pawlit/meadowmew-golden-ready.png"
           },
           {
             "id": "Grass",
-            "sprite": "assets/monsters/Pawlit/meadowmew-classic-ready.png"
+            "sprite": "assets/Monsters/Pawlit/meadowmew-classic-ready.png"
           },
           {
             "id": "Lilac",
-            "sprite": "assets/monsters/Pawlit/meadowmew-lilac-ready.png"
+            "sprite": "assets/Monsters/Pawlit/meadowmew-lilac-ready.png"
           }
         ]
       }
