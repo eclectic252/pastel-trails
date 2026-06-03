@@ -401,6 +401,141 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         ]
       },
       {
+        "id": "frostbite",
+        "label": "Frostbite",
+        "playerLabel": "Frostbite",
+        "playerSelectable": true,
+        "path": "assets/Characters/Boardwalk girl sprite/Frostbite.png",
+        "columns": 4,
+        "rows": 4,
+        "offsetX": 0,
+        "offsetY": 0,
+        "rowOffsets": [
+          {
+            "x": 0,
+            "y": 18
+          },
+          {
+            "x": 0,
+            "y": 61
+          },
+          {
+            "x": 0,
+            "y": 75
+          },
+          {
+            "x": 0,
+            "y": 80
+          }
+        ],
+        "frameOffsets": [
+          [
+            {
+              "x": 28,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -7,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -46,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -79,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 30,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 5,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -21,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -49,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 48,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 10,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -9,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -44,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 35,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 7,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -17,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -47,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ]
+        ]
+      },
+      {
         "id": "heather-walk",
         "label": "Heather Walk",
         "playerLabel": "Heather Walk",
@@ -934,141 +1069,6 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             {
               "x": -50,
               "y": -25,
-              "width": 0,
-              "height": 0
-            }
-          ]
-        ]
-      },
-      {
-        "id": "dawn-view-blue-walksheet-v4-fullsize-transparent",
-        "label": "Dawn View Blue Walksheet V4 Fullsize Transparent",
-        "playerLabel": "Dawn View Blue Walksheet V4 Fullsize Transparent",
-        "playerSelectable": false,
-        "path": "assets/Characters/Boardwalk girl sprite/dawn_view_blue_walksheet_v4_fullsize_transparent.png",
-        "columns": 4,
-        "rows": 4,
-        "offsetX": 0,
-        "offsetY": 0,
-        "rowOffsets": [
-          {
-            "x": 0,
-            "y": 0
-          },
-          {
-            "x": 0,
-            "y": 0
-          },
-          {
-            "x": 0,
-            "y": 0
-          },
-          {
-            "x": 0,
-            "y": 0
-          }
-        ],
-        "frameOffsets": [
-          [
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            }
-          ],
-          [
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            }
-          ],
-          [
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            }
-          ],
-          [
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
               "width": 0,
               "height": 0
             }

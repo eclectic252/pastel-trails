@@ -11,6 +11,7 @@
   const PLAYER_SPRITE_SHEET = "assets/Characters/Boardwalk girl sprite/boardwalk girlcheckbackground_transparent.png";
   const PLAYER_SPRITE_COLUMNS = 4;
   const PLAYER_SPRITE_ROWS = 4;
+  const CHARACTER_SHEET_FRAME_HEIGHT = 313;
   const PLAYER_WALK_FRAME_MS = 140;
   const CHARACTER_SHEET_OPTIONS = [
     {
@@ -112,6 +113,7 @@
           path: entry.path,
           columns: entry.columns,
           rows: entry.rows,
+          frameHeight: CHARACTER_SHEET_FRAME_HEIGHT,
           offsetX: 0,
           offsetY: 0,
           rowOffsets: Array.from({ length: entry.rows }, function () {
@@ -314,6 +316,7 @@
           path: saved.path || option.path,
           columns,
           rows,
+          frameHeight: Math.max(1, Number(saved.frameHeight || option.frameHeight || CHARACTER_SHEET_FRAME_HEIGHT)),
           offsetX: Number(saved.offsetX || 0),
           offsetY: Number(saved.offsetY || 0),
           rowOffsets,
@@ -3889,6 +3892,9 @@
     if (typeof devToolsState.characterSheetRows !== "number" || devToolsState.characterSheetRows < 1) {
       devToolsState.characterSheetRows = sheet?.rows || 4;
     }
+    if (typeof devToolsState.characterSheetFrameHeight !== "number" || devToolsState.characterSheetFrameHeight < 1) {
+      devToolsState.characterSheetFrameHeight = Math.max(1, Number(sheet?.frameHeight || CHARACTER_SHEET_FRAME_HEIGHT));
+    }
     if (typeof devToolsState.characterSheetOffsetX !== "number") {
       devToolsState.characterSheetOffsetX = 0;
     }
@@ -4000,6 +4006,7 @@
     devToolsState.selectedCharacterSheetId = config?.id || CHARACTER_SHEET_OPTIONS[0]?.id || "";
     devToolsState.characterSheetColumns = Math.max(1, Number(config?.columns || 4));
     devToolsState.characterSheetRows = Math.max(1, Number(config?.rows || 4));
+    devToolsState.characterSheetFrameHeight = Math.max(1, Number(config?.frameHeight || CHARACTER_SHEET_FRAME_HEIGHT));
     devToolsState.characterSheetOffsetX = Number(config?.offsetX || 0);
     devToolsState.characterSheetOffsetY = Number(config?.offsetY || 0);
     devToolsState.characterSheetPlayerLabel = config?.playerLabel || config?.label || "";
@@ -4026,6 +4033,7 @@
 
     sheet.columns = Math.max(1, Number(devToolsState.characterSheetColumns || sheet.columns || 4));
     sheet.rows = Math.max(1, Number(devToolsState.characterSheetRows || sheet.rows || 4));
+    sheet.frameHeight = Math.max(1, Number(devToolsState.characterSheetFrameHeight || sheet.frameHeight || CHARACTER_SHEET_FRAME_HEIGHT));
     sheet.offsetX = Number(devToolsState.characterSheetOffsetX || 0);
     sheet.offsetY = Number(devToolsState.characterSheetOffsetY || 0);
     sheet.playerLabel = String(devToolsState.characterSheetPlayerLabel || sheet.playerLabel || sheet.label || "");
@@ -4624,6 +4632,7 @@
       '<div class="form-grid">',
       '<label class="input-group"><span>Columns</span><input type="number" min="1" step="1" data-dev-character-field="columns" value="' + Number(devToolsState.characterSheetColumns || sheet?.columns || 4) + '" /></label>',
       '<label class="input-group"><span>Rows</span><input type="number" min="1" step="1" data-dev-character-field="rows" value="' + Number(devToolsState.characterSheetRows || sheet?.rows || 4) + '" /></label>',
+      '<label class="input-group"><span>Base Cut Height</span><input type="number" value="' + Number(devToolsState.characterSheetFrameHeight || sheet?.frameHeight || CHARACTER_SHEET_FRAME_HEIGHT) + '" disabled /></label>',
       '<label class="input-group"><span>Offset X</span><input type="number" step="1" data-dev-character-field="offsetX" value="' + Number(devToolsState.characterSheetOffsetX || 0) + '" /></label>',
       '<label class="input-group"><span>Offset Y</span><input type="number" step="1" data-dev-character-field="offsetY" value="' + Number(devToolsState.characterSheetOffsetY || 0) + '" /></label>',
       '<label class="input-group"><span>Preview Scale</span><input type="number" min="0.5" max="6" step="0.25" data-dev-character-field="previewScale" value="' + Number(devToolsState.characterSheetPreviewScale || 1.5) + '" /></label>',
@@ -4639,7 +4648,7 @@
       '<label class="input-group"><span>Frame Cut Width</span><input type="number" step="1" data-dev-character-field="frameWidthAdjust" value="' + Number(selectedFrameOffset.width || 0) + '" /></label>',
       '<label class="input-group"><span>Frame Cut Height</span><input type="number" step="1" data-dev-character-field="frameHeightAdjust" value="' + Number(selectedFrameOffset.height || 0) + '" /></label>',
       '</div>',
-      '<p class="dev-helper-text">Use global offsets for the whole sheet, row offsets for one direction row, and frame cut values for individual cells. Frame cut X/Y/Width/Height only affects the selected frame, so you can fix one drifted frame without moving its neighbors.</p>',
+      '<p class="dev-helper-text">Character sheets now use a fixed base cut height of ' + CHARACTER_SHEET_FRAME_HEIGHT + 'px, so extra bottom padding will not stretch the default frame. Use global offsets for the whole sheet, row offsets for one direction row, and frame cut values for individual cells. Frame cut X/Y/Width/Height only affects the selected frame, so you can fix one drifted frame without moving its neighbors.</p>',
       '<div class="title-actions"><button class="secondary-button" type="button" data-action="export-character-sheets-json">Export character-sheets.json</button></div>',
       '</section>',
       '<section class="dev-preview-grid dev-character-preview-grid">',
@@ -4671,10 +4680,10 @@
   function getCharacterSheetMetrics(devToolsState, image) {
     const columns = Math.max(1, Number(devToolsState.characterSheetColumns || 4));
     const rows = Math.max(1, Number(devToolsState.characterSheetRows || 4));
+    const frameHeight = Math.max(1, Number(devToolsState.characterSheetFrameHeight || CHARACTER_SHEET_FRAME_HEIGHT));
     const offsetX = Number(devToolsState.characterSheetOffsetX || 0);
     const offsetY = Number(devToolsState.characterSheetOffsetY || 0);
     const frameWidth = Math.floor((image.naturalWidth - offsetX) / columns);
-    const frameHeight = Math.floor((image.naturalHeight - offsetY) / rows);
     return {
       columns,
       rows,
@@ -4704,6 +4713,7 @@
     return {
       characterSheetColumns: Math.max(1, Number(sheet?.columns || 4)),
       characterSheetRows: Math.max(1, Number(sheet?.rows || 4)),
+      characterSheetFrameHeight: Math.max(1, Number(sheet?.frameHeight || CHARACTER_SHEET_FRAME_HEIGHT)),
       characterSheetOffsetX: Number(sheet?.offsetX || 0),
       characterSheetOffsetY: Number(sheet?.offsetY || 0),
       characterSheetRowOffsets: sheet?.rowOffsets || [],
@@ -5787,6 +5797,7 @@
         selectedCharacterSheetId: getCharacterSheetConfig(content, CHARACTER_SHEET_OPTIONS[0]?.id || "")?.id || CHARACTER_SHEET_OPTIONS[0]?.id || "",
         characterSheetColumns: getCharacterSheetConfig(content, CHARACTER_SHEET_OPTIONS[0]?.id || "")?.columns || CHARACTER_SHEET_OPTIONS[0]?.columns || 4,
         characterSheetRows: getCharacterSheetConfig(content, CHARACTER_SHEET_OPTIONS[0]?.id || "")?.rows || CHARACTER_SHEET_OPTIONS[0]?.rows || 4,
+        characterSheetFrameHeight: getCharacterSheetConfig(content, CHARACTER_SHEET_OPTIONS[0]?.id || "")?.frameHeight || CHARACTER_SHEET_FRAME_HEIGHT,
         characterSheetOffsetX: 0,
         characterSheetOffsetY: 0,
         characterSheetSelectedRow: 0,
