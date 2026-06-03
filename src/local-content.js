@@ -536,6 +536,276 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         ]
       },
       {
+        "id": "pastel-pink-cowgirl",
+        "label": "Pastel Pink Cowgirl",
+        "playerLabel": "Pastel Pink Cowgirl",
+        "playerSelectable": true,
+        "path": "assets/Characters/Boardwalk girl sprite/Pastel_Pink_Cowgirl.png",
+        "columns": 4,
+        "rows": 4,
+        "offsetX": 0,
+        "offsetY": 0,
+        "rowOffsets": [
+          {
+            "x": 0,
+            "y": 13
+          },
+          {
+            "x": 0,
+            "y": 9
+          },
+          {
+            "x": 0,
+            "y": -3
+          },
+          {
+            "x": 0,
+            "y": -12
+          }
+        ],
+        "frameOffsets": [
+          [
+            {
+              "x": 50,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 25,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -8,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -32,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 40,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 13,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -19,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -36,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 50,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 28,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -12,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -28,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 49,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 24,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -13,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -32,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ]
+        ]
+      },
+      {
+        "id": "pink-cowgirl",
+        "label": "Pink Cowgirl",
+        "playerLabel": "Magenta Pink Cowgirl",
+        "playerSelectable": true,
+        "path": "assets/Characters/Boardwalk girl sprite/Pink_Cowgirl.png",
+        "columns": 4,
+        "rows": 4,
+        "offsetX": 0,
+        "offsetY": 0,
+        "rowOffsets": [
+          {
+            "x": 0,
+            "y": 13
+          },
+          {
+            "x": 0,
+            "y": 7
+          },
+          {
+            "x": 0,
+            "y": -3
+          },
+          {
+            "x": 0,
+            "y": -13
+          }
+        ],
+        "frameOffsets": [
+          [
+            {
+              "x": 50,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 22,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -5,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -46,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 48,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 15,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -14,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -48,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 48,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 26,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -14,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -45,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 50,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 24,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -13,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -45,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ]
+        ]
+      },
+      {
         "id": "boardwalk-girl-check",
         "label": "Boardwalk Girl Check",
         "playerLabel": "Boardwalk Girl",

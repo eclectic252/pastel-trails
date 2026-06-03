@@ -221,8 +221,8 @@ button {
 }
 
 .avatar-preview-sprite {
-  width: 96px;
-  height: 96px;
+  width: 124px;
+  height: 124px;
   display: block;
   align-self: center;
   justify-self: center;
@@ -335,8 +335,8 @@ button {
 }
 
 .save-avatar-sprite {
-  width: 88px;
-  height: 88px;
+  width: 116px;
+  height: 116px;
   display: block;
   background-repeat: no-repeat;
   image-rendering: auto;
