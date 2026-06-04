@@ -116,7 +116,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               "sheetId": "pawlit-classic-walksheet"
             },
             "overworld": {
-              "sheetId": "assets-monsters-pawlit-pawlit-blue-walksheet",
+              "sheetId": "assets-monsters-pawlit-pawlit-tide-walksheet",
               "rows": {
                 "down": 0,
                 "left": 1,
@@ -1774,9 +1774,131 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "frameHeight": 313,
         "offsetX": 0,
         "offsetY": 0,
-        "renderWidth": null,
-        "rowOffsets": [],
-        "frameOffsets": []
+        "renderWidth": 100,
+        "rowOffsets": [
+          {
+            "x": 0,
+            "y": 19
+          },
+          {
+            "x": 0,
+            "y": 18
+          },
+          {
+            "x": 0,
+            "y": 38
+          },
+          {
+            "x": 0,
+            "y": 96
+          }
+        ],
+        "frameOffsets": [
+          [
+            {
+              "x": 22,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -31,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -70,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -106,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 43,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -41,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -53,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 15,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -20,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -10,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -5,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 22,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -21,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -46,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -86,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ]
+        ]
       },
       {
         "id": "assets-monsters-pawlit-pawlit-blue-walksheet",
