@@ -4921,6 +4921,12 @@
       ctx.strokeStyle = color;
       ctx.lineWidth = isSelected ? 3 : 1.5;
       ctx.strokeRect(dx, dy, drawWidth, drawHeight);
+      ctx.moveTo(dx + drawWidth / 2, dy);
+      ctx.lineTo(dx + drawWidth / 2, dy + drawHeight);
+      ctx.stroke();
+      ctx.moveTo(dx, dy + drawHeight / 2);
+      ctx.lineTo(dx + drawWidth, dy + drawHeight / 2);
+      ctx.stroke();
       ctx.restore();
     });
 

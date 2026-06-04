@@ -951,6 +951,142 @@
           }
         ]
       ]
+    },
+    {
+      "id": "silver-sash-wanderer-walksheet-v1-fullsize-transparent",
+      "label": "Silver Sash Wanderer",
+      "playerLabel": "Silver Sash Wanderer",
+      "playerSelectable": true,
+      "path": "assets/Characters/Boardwalk girl sprite/silver_sash_wanderer_walksheet_v1_fullsize_transparent.png",
+      "columns": 4,
+      "rows": 4,
+      "frameHeight": 313,
+      "offsetX": 0,
+      "offsetY": 0,
+      "rowOffsets": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "frameOffsets": [
+        [
+          {
+            "x": 37,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 10,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -10,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -37,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 28,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 7,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -23,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -49,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 53,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 23,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -5,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -36,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 38,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 16,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -12,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -36,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ]
+      ]
     }
   ]
 }
