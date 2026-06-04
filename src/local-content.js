@@ -4,6 +4,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       "theme": "classic",
       "zoom": 100,
       "partySize": 6,
+      "playerSpriteRenderWidth": 155,
+      "playerSpriteAnchorOffsetY": 20,
       "arenaLeaderMinLevel": 1,
       "arenaLeaderMaxLevel": 10,
       "arenaLeaderPartySize": 3,
@@ -941,6 +943,19 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         ]
       },
       {
+        "id": "whitesundress",
+        "label": "WhiteSundress",
+        "playerLabel": "WhiteSundress",
+        "playerSelectable": true,
+        "path": "assets/Characters/Boardwalk girl sprite/WhiteSundress.png",
+        "columns": 4,
+        "rows": 4,
+        "offsetX": 0,
+        "offsetY": 0,
+        "rowOffsets": [],
+        "frameOffsets": []
+      },
+      {
         "id": "blonde-braided-adventurer-walksheet-v3-fullsize-transparent",
         "label": "Blonde Braided Adventurer Walksheet V3 Fullsize Transparent",
         "playerLabel": "Blonde Braided Adventurer",
@@ -1338,6 +1353,141 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             },
             {
               "x": -33,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ]
+        ]
+      },
+      {
+        "id": "man-walksheet-v1-4x4-source-alpha",
+        "label": "Man Walksheet V1 4x4 Source Alpha",
+        "playerLabel": "Electric Jacket Man",
+        "playerSelectable": true,
+        "path": "assets/Characters/Boardwalk girl sprite/man_walksheet_v1_4x4_source_alpha.png",
+        "columns": 4,
+        "rows": 4,
+        "offsetX": 0,
+        "offsetY": 0,
+        "rowOffsets": [
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 0,
+            "y": -23
+          },
+          {
+            "x": 0,
+            "y": -36
+          },
+          {
+            "x": 0,
+            "y": -46
+          }
+        ],
+        "frameOffsets": [
+          [
+            {
+              "x": 27,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 8,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -11,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -32,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 17,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -2,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -24,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -44,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 29,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 6,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -12,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -35,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 20,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 3,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -14,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -47,
               "y": 0,
               "width": 0,
               "height": 0

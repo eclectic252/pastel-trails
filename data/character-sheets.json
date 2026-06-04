@@ -1089,6 +1089,142 @@
       ]
     },
     {
+      "id": "man-walksheet-v1-4x4-source-alpha",
+      "label": "Man Walksheet V1 4x4 Source Alpha",
+      "playerLabel": "Electric Jacket Man",
+      "playerSelectable": true,
+      "path": "assets/Characters/Boardwalk girl sprite/man_walksheet_v1_4x4_source_alpha.png",
+      "columns": 4,
+      "rows": 4,
+      "frameHeight": 313,
+      "offsetX": 0,
+      "offsetY": 0,
+      "rowOffsets": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 0,
+          "y": -23
+        },
+        {
+          "x": 0,
+          "y": -36
+        },
+        {
+          "x": 0,
+          "y": -46
+        }
+      ],
+      "frameOffsets": [
+        [
+          {
+            "x": 27,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 8,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -11,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -32,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 17,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -2,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -24,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -44,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 29,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 6,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -12,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -35,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 20,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 3,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -14,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -47,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ]
+      ]
+    },
+    {
       "id": "silver-sash-wanderer-walksheet-v1-fullsize-transparent",
       "label": "Silver Sash Wanderer",
       "playerLabel": "Silver Sash Wanderer",

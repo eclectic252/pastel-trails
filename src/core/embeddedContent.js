@@ -4,6 +4,8 @@ export const embeddedContent = {
       theme: "classic",
       zoom: 100,
       partySize: 6,
+      playerSpriteRenderWidth: 168,
+      playerSpriteAnchorOffsetY: 20,
       shareExperience: true,
       mapDetails: true,
       devMode: false,

@@ -12,6 +12,8 @@
   const PLAYER_SPRITE_COLUMNS = 4;
   const PLAYER_SPRITE_ROWS = 4;
   const CHARACTER_SHEET_FRAME_HEIGHT = 313;
+  const PLAYER_RENDER_WIDTH = 168;
+  const PLAYER_SPRITE_ANCHOR_OFFSET_Y = 20;
   const PLAYER_WALK_ANIMATION_MS = {
     horizontal: 130,
     vertical: 120,
@@ -58,6 +60,8 @@
         theme: "classic",
         zoom: 100,
         partySize: 6,
+        playerSpriteRenderWidth: PLAYER_RENDER_WIDTH,
+        playerSpriteAnchorOffsetY: PLAYER_SPRITE_ANCHOR_OFFSET_Y,
         shareExperience: true,
         mapDetails: true,
         encounterPreview: false,
@@ -1469,6 +1473,56 @@
     return state.ui;
   }
 
+  function ensureGlobalPlayerSpriteSettings(content) {
+    if (!content.settings) {
+      content.settings = JSON.parse(JSON.stringify(fallbackContent.settings));
+    }
+    if (!content.settings.defaults) {
+      content.settings.defaults = Object.assign({}, fallbackContent.settings.defaults);
+    }
+
+    content.settings.defaults.playerSpriteRenderWidth = Math.max(
+      64,
+      Number(
+        content.settings.defaults.playerSpriteRenderWidth
+        ?? PLAYER_RENDER_WIDTH
+      ) || PLAYER_RENDER_WIDTH
+    );
+    content.settings.defaults.playerSpriteAnchorOffsetY = Number(
+      content.settings.defaults.playerSpriteAnchorOffsetY
+      ?? PLAYER_SPRITE_ANCHOR_OFFSET_Y
+    ) || 0;
+
+    return content.settings.defaults;
+  }
+
+  function ensureDevToolsPlayerSpriteSettings(devToolsState, content) {
+    const defaultSettings = ensureGlobalPlayerSpriteSettings(content);
+
+    devToolsState.playerSpriteRenderWidth = Math.max(
+      64,
+      Number(
+        devToolsState.playerSpriteRenderWidth
+        ?? defaultSettings.playerSpriteRenderWidth
+        ?? PLAYER_RENDER_WIDTH
+      ) || PLAYER_RENDER_WIDTH
+    );
+    devToolsState.playerSpriteAnchorOffsetY = Number(
+      devToolsState.playerSpriteAnchorOffsetY
+      ?? defaultSettings.playerSpriteAnchorOffsetY
+      ?? PLAYER_SPRITE_ANCHOR_OFFSET_Y
+    ) || 0;
+
+    return devToolsState;
+  }
+
+  function syncDevToolsPlayerSpriteSettings(content, devToolsState) {
+    ensureGlobalPlayerSpriteSettings(content);
+    ensureDevToolsPlayerSpriteSettings(devToolsState, content);
+    content.settings.defaults.playerSpriteRenderWidth = devToolsState.playerSpriteRenderWidth;
+    content.settings.defaults.playerSpriteAnchorOffsetY = devToolsState.playerSpriteAnchorOffsetY;
+  }
+
   function ensurePlayerVisualState(state) {
     if (!state.world) {
       return {
@@ -2489,13 +2543,14 @@
     ensureCharacterDevSelection(runtimeCharacterConfig, content);
     const selectedSheet = getSelectedCharacterSheet(runtimeCharacterConfig, content);
     const image = getImage(selectedSheet?.path || PLAYER_SPRITE_SHEET);
-    const map = content.maps[state.world.currentMapId];
     const zoomScale = Math.max(0.1, Number(state.settings.zoom || 100) / 100);
+    const globalPlayerSpriteSettings = ensureGlobalPlayerSpriteSettings(content);
     const playerX = (state.world.position.x - camera.x) * zoomScale;
     const playerY = (state.world.position.y - camera.y) * zoomScale;
-    const spriteSize = (map?.tileSize || 128) * zoomScale;
+    const spriteSize = Math.max(64, Number(globalPlayerSpriteSettings.playerSpriteRenderWidth || PLAYER_RENDER_WIDTH)) * zoomScale;
+    const anchorOffsetY = Number(globalPlayerSpriteSettings.playerSpriteAnchorOffsetY || 0) * zoomScale;
     const drawX = Math.round(playerX - spriteSize / 2);
-    const drawY = Math.round(playerY - spriteSize / 2);
+    const drawY = Math.round(playerY - spriteSize / 2 - anchorOffsetY);
     const visual = ensurePlayerVisualState(state);
     const rowByFacing = {
       down: 0,
@@ -3194,7 +3249,6 @@
         const selected = Number(state.settings.zoom) === Number(zoom) ? " selected" : "";
         return '<option value="' + zoom + '"' + selected + ">" + zoom + "%</option>";
       }).join("");
-
       panelBody = [
         '<div class="form-grid">',
         '<label class="input-group"><span>Theme</span><select data-world-setting="theme">' + themeOptions + "</select></label>",
@@ -4010,6 +4064,7 @@
 
   function applyCharacterSheetToDevTools(content, devToolsState, sheetId) {
     const config = getCharacterSheetConfig(content, sheetId) || CHARACTER_SHEET_OPTIONS[0] || null;
+    ensureDevToolsPlayerSpriteSettings(devToolsState, content);
     devToolsState.selectedCharacterSheetId = config?.id || CHARACTER_SHEET_OPTIONS[0]?.id || "";
     devToolsState.characterSheetColumns = Math.max(1, Number(config?.columns || 4));
     devToolsState.characterSheetRows = Math.max(1, Number(config?.rows || 4));
@@ -4600,6 +4655,7 @@
 
   function renderCharacterDevToolsScreen(root, content, devToolsState) {
     const sheet = ensureCharacterDevSelection(devToolsState, content);
+    ensureDevToolsPlayerSpriteSettings(devToolsState, content);
     const selectedRow = devToolsState.characterSheetSelectedRow || 0;
     const selectedFrame = devToolsState.characterSheetSelectedFrame || 0;
     const compareRow = typeof devToolsState.characterSheetCompareRow === "number" ? devToolsState.characterSheetCompareRow : Math.min(1, Math.max(1, (devToolsState.characterSheetRows || 1) - 1));
@@ -4634,6 +4690,15 @@
       '<section class="dev-screen-layout">',
       '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>Sprite Sheets</h2></div><ul class="compact-list dev-map-list">' + sidebarItems + '</ul></aside>',
       '<section class="dev-main">',
+      '<section class="panel-block dev-editor-panel">',
+      '<div class="section-heading"><h2>Game Sprite Defaults</h2></div>',
+      '<div class="form-grid">',
+      '<label class="input-group"><span>Sprite Width</span><input type="number" min="64" max="384" step="1" data-dev-character-field="playerSpriteRenderWidth" value="' + Number(devToolsState.playerSpriteRenderWidth || PLAYER_RENDER_WIDTH) + '" /></label>',
+      '<label class="input-group"><span>Sprite Anchor Y</span><input type="number" min="-128" max="128" step="1" data-dev-character-field="playerSpriteAnchorOffsetY" value="' + Number(devToolsState.playerSpriteAnchorOffsetY || 0) + '" /></label>',
+      '</div>',
+      '<p class="dev-helper-text">These values are global defaults for the whole game and are saved to <code>settings.json</code>, not to an individual character sheet.</p>',
+      '<div class="title-actions"><button class="secondary-button" type="button" data-action="export-settings-json">Export settings.json</button></div>',
+      '</section>',
       '<section class="panel-block dev-editor-panel">',
       '<div class="section-heading"><h2>Sheet Settings</h2></div>',
       '<div class="form-grid">',
@@ -5321,6 +5386,9 @@
     root.querySelector('[data-action="export-character-sheets-json"]')?.addEventListener("click", function () {
       app.exportCharacterSheetsJson();
     });
+    root.querySelector('[data-action="export-settings-json"]')?.addEventListener("click", function () {
+      app.exportSettingsJson();
+    });
 
     root.querySelectorAll("[data-dev-select-map]").forEach(function (button) {
       button.addEventListener("click", function () {
@@ -5811,6 +5879,8 @@
         characterSheetColumns: getCharacterSheetConfig(content, CHARACTER_SHEET_OPTIONS[0]?.id || "")?.columns || CHARACTER_SHEET_OPTIONS[0]?.columns || 4,
         characterSheetRows: getCharacterSheetConfig(content, CHARACTER_SHEET_OPTIONS[0]?.id || "")?.rows || CHARACTER_SHEET_OPTIONS[0]?.rows || 4,
         characterSheetFrameHeight: getCharacterSheetConfig(content, CHARACTER_SHEET_OPTIONS[0]?.id || "")?.frameHeight || CHARACTER_SHEET_FRAME_HEIGHT,
+        playerSpriteRenderWidth: content.settings?.defaults?.playerSpriteRenderWidth || PLAYER_RENDER_WIDTH,
+        playerSpriteAnchorOffsetY: content.settings?.defaults?.playerSpriteAnchorOffsetY || PLAYER_SPRITE_ANCHOR_OFFSET_Y,
         characterSheetOffsetX: 0,
         characterSheetOffsetY: 0,
         characterSheetSelectedRow: 0,
@@ -5958,7 +6028,6 @@
         } else {
           this.state.settings[key] = rawValue;
         }
-
         this.render();
       },
       updateWorldPlayerField: function (key, rawValue) {
@@ -6218,6 +6287,10 @@
           this.devTools.characterSheetOffsetX = Number(rawValue || 0);
         } else if (field === "offsetY") {
           this.devTools.characterSheetOffsetY = Number(rawValue || 0);
+        } else if (field === "playerSpriteRenderWidth") {
+          this.devTools.playerSpriteRenderWidth = Math.max(64, Number(rawValue || PLAYER_RENDER_WIDTH));
+        } else if (field === "playerSpriteAnchorOffsetY") {
+          this.devTools.playerSpriteAnchorOffsetY = Number(rawValue || 0);
         } else if (field === "playerLabel") {
           this.devTools.characterSheetPlayerLabel = String(rawValue || "");
         } else if (field === "playerSelectable") {
@@ -6253,6 +6326,7 @@
         }
 
         ensureCharacterDevSelection(this.devTools, this.content);
+        syncDevToolsPlayerSpriteSettings(this.content, this.devTools);
         syncDevToolsCharacterSheet(this.content, this.devTools);
         if (shouldRender !== false) {
           this.render();
@@ -6873,6 +6947,26 @@
         anchor.click();
         URL.revokeObjectURL(url);
         this.state.message = "Exported character-sheets.json.";
+        if (this.state.screen === "world") {
+          this.render();
+        }
+      },
+      exportSettingsJson: function () {
+        syncDevToolsPlayerSpriteSettings(this.content, this.devTools);
+        const payload = {
+          defaults: Object.assign({}, this.content.settings?.defaults || fallbackContent.settings.defaults),
+          allowedZoomLevels: this.content.settings?.allowedZoomLevels || fallbackContent.settings.allowedZoomLevels,
+          maxSaveSlots: this.content.settings?.maxSaveSlots || fallbackContent.settings.maxSaveSlots,
+        };
+
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = "settings.json";
+        anchor.click();
+        URL.revokeObjectURL(url);
+        this.state.message = "Exported settings.json.";
         if (this.state.screen === "world") {
           this.render();
         }
