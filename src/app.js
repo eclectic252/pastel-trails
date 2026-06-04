@@ -12,7 +12,10 @@
   const PLAYER_SPRITE_COLUMNS = 4;
   const PLAYER_SPRITE_ROWS = 4;
   const CHARACTER_SHEET_FRAME_HEIGHT = 313;
-  const PLAYER_WALK_FRAME_MS = 140;
+  const PLAYER_WALK_ANIMATION_MS = {
+    horizontal: 130,
+    vertical: 120,
+  };
   const CHARACTER_SHEET_OPTIONS = [
     {
       id: "boardwalk-girl-check",
@@ -1525,9 +1528,13 @@
       return visual;
     }
 
+    const frameDuration = visual.facing === "up" || visual.facing === "down"
+      ? PLAYER_WALK_ANIMATION_MS.vertical
+      : PLAYER_WALK_ANIMATION_MS.horizontal;
+
     visual.frameTime += deltaMs;
-    while (visual.frameTime >= PLAYER_WALK_FRAME_MS) {
-      visual.frameTime -= PLAYER_WALK_FRAME_MS;
+    while (visual.frameTime >= frameDuration) {
+      visual.frameTime -= frameDuration;
       visual.frameIndex = (visual.frameIndex + 1) % PLAYER_SPRITE_COLUMNS;
     }
 
@@ -7200,8 +7207,8 @@
         if (this.state.screen === "dev-tools" && this.devTools.section === "characters") {
           ensureCharacterDevSelection(this.devTools, this.content);
           this.devTools.characterSheetAnimation.frameTime += deltaMs;
-          while (this.devTools.characterSheetAnimation.frameTime >= PLAYER_WALK_FRAME_MS) {
-            this.devTools.characterSheetAnimation.frameTime -= PLAYER_WALK_FRAME_MS;
+          while (this.devTools.characterSheetAnimation.frameTime >= PLAYER_WALK_ANIMATION_MS.horizontal) {
+            this.devTools.characterSheetAnimation.frameTime -= PLAYER_WALK_ANIMATION_MS.horizontal;
             this.devTools.characterSheetAnimation.frameIndex = (this.devTools.characterSheetAnimation.frameIndex + 1) % Math.max(1, this.devTools.characterSheetColumns || 4);
           }
           drawCharacterDevCanvases(root, this.devTools);
