@@ -13,11 +13,19 @@
   const PLAYER_SPRITE_ROWS = 4;
   const CHARACTER_SHEET_FRAME_HEIGHT = 313;
   const PLAYER_RENDER_WIDTH = 168;
+  const MONSTER_RENDER_WIDTH = 128;
+  const MIN_PLAYER_RENDER_WIDTH = 64;
+  const MIN_MONSTER_RENDER_WIDTH = 16;
   const PLAYER_SPRITE_ANCHOR_OFFSET_Y = 20;
   const PLAYER_WALK_ANIMATION_MS = {
     horizontal: 130,
     vertical: 120,
   };
+  const MONSTER_WALK_SPEED = 72;
+  const MONSTER_WALK_STEP_PX = 32;
+  const MONSTER_WALK_STEP_MIN = 1;
+  const MONSTER_WALK_STEP_MAX = 3;
+  const MONSTER_WALK_PAUSE_MS = 900;
   const CHARACTER_SHEET_OPTIONS = [
     {
       id: "boardwalk-girl-check",
@@ -50,6 +58,21 @@
       })
       .join(" ");
   }
+
+  function getMinimumRenderWidthForKind(kind) {
+    return kind === "monster" ? MIN_MONSTER_RENDER_WIDTH : MIN_PLAYER_RENDER_WIDTH;
+  }
+
+  function clampRenderWidth(value, kind, fallbackValue) {
+    const numeric = Number(value ?? fallbackValue);
+    const fallback = Number(fallbackValue);
+    const resolved = Number.isFinite(numeric) && numeric > 0
+      ? numeric
+      : (Number.isFinite(fallback) && fallback > 0
+        ? fallback
+        : (kind === "monster" ? MONSTER_RENDER_WIDTH : PLAYER_RENDER_WIDTH));
+    return Math.max(getMinimumRenderWidthForKind(kind), resolved);
+  }
   const WILD_RADIUS = 18;
   const WILD_RESPAWN_MS = 120000;
   const TRANSITION_COOLDOWN_MS = 600;
@@ -61,6 +84,7 @@
         zoom: 100,
         partySize: 6,
         playerSpriteRenderWidth: PLAYER_RENDER_WIDTH,
+        monsterSpriteRenderWidth: MONSTER_RENDER_WIDTH,
         playerSpriteAnchorOffsetY: PLAYER_SPRITE_ANCHOR_OFFSET_Y,
         shareExperience: true,
         mapDetails: true,
@@ -117,12 +141,15 @@
           label: entry.label,
           playerLabel: entry.label,
           playerSelectable: true,
+          kind: "character",
+          group: "Characters / Boardwalk girl sprite",
           path: entry.path,
           columns: entry.columns,
           rows: entry.rows,
           frameHeight: CHARACTER_SHEET_FRAME_HEIGHT,
           offsetX: 0,
           offsetY: 0,
+          renderWidth: null,
           rowOffsets: Array.from({ length: entry.rows }, function () {
             return { x: 0, y: 0 };
           }),
@@ -133,6 +160,9 @@
           }),
         };
       }),
+    },
+    monsterAssets: {
+      images: [],
     },
     arenas: { arenas: [] },
     trainers: { trainers: [] },
@@ -319,17 +349,33 @@
           id: option.id,
           label: saved.label || option.label || prettifyCharacterSheetLabel(option.path || option.id),
           playerLabel: saved.playerLabel || option.playerLabel || saved.label || option.label || prettifyCharacterSheetLabel(option.path || option.id),
-          playerSelectable: saved.playerSelectable ?? option.playerSelectable ?? true,
+          playerSelectable: saved.playerSelectable ?? option.playerSelectable ?? ((saved.kind || option.kind || "character") !== "monster"),
+          kind: saved.kind || option.kind || "character",
+          group: saved.group || option.group || option.path?.split("/").slice(1, -1).join(" / ") || "Sheets",
           path: saved.path || option.path,
           columns,
           rows,
           frameHeight: Math.max(1, Number(saved.frameHeight || option.frameHeight || CHARACTER_SHEET_FRAME_HEIGHT)),
           offsetX: Number(saved.offsetX || 0),
           offsetY: Number(saved.offsetY || 0),
+          renderWidth: saved.renderWidth === null || saved.renderWidth === ""
+            ? null
+            : (saved.renderWidth ?? option.renderWidth ?? null) === null
+              ? null
+              : clampRenderWidth(
+                saved.renderWidth ?? option.renderWidth,
+                saved.kind || option.kind || "character",
+                option.renderWidth ?? ((saved.kind || option.kind || "character") === "monster" ? MONSTER_RENDER_WIDTH : PLAYER_RENDER_WIDTH)
+              ),
           rowOffsets,
           frameOffsets,
         };
       }),
+    };
+    const monsterAssets = {
+      images: Array.isArray(rawContent.monsterAssets?.images)
+        ? rawContent.monsterAssets.images.slice().sort()
+        : [],
     };
 
     return {
@@ -350,6 +396,7 @@
         }),
       },
       characterSheets,
+      monsterAssets,
       arenas: rawContent.arenas || JSON.parse(JSON.stringify(fallbackContent.arenas)),
       trainers: rawContent.trainers,
       maps,
@@ -416,39 +463,99 @@
     return files;
   }
 
+  async function collectImageFilesRecursive(directoryHandle, prefixParts) {
+    const files = [];
+
+    for await (const [name, handle] of directoryHandle.entries()) {
+      if (handle.kind === "file" && /\.(png|webp|jpg|jpeg)$/i.test(name)) {
+        files.push({
+          name,
+          pathParts: [...prefixParts, name],
+        });
+      } else if (handle.kind === "directory") {
+        const nested = await collectImageFilesRecursive(handle, [...prefixParts, name]);
+        files.push(...nested);
+      }
+    }
+
+    return files;
+  }
+
+  function buildDiscoveredSheetEntry(file, kind) {
+    const path = file.pathParts.join("/");
+    const existing = CHARACTER_SHEET_OPTIONS.find(function (entry) {
+      return entry.path === path;
+    });
+    const baseName = file.name.replace(/\.[^.]+$/, "");
+    const relativeParts = file.pathParts.slice(1, -1);
+    const folderLabel = relativeParts.join(" / ");
+    const baseId = slugify(relativeParts.concat(baseName).join("-"));
+    const isCharacter = kind !== "monster";
+    return {
+      id: existing?.id || baseId,
+      label: existing?.label || prettifyCharacterSheetLabel(file.name),
+      playerLabel: existing?.playerLabel || existing?.label || prettifyCharacterSheetLabel(file.name),
+      playerSelectable: existing?.playerSelectable ?? isCharacter,
+      kind: kind || "character",
+      group: folderLabel,
+      path,
+      columns: existing?.columns || 4,
+      rows: existing?.rows || 4,
+      frameHeight: existing?.frameHeight || CHARACTER_SHEET_FRAME_HEIGHT,
+      offsetX: existing?.offsetX || 0,
+      offsetY: existing?.offsetY || 0,
+      renderWidth: existing?.renderWidth ?? null,
+    };
+  }
+
+  function isLikelyMonsterSheetFile(file) {
+    const path = file.pathParts.join("/").toLowerCase();
+    const name = file.name.toLowerCase();
+    return path.includes("/monster spritesheets/")
+      || name.includes("walksheet")
+      || name.includes("spritesheet");
+  }
+
+  function buildMonsterAssetCatalog(files) {
+    return {
+      images: files.map(function (file) {
+        return file.pathParts.join("/");
+      }).sort(),
+    };
+  }
+
   async function loadCharacterSheetsFromDirectory(rootHandle) {
     const discoveredSheets = [];
+    let monsterAssets = { images: [] };
 
     try {
       const assetsHandle = await rootHandle.getDirectoryHandle("assets");
-      const charactersHandle = await assetsHandle.getDirectoryHandle("Characters");
-      const spriteFolderHandle = await charactersHandle.getDirectoryHandle("Boardwalk girl sprite");
-
-      for await (const [name, handle] of spriteFolderHandle.entries()) {
-        if (handle.kind !== "file" || !name.toLowerCase().endsWith(".png")) {
-          continue;
-        }
-
-        const path = ["assets", "Characters", "Boardwalk girl sprite", name].join("/");
-        const existing = CHARACTER_SHEET_OPTIONS.find(function (entry) {
-          return entry.path === path;
+      try {
+        const charactersHandle = await assetsHandle.getDirectoryHandle("Characters");
+        const characterFiles = await collectImageFilesRecursive(charactersHandle, ["assets", "Characters"]);
+        characterFiles.forEach(function (file) {
+          discoveredSheets.push(buildDiscoveredSheetEntry(file, "character"));
         });
-        const baseId = name.replace(/\.[^.]+$/, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      } catch {}
 
-        discoveredSheets.push({
-          id: existing?.id || baseId,
-          label: existing?.label || prettifyCharacterSheetLabel(name),
-          path,
-          columns: existing?.columns || 4,
-          rows: existing?.rows || 4,
+      try {
+        const monstersHandle = await assetsHandle.getDirectoryHandle("Monsters");
+        const monsterFiles = await collectImageFilesRecursive(monstersHandle, ["assets", "Monsters"]);
+        monsterAssets = buildMonsterAssetCatalog(monsterFiles);
+        monsterFiles.filter(isLikelyMonsterSheetFile).forEach(function (file) {
+          discoveredSheets.push(buildDiscoveredSheetEntry(file, "monster"));
         });
-      }
+      } catch {}
     } catch {
-      return JSON.parse(JSON.stringify(fallbackContent.characterSheets));
+      return {
+        sheets: JSON.parse(JSON.stringify(fallbackContent.characterSheets.sheets)),
+        monsterAssets: JSON.parse(JSON.stringify(fallbackContent.monsterAssets || { images: [] })),
+      };
     }
 
     return {
       sheets: discoveredSheets.length ? discoveredSheets : JSON.parse(JSON.stringify(fallbackContent.characterSheets.sheets)),
+      monsterAssets,
     };
   }
 
@@ -491,11 +598,23 @@
           id: saved.id || discovered.id,
           label: saved.label || discovered.label,
           playerLabel: saved.playerLabel || discovered.playerLabel || discovered.label,
-          playerSelectable: saved.playerSelectable ?? discovered.playerSelectable ?? true,
+          playerSelectable: saved.playerSelectable ?? discovered.playerSelectable ?? (discovered.kind !== "monster"),
+          kind: saved.kind || discovered.kind || "character",
+          group: saved.group || discovered.group,
+          renderWidth: saved.renderWidth === null || saved.renderWidth === ""
+            ? null
+            : (saved.renderWidth ?? discovered.renderWidth ?? null) === null
+              ? null
+              : clampRenderWidth(
+                saved.renderWidth ?? discovered.renderWidth,
+                saved.kind || discovered.kind || "character",
+                discovered.renderWidth ?? ((saved.kind || discovered.kind || "character") === "monster" ? MONSTER_RENDER_WIDTH : PLAYER_RENDER_WIDTH)
+              ),
           path: discovered.path,
         });
       }),
     };
+    const monsterAssets = discoveredCharacterSheets.monsterAssets || { images: [] };
 
     const maps = await loadAuthoredMapsFromAssets(rootHandle);
     const mapMetadata = {};
@@ -503,11 +622,42 @@
       mapMetadata[mapId] = await tryReadJsonFromHandle(rootHandle, ["data", "map-metadata", mapId + ".meta.json"]) || {};
     }
 
-    return normalizeContent({ settings, themes, items, skills, monsters, towns, arenas, trainers, characterSheets, maps, mapMetadata }, "directory");
+    return normalizeContent({ settings, themes, items, skills, monsters, towns, arenas, trainers, characterSheets, monsterAssets, maps, mapMetadata }, "directory");
   }
 
   function loadEmbeddedContent() {
     return normalizeContent(getEmbeddedContent(), "embedded");
+  }
+
+  function clearImageCache() {
+    IMAGE_CACHE.forEach(function (image) {
+      if (image instanceof Image) {
+        image.onload = null;
+        image.onerror = null;
+        image.src = "";
+      }
+    });
+    IMAGE_CACHE.clear();
+  }
+
+  function clearMapRuntimeCaches(content) {
+    const maps = content?.maps || {};
+    Object.keys(maps).forEach(function (mapId) {
+      const map = maps[mapId];
+      if (!map || typeof map !== "object") {
+        return;
+      }
+      delete map._collisionRects;
+      delete map._baseWorldLayerCanvas;
+      delete map._foregroundWorldLayerCanvas;
+    });
+  }
+
+  function clearRuntimeCaches(content, options) {
+    clearMapRuntimeCaches(content);
+    if (options?.includeImages) {
+      clearImageCache();
+    }
   }
 
   function getImage(src) {
@@ -530,6 +680,10 @@
           const canvas = document.querySelector(".world-canvas");
           if (canvas) {
             drawWorld(canvas, ACTIVE_APP.state, ACTIVE_APP.content, ACTIVE_APP.devTools);
+          }
+          const root = document.querySelector("#app");
+          if (root) {
+            drawMonsterVariantCanvases(root, ACTIVE_APP.content);
           }
           return;
         }
@@ -625,6 +779,102 @@
     return species?.variants?.find(function (variant) {
       return variant.id === variantId;
     }) || species?.variants?.[0] || null;
+  }
+
+  function getMonsterSheetOptions(content) {
+    return getAvailableCharacterSheets(content).filter(function (entry) {
+      return getSpriteSheetKind(entry) === "monster";
+    });
+  }
+
+  function getMonsterImageOptions(content) {
+    const images = Array.isArray(content?.monsterAssets?.images) ? content.monsterAssets.images.slice() : [];
+    return images.sort();
+  }
+
+  function normalizeFrameList(value, fallbackFrame) {
+    if (Array.isArray(value)) {
+      const normalized = value.map(function (entry) {
+        return Math.max(0, Number(entry || 0));
+      }).filter(function (entry) {
+        return Number.isFinite(entry);
+      });
+      return normalized.length ? normalized : [Math.max(0, Number(fallbackFrame || 0))];
+    }
+
+    if (typeof value === "string") {
+      const normalized = value.split(",").map(function (entry) {
+        return Math.max(0, Number(String(entry).trim() || 0));
+      }).filter(function (entry) {
+        return Number.isFinite(entry);
+      });
+      return normalized.length ? normalized : [Math.max(0, Number(fallbackFrame || 0))];
+    }
+
+    return [Math.max(0, Number(fallbackFrame || 0))];
+  }
+
+  function getVariantPortraitConfig(variant) {
+    const config = variant?.portrait || {};
+    return {
+      imagePath: config.imagePath || "",
+      sheetId: config.sheetId || "",
+      row: Math.max(0, Number(config.row || 0)),
+      frame: Math.max(0, Number(config.frame || 0)),
+    };
+  }
+
+  function getVariantPortraitSheet(content, variant) {
+    const config = getVariantPortraitConfig(variant);
+    if (!config.sheetId) {
+      return null;
+    }
+
+    return getAvailableCharacterSheets(content).find(function (entry) {
+      return entry.id === config.sheetId;
+    }) || null;
+  }
+
+  function getVariantOverworldConfig(variant) {
+    const config = variant?.overworld || {};
+    const idleFrame = Math.max(0, Number(config.idleFrame || 0));
+    const downRow = Math.max(0, Number(config.rows?.down ?? config.downRow ?? config.row ?? 0));
+    const leftRow = Math.max(0, Number(config.rows?.left ?? config.leftRow ?? (downRow + 1)));
+    const rightRow = Math.max(0, Number(config.rows?.right ?? config.rightRow ?? (downRow + 2)));
+    const upRow = Math.max(0, Number(config.rows?.up ?? config.upRow ?? (downRow + 3)));
+    return {
+      sheetId: config.sheetId || "",
+      row: downRow,
+      rows: {
+        down: downRow,
+        left: leftRow,
+        right: rightRow,
+        up: upRow,
+      },
+      idleFrame,
+      walkFrames: normalizeFrameList(config.walkFrames, idleFrame),
+      frameDurationMs: Math.max(60, Number(config.frameDurationMs || 180)),
+    };
+  }
+
+  function getVariantOverworldSheet(content, variant) {
+    const config = getVariantOverworldConfig(variant);
+    if (!config.sheetId) {
+      return null;
+    }
+
+    return getAvailableCharacterSheets(content).find(function (entry) {
+      return entry.id === config.sheetId;
+    }) || null;
+  }
+
+  function getDirectionRowForMonster(overworldConfig, facing) {
+    const resolvedFacing = ["down", "left", "right", "up"].includes(facing) ? facing : "down";
+    return overworldConfig?.rows?.[resolvedFacing] ?? overworldConfig?.row ?? 0;
+  }
+
+  function renderMonsterVariantVisualMarkup(speciesId, variantId, className, mode) {
+    return '<canvas class="' + escapeHtml(className) + '" data-monster-visual-species="' + escapeHtml(speciesId || "") + '" data-monster-visual-variant="' + escapeHtml(variantId || "default") + '" data-monster-visual-mode="' + escapeHtml(mode || "default") + '"></canvas>';
   }
 
   function formatMonsterVariantLabel(variantId) {
@@ -954,6 +1204,14 @@
       level: rollSpawnLevel(spawn),
       x: Number(spawn.x || 0),
       y: Number(spawn.y || 0),
+      homeX: Number(spawn.x || 0),
+      homeY: Number(spawn.y || 0),
+      walkRange: Math.max(0, Number(spawn.walkRange || 0)),
+      walkTargetX: Number(spawn.x || 0),
+      walkTargetY: Number(spawn.y || 0),
+      walkPauseUntil: Date.now() + MONSTER_WALK_PAUSE_MS,
+      facing: "down",
+      isWalking: false,
       active: true,
       respawnsAt: null,
       label: "Wild " + species.name,
@@ -1496,6 +1754,25 @@
     return content.settings.defaults;
   }
 
+  function ensureGlobalMonsterSpriteSettings(content) {
+    if (!content.settings) {
+      content.settings = JSON.parse(JSON.stringify(fallbackContent.settings));
+    }
+    if (!content.settings.defaults) {
+      content.settings.defaults = Object.assign({}, fallbackContent.settings.defaults);
+    }
+
+    content.settings.defaults.monsterSpriteRenderWidth = Math.max(
+      MIN_MONSTER_RENDER_WIDTH,
+      Number(
+        content.settings.defaults.monsterSpriteRenderWidth
+        ?? MONSTER_RENDER_WIDTH
+      ) || MONSTER_RENDER_WIDTH
+    );
+
+    return content.settings.defaults;
+  }
+
   function ensureDevToolsPlayerSpriteSettings(devToolsState, content) {
     const defaultSettings = ensureGlobalPlayerSpriteSettings(content);
 
@@ -1516,11 +1793,52 @@
     return devToolsState;
   }
 
+  function ensureDevToolsMonsterSpriteSettings(devToolsState, content) {
+    const defaultSettings = ensureGlobalMonsterSpriteSettings(content);
+
+    devToolsState.monsterSpriteRenderWidth = Math.max(
+      MIN_MONSTER_RENDER_WIDTH,
+      Number(
+        devToolsState.monsterSpriteRenderWidth
+        ?? defaultSettings.monsterSpriteRenderWidth
+        ?? MONSTER_RENDER_WIDTH
+      ) || MONSTER_RENDER_WIDTH
+    );
+
+    return devToolsState;
+  }
+
   function syncDevToolsPlayerSpriteSettings(content, devToolsState) {
     ensureGlobalPlayerSpriteSettings(content);
     ensureDevToolsPlayerSpriteSettings(devToolsState, content);
     content.settings.defaults.playerSpriteRenderWidth = devToolsState.playerSpriteRenderWidth;
     content.settings.defaults.playerSpriteAnchorOffsetY = devToolsState.playerSpriteAnchorOffsetY;
+  }
+
+  function syncDevToolsMonsterSpriteSettings(content, devToolsState) {
+    ensureGlobalMonsterSpriteSettings(content);
+    ensureDevToolsMonsterSpriteSettings(devToolsState, content);
+    content.settings.defaults.monsterSpriteRenderWidth = devToolsState.monsterSpriteRenderWidth;
+  }
+
+  function getSpriteSheetKind(sheet) {
+    return sheet?.kind === "monster" ? "monster" : "character";
+  }
+
+  function getDefaultRenderWidthForSheet(content, sheet) {
+    const kind = getSpriteSheetKind(sheet);
+    if (kind === "monster") {
+      return ensureGlobalMonsterSpriteSettings(content).monsterSpriteRenderWidth;
+    }
+    return ensureGlobalPlayerSpriteSettings(content).playerSpriteRenderWidth;
+  }
+
+  function getEffectiveRenderWidthForSheet(content, sheet) {
+    return clampRenderWidth(
+      sheet?.renderWidth ?? getDefaultRenderWidthForSheet(content, sheet) ?? PLAYER_RENDER_WIDTH,
+      getSpriteSheetKind(sheet),
+      getDefaultRenderWidthForSheet(content, sheet) ?? PLAYER_RENDER_WIDTH
+    );
   }
 
   function ensurePlayerVisualState(state) {
@@ -1995,6 +2313,13 @@
           monster.level = rerolled.level;
           monster.x = rerolled.x;
           monster.y = rerolled.y;
+          monster.homeX = rerolled.homeX;
+          monster.homeY = rerolled.homeY;
+          monster.walkRange = rerolled.walkRange;
+          monster.walkTargetX = rerolled.walkTargetX;
+          monster.walkTargetY = rerolled.walkTargetY;
+          monster.walkPauseUntil = rerolled.walkPauseUntil;
+          monster.facing = rerolled.facing;
           monster.active = true;
           monster.respawnsAt = null;
           monster.label = rerolled.label;
@@ -2005,6 +2330,117 @@
           monster.respawnsAt = now + ((Number(monster.respawnSeconds || 120) * 1000) || WILD_RESPAWN_MS);
           monster.label = "Wild spawn recharging";
         }
+      }
+    });
+  }
+
+  function pickMonsterWalkTarget(monster) {
+    const range = Math.max(0, Number(monster.walkRange || 0));
+    if (!range) {
+      monster.walkTargetX = Number(monster.homeX || monster.x || 0);
+      monster.walkTargetY = Number(monster.homeY || monster.y || 0);
+      monster.walkPauseUntil = 0;
+      return;
+    }
+    const originX = Number(monster.x ?? monster.homeX ?? 0);
+    const originY = Number(monster.y ?? monster.homeY ?? 0);
+    const homeX = Number(monster.homeX || originX || 0);
+    const homeY = Number(monster.homeY || originY || 0);
+    const stepDistance = MONSTER_WALK_STEP_PX * (MONSTER_WALK_STEP_MIN + Math.floor(Math.random() * (MONSTER_WALK_STEP_MAX - MONSTER_WALK_STEP_MIN + 1)));
+    const directions = [
+      { facing: "up", dx: 0, dy: -stepDistance },
+      { facing: "down", dx: 0, dy: stepDistance },
+      { facing: "left", dx: -stepDistance, dy: 0 },
+      { facing: "right", dx: stepDistance, dy: 0 },
+    ];
+    const validDirections = directions.filter(function (direction) {
+      const targetX = originX + direction.dx;
+      const targetY = originY + direction.dy;
+      return Math.hypot(targetX - homeX, targetY - homeY) <= range + 1;
+    });
+    const pool = validDirections.length ? validDirections : directions;
+    const choice = pool[Math.floor(Math.random() * pool.length)] || directions[0];
+
+    monster.walkTargetX = originX + choice.dx;
+    monster.walkTargetY = originY + choice.dy;
+    monster.facing = choice.facing;
+    monster.walkPauseUntil = 0;
+  }
+
+  function moveWildMonsters(state, content, deltaMs) {
+    if (!Array.isArray(state.world?.wildMonsters) || !state.world.wildMonsters.length) {
+      return;
+    }
+
+    const map = content.maps[state.world.currentMapId];
+    if (!map) {
+      return;
+    }
+
+    const now = Date.now();
+
+    state.world.wildMonsters.forEach(function (monster) {
+      if (!monster?.active) {
+        return;
+      }
+
+      const range = Math.max(0, Number(monster.walkRange || 0));
+      monster.homeX = Number(monster.homeX ?? monster.x ?? 0);
+      monster.homeY = Number(monster.homeY ?? monster.y ?? 0);
+
+      if (!range) {
+        monster.x = monster.homeX;
+        monster.y = monster.homeY;
+        monster.isWalking = false;
+        if (!["down", "left", "right", "up"].includes(monster.facing)) {
+          monster.facing = "down";
+        }
+        return;
+      }
+
+      if (monster.walkPauseUntil && monster.walkPauseUntil > now) {
+        monster.isWalking = false;
+        return;
+      }
+
+      if (!Number.isFinite(monster.walkTargetX) || !Number.isFinite(monster.walkTargetY)) {
+        pickMonsterWalkTarget(monster);
+      }
+
+      const dx = Number(monster.walkTargetX || monster.homeX) - monster.x;
+      const dy = Number(monster.walkTargetY || monster.homeY) - monster.y;
+      const movingHorizontally = Math.abs(dx) > Math.abs(dy);
+      monster.facing = movingHorizontally
+        ? (dx < 0 ? "left" : "right")
+        : (dy < 0 ? "up" : "down");
+      const distance = movingHorizontally ? Math.abs(dx) : Math.abs(dy);
+
+      if (distance < 4) {
+        monster.x = Number(monster.walkTargetX || monster.x || 0);
+        monster.y = Number(monster.walkTargetY || monster.y || 0);
+        monster.isWalking = false;
+        monster.walkPauseUntil = now + MONSTER_WALK_PAUSE_MS + Math.floor(Math.random() * 700);
+        pickMonsterWalkTarget(monster);
+        return;
+      }
+
+      const step = MONSTER_WALK_SPEED * (deltaMs / 1000);
+      const appliedStep = Math.min(step, distance);
+      const moveX = movingHorizontally ? Math.sign(dx) * appliedStep : 0;
+      const moveY = movingHorizontally ? 0 : Math.sign(dy) * appliedStep;
+      const resolved = tryMoveAlongAxis(map, monster.x, monster.y, monster.x + moveX, monster.y + moveY);
+      const nextX = resolved.x;
+      const nextY = resolved.y;
+      const homeDistance = Math.hypot(nextX - monster.homeX, nextY - monster.homeY);
+
+      if (homeDistance <= range + 2 && (Math.abs(nextX - monster.x) > 0.01 || Math.abs(nextY - monster.y) > 0.01)) {
+        monster.x = nextX;
+        monster.y = nextY;
+        monster.isWalking = true;
+      } else {
+        monster.isWalking = false;
+        monster.walkPauseUntil = now + 250;
+        pickMonsterWalkTarget(monster);
       }
     });
   }
@@ -2454,13 +2890,18 @@
   function drawWildMonsterSprite(ctx, monster, content, camera) {
     const species = getSpecies(content, monster.speciesId);
     const variant = getSpeciesVariant(species, monster.variantId);
-    const spritePath = variant?.sprite || "";
+    const portraitSheet = getVariantPortraitSheet(content, variant);
+    const portraitConfig = getVariantPortraitConfig(variant);
+    const overworldSheet = getVariantOverworldSheet(content, variant);
+    const overworldConfig = getVariantOverworldConfig(variant);
     const zoomScale = Math.max(0.1, Number(ACTIVE_APP?.state?.settings?.zoom || 100) / 100);
     const useSmoothSampling = Math.abs(zoomScale - 1) > 0.001;
     const screenX = Math.round((monster.x - camera.x) * zoomScale);
     const screenY = Math.round((monster.y - camera.y) * zoomScale);
     const map = content.maps[ACTIVE_APP?.state?.world?.currentMapId || ""];
-    const spriteSize = (map?.tileSize || 128) * zoomScale;
+    const fallbackSheet = overworldSheet || portraitSheet;
+    const overworldWidth = fallbackSheet ? getEffectiveRenderWidthForSheet(content, fallbackSheet) : (map?.tileSize || 128);
+    const spriteSize = overworldWidth * zoomScale;
     const drawX = Math.round(screenX - spriteSize / 2);
     const drawY = Math.round(screenY - spriteSize / 2);
     const label = "Lv " + Number(monster.level || 1) + " " + (species?.name || monster.speciesId) + " (" + formatMonsterVariantLabel(variant?.id || monster.variantId || "default") + ")";
@@ -2494,8 +2935,36 @@
       ctx.restore();
     };
 
-    if (spritePath) {
-      const image = getImage(spritePath);
+    if (overworldSheet?.path) {
+      const image = getImage(overworldSheet.path);
+      if (image.complete && image.naturalWidth) {
+        const runtimeCharacterConfig = buildCharacterSheetRenderConfig(overworldSheet);
+        ensureCharacterDevSelection(runtimeCharacterConfig, content);
+        const walkFrames = normalizeFrameList(overworldConfig.walkFrames, overworldConfig.idleFrame);
+        const animationStep = Math.floor(Date.now() / Math.max(60, Number(overworldConfig.frameDurationMs || 180)));
+        const animatedFrame = walkFrames[animationStep % walkFrames.length] ?? overworldConfig.idleFrame;
+        const frameIndex = monster.isWalking ? animatedFrame : overworldConfig.idleFrame;
+        const rowIndex = getDirectionRowForMonster(overworldConfig, monster.facing);
+        const sourceRect = getCharacterFrameSourceRect(
+          runtimeCharacterConfig,
+          image,
+          Math.max(0, Math.min((runtimeCharacterConfig.characterSheetRows || 1) - 1, rowIndex)),
+          Math.max(0, Math.min((runtimeCharacterConfig.characterSheetColumns || 1) - 1, frameIndex))
+        );
+        ctx.save();
+        ctx.imageSmoothingEnabled = useSmoothSampling;
+        if (useSmoothSampling) {
+          ctx.imageSmoothingQuality = "high";
+        }
+        ctx.drawImage(image, sourceRect.sx, sourceRect.sy, sourceRect.sw, sourceRect.sh, drawX, drawY, spriteSize, spriteSize);
+        ctx.restore();
+        drawWildMonsterLabel();
+        return;
+      }
+    }
+
+    if (portraitConfig.imagePath) {
+      const image = getImage(portraitConfig.imagePath);
       if (image.complete && image.naturalWidth) {
         ctx.save();
         ctx.imageSmoothingEnabled = useSmoothSampling;
@@ -2503,6 +2972,29 @@
           ctx.imageSmoothingQuality = "high";
         }
         ctx.drawImage(image, drawX, drawY, spriteSize, spriteSize);
+        ctx.restore();
+        drawWildMonsterLabel();
+        return;
+      }
+    }
+
+    if (portraitSheet?.path) {
+      const image = getImage(portraitSheet.path);
+      if (image.complete && image.naturalWidth) {
+        const runtimeCharacterConfig = buildCharacterSheetRenderConfig(portraitSheet);
+        ensureCharacterDevSelection(runtimeCharacterConfig, content);
+        const sourceRect = getCharacterFrameSourceRect(
+          runtimeCharacterConfig,
+          image,
+          Math.max(0, Math.min((runtimeCharacterConfig.characterSheetRows || 1) - 1, portraitConfig.row)),
+          Math.max(0, Math.min((runtimeCharacterConfig.characterSheetColumns || 1) - 1, portraitConfig.frame))
+        );
+        ctx.save();
+        ctx.imageSmoothingEnabled = useSmoothSampling;
+        if (useSmoothSampling) {
+          ctx.imageSmoothingQuality = "high";
+        }
+        ctx.drawImage(image, sourceRect.sx, sourceRect.sy, sourceRect.sw, sourceRect.sh, drawX, drawY, spriteSize, spriteSize);
         ctx.restore();
         drawWildMonsterLabel();
         return;
@@ -2636,13 +3128,10 @@
     const species = getSpecies(content, monster.speciesId);
     const variant = getSpeciesVariant(species, monster.variantId || "default");
     const variantLabel = formatMonsterVariantLabel(variant?.id || monster.variantId || "default");
-    const sprite = variant?.sprite || "";
     const maxHp = Number(options.maxHp || monster.maxHp || monster.stats?.hp || 1);
     const currentHp = Number(options.currentHp || monster.currentHp || 0);
     const hpPercent = Math.max(0, Math.min(100, (currentHp / Math.max(1, maxHp)) * 100));
-    const visual = sprite
-      ? '<img class="battle-hud-sprite" src="' + escapeHtml(sprite) + '" alt="' + escapeHtml((species?.name || monster.speciesId) + " " + variantLabel) + '" />'
-      : '<div class="battle-hud-fallback">' + escapeHtml((species?.name || monster.speciesId || "?").slice(0, 1)) + "</div>";
+    const visual = renderMonsterVariantVisualMarkup(monster.speciesId, variant?.id || monster.variantId || "default", "battle-hud-sprite", "default");
     const badgeSideClass = options.badgeSide === "right"
       ? " battle-hud-level-badge-right"
       : " battle-hud-level-badge-left";
@@ -2666,14 +3155,11 @@
 
     const species = getSpecies(content, monster.speciesId);
     const variant = getSpeciesVariant(species, monster.variantId || "default");
-    const sprite = variant?.sprite || "";
     const maxHp = Number(options.maxHp || monster.maxHp || monster.stats?.hp || 1);
     const currentHp = Number(options.currentHp || monster.currentHp || 0);
     const hpPercent = Math.max(0, Math.min(100, (currentHp / Math.max(1, maxHp)) * 100));
     const activeClass = options.active ? " battle-party-slot-active" : "";
-    const visual = sprite
-      ? '<img class="battle-party-slot-sprite" src="' + escapeHtml(sprite) + '" alt="' + escapeHtml(species?.name || monster.speciesId) + '" />'
-      : '<div class="battle-party-slot-fallback">' + escapeHtml((species?.name || monster.speciesId || "?").slice(0, 1)) + "</div>";
+    const visual = renderMonsterVariantVisualMarkup(monster.speciesId, variant?.id || monster.variantId || "default", "battle-party-slot-sprite", "default");
 
     return [
       '<div class="battle-party-slot' + activeClass + '">',
@@ -2691,10 +3177,7 @@
   function renderBattleBattler(content, monster, className) {
     const species = getSpecies(content, monster.speciesId);
     const variant = getSpeciesVariant(species, monster.variantId || "default");
-    const sprite = variant?.sprite || "";
-    const visual = sprite
-      ? '<img class="battle-battler-sprite" src="' + escapeHtml(sprite) + '" alt="' + escapeHtml(species?.name || monster.speciesId) + '" />'
-      : '<div class="battle-battler-fallback">' + escapeHtml((species?.name || monster.speciesId || "?").slice(0, 1)) + "</div>";
+    const visual = renderMonsterVariantVisualMarkup(monster.speciesId, variant?.id || monster.variantId || "default", "battle-battler-sprite", "default");
 
     return [
       '<div class="battle-battler ' + className + '">',
@@ -3207,9 +3690,7 @@
         const variantMarkup = entry.variants.map(function (variantEntry) {
           const variantLabel = formatMonsterVariantLabel(variantEntry.variant.id || "default");
           const variantLocationText = variantEntry.locations.length ? variantEntry.locations.join(", ") : "No available spawn locations assigned yet";
-          const spriteMarkup = variantEntry.variant.sprite
-            ? '<img class="registry-variant-sprite" src="' + escapeHtml(variantEntry.variant.sprite) + '" alt="' + escapeHtml(entry.species.name + " " + variantLabel) + '" />'
-            : '<span class="registry-variant-fallback">' + escapeHtml(entry.species.name.slice(0, 1)) + "</span>";
+          const spriteMarkup = renderMonsterVariantVisualMarkup(entry.species.id, variantEntry.variant.id || "default", "registry-variant-sprite", "default");
 
           return [
             '<li class="registry-variant-row">',
@@ -3350,12 +3831,12 @@
       : '<section class="dev-editor"><h3>No Transition Selected</h3><p>Add a new transition to begin editing.</p></section>';
 
     const spawnItems = visibleSpawns.length
-      ? visibleSpawns.map(function (spawn) {
-          const selected = spawn.id === selectedSpawnId ? " compact-list-selected" : "";
-          const optionCount = ensureSpawnOptions(spawn, content).length;
-          return '<li class="' + selected.trim() + '"><button type="button" class="link-button" data-dev-select-spawn="' + spawn.id + '">' +
-            "<strong>" + escapeHtml(spawn.id) + "</strong><span>" + Number(spawn.spawnChance ?? 100) + "% spawn · " + optionCount + " monster option" + (optionCount === 1 ? "" : "s") + " @ " + spawn.x + "," + spawn.y + "</span></button></li>";
-        }).join("")
+        ? visibleSpawns.map(function (spawn) {
+            const selected = spawn.id === selectedSpawnId ? " compact-list-selected" : "";
+            const optionCount = ensureSpawnOptions(spawn, content).length;
+            return '<li class="' + selected.trim() + '"><button type="button" class="link-button" data-dev-select-spawn="' + spawn.id + '">' +
+            "<strong>" + escapeHtml(spawn.id) + "</strong><span>" + Number(spawn.spawnChance ?? 100) + "% spawn · " + optionCount + " monster option" + (optionCount === 1 ? "" : "s") + " @ " + spawn.x + "," + spawn.y + " · range " + Number(spawn.walkRange || 0) + "</span></button></li>";
+          }).join("")
       : "<li>No spawn points defined yet.</li>";
 
     const spawnEditor = selectedSpawn
@@ -3401,8 +3882,10 @@
           '<label class="input-group"><span>Y</span><input type="number" step="1" data-dev-spawn-field="y" value="' + selectedSpawn.y + '" /></label>',
           '<label class="input-group"><span>Min Level</span><input type="number" step="1" data-dev-spawn-field="levelMin" value="' + (selectedSpawn.levelMin || 1) + '" /></label>',
           '<label class="input-group"><span>Max Level</span><input type="number" step="1" data-dev-spawn-field="levelMax" value="' + (selectedSpawn.levelMax || selectedSpawn.levelMin || 1) + '" /></label>',
+          '<label class="input-group"><span>Walking Range</span><input type="number" min="0" step="1" data-dev-spawn-field="walkRange" value="' + Number(selectedSpawn.walkRange || 0) + '" /></label>',
           '<label class="input-group"><span>Respawn Seconds</span><input type="number" step="1" data-dev-spawn-field="respawnSeconds" value="' + (selectedSpawn.respawnSeconds || 120) + '" /></label>',
           "</div>",
+          '<p class="dev-helper-text">Walking Range is the radius in pixels that this overworld monster can roam from its spawn point. Set 0 to keep it planted.</p>',
           '<div class="title-actions">',
           '<button class="secondary-button" type="button" data-action="duplicate-spawn">Duplicate</button>',
           '<button class="secondary-button" type="button" data-action="delete-spawn">Delete</button>',
@@ -3553,8 +4036,18 @@
       const isSelected = spawn.id === devToolsState.selectedSpawnId;
       const x = offsetX + spawn.x * scale;
       const y = offsetY + spawn.y * scale;
+      const walkRange = Math.max(0, Number(spawn.walkRange || 0)) * scale;
 
       ctx.save();
+      if (walkRange > 0) {
+        ctx.beginPath();
+        ctx.fillStyle = isSelected ? "rgba(96, 163, 111, 0.12)" : "rgba(39, 120, 73, 0.08)";
+        ctx.strokeStyle = isSelected ? "rgba(96, 163, 111, 0.45)" : "rgba(39, 120, 73, 0.28)";
+        ctx.lineWidth = 1.5;
+        ctx.arc(x, y, walkRange, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
       ctx.beginPath();
       ctx.fillStyle = isSelected ? "rgba(96, 163, 111, 0.9)" : "rgba(39, 120, 73, 0.82)";
       ctx.strokeStyle = "#ffffff";
@@ -3808,6 +4301,31 @@
     }
   }
 
+  function captureScrollState(target) {
+    if (!(target instanceof HTMLElement)) {
+      return { left: window.scrollX || 0, top: window.scrollY || 0 };
+    }
+
+    return {
+      left: target.scrollLeft,
+      top: target.scrollTop,
+    };
+  }
+
+  function restoreScrollState(target, scrollState) {
+    if (!scrollState) {
+      return;
+    }
+
+    if (!(target instanceof HTMLElement)) {
+      window.scrollTo(scrollState.left || 0, scrollState.top || 0);
+      return;
+    }
+
+    target.scrollLeft = scrollState.left || 0;
+    target.scrollTop = scrollState.top || 0;
+  }
+
   function isEditableTarget(target) {
     if (!(target instanceof HTMLElement)) {
       return false;
@@ -3903,6 +4421,19 @@
         {
           id: "default",
           sprite: "assets/monsters/new-monster.png",
+          portrait: {
+            imagePath: "",
+            sheetId: "",
+            row: 0,
+            frame: 0,
+          },
+          overworld: {
+            sheetId: "",
+            row: 0,
+            idleFrame: 0,
+            walkFrames: [0, 1, 2, 3],
+            frameDurationMs: 180,
+          },
         },
       ],
     };
@@ -3946,6 +4477,7 @@
     const sheet = availableSheets.find(function (entry) {
       return entry.id === devToolsState.selectedCharacterSheetId;
     }) || availableSheets[0] || null;
+    const isMonsterSheet = getSpriteSheetKind(sheet) === "monster";
 
     if (typeof devToolsState.characterSheetColumns !== "number" || devToolsState.characterSheetColumns < 1) {
       devToolsState.characterSheetColumns = sheet?.columns || 4;
@@ -3975,7 +4507,13 @@
       devToolsState.characterSheetPlayerLabel = sheet?.playerLabel || sheet?.label || "";
     }
     if (typeof devToolsState.characterSheetPlayerSelectable !== "boolean") {
-      devToolsState.characterSheetPlayerSelectable = !!sheet?.playerSelectable;
+      devToolsState.characterSheetPlayerSelectable = isMonsterSheet ? false : !!sheet?.playerSelectable;
+    }
+    if (devToolsState.characterSheetKind !== "character" && devToolsState.characterSheetKind !== "monster") {
+      devToolsState.characterSheetKind = getSpriteSheetKind(sheet);
+    }
+    if (devToolsState.characterSheetRenderWidthOverride !== null && devToolsState.characterSheetRenderWidthOverride !== undefined && devToolsState.characterSheetRenderWidthOverride !== "" && typeof devToolsState.characterSheetRenderWidthOverride !== "number") {
+      devToolsState.characterSheetRenderWidthOverride = Math.max(64, Number(devToolsState.characterSheetRenderWidthOverride || 64));
     }
     if (typeof devToolsState.characterSheetCompareRow !== "number" || devToolsState.characterSheetCompareRow < 0) {
       devToolsState.characterSheetCompareRow = Math.min(1, Math.max(0, (sheet?.rows || devToolsState.characterSheetRows || 1) - 1));
@@ -4041,6 +4579,27 @@
       : CHARACTER_SHEET_OPTIONS);
   }
 
+  function getCharacterSheetGroups(content) {
+    const groups = new Map();
+
+    getAvailableCharacterSheets(content).forEach(function (entry) {
+      const label = entry.group || entry.path?.split("/").slice(1, -1).join(" / ") || "Sheets";
+      if (!groups.has(label)) {
+        groups.set(label, []);
+      }
+      groups.get(label).push(entry);
+    });
+
+    return Array.from(groups.entries()).map(function ([label, sheets]) {
+      return {
+        label,
+        sheets,
+      };
+    }).sort(function (left, right) {
+      return left.label.localeCompare(right.label);
+    });
+  }
+
   function getPlayerAvatarOptions(content) {
     const selectable = getAvailableCharacterSheets(content).filter(function (entry) {
       return entry.playerSelectable;
@@ -4065,14 +4624,17 @@
   function applyCharacterSheetToDevTools(content, devToolsState, sheetId) {
     const config = getCharacterSheetConfig(content, sheetId) || CHARACTER_SHEET_OPTIONS[0] || null;
     ensureDevToolsPlayerSpriteSettings(devToolsState, content);
+    ensureDevToolsMonsterSpriteSettings(devToolsState, content);
     devToolsState.selectedCharacterSheetId = config?.id || CHARACTER_SHEET_OPTIONS[0]?.id || "";
     devToolsState.characterSheetColumns = Math.max(1, Number(config?.columns || 4));
     devToolsState.characterSheetRows = Math.max(1, Number(config?.rows || 4));
     devToolsState.characterSheetFrameHeight = Math.max(1, Number(config?.frameHeight || CHARACTER_SHEET_FRAME_HEIGHT));
     devToolsState.characterSheetOffsetX = Number(config?.offsetX || 0);
     devToolsState.characterSheetOffsetY = Number(config?.offsetY || 0);
+    devToolsState.characterSheetKind = getSpriteSheetKind(config);
+    devToolsState.characterSheetRenderWidthOverride = config?.renderWidth ?? null;
     devToolsState.characterSheetPlayerLabel = config?.playerLabel || config?.label || "";
-    devToolsState.characterSheetPlayerSelectable = !!config?.playerSelectable;
+    devToolsState.characterSheetPlayerSelectable = getSpriteSheetKind(config) === "monster" ? false : !!config?.playerSelectable;
     devToolsState.characterSheetRowOffsets = JSON.parse(JSON.stringify(config?.rowOffsets || []));
     devToolsState.characterSheetFrameOffsets = JSON.parse(JSON.stringify(config?.frameOffsets || []));
     devToolsState.characterSheetSelectedRow = 0;
@@ -4098,6 +4660,14 @@
     sheet.frameHeight = Math.max(1, Number(devToolsState.characterSheetFrameHeight || sheet.frameHeight || CHARACTER_SHEET_FRAME_HEIGHT));
     sheet.offsetX = Number(devToolsState.characterSheetOffsetX || 0);
     sheet.offsetY = Number(devToolsState.characterSheetOffsetY || 0);
+    sheet.kind = getSpriteSheetKind(sheet);
+    sheet.renderWidth = devToolsState.characterSheetRenderWidthOverride === null || devToolsState.characterSheetRenderWidthOverride === ""
+      ? null
+      : clampRenderWidth(
+        devToolsState.characterSheetRenderWidthOverride || sheet.renderWidth || getDefaultRenderWidthForSheet(content, sheet),
+        sheet.kind,
+        getDefaultRenderWidthForSheet(content, sheet)
+      );
     sheet.playerLabel = String(devToolsState.characterSheetPlayerLabel || sheet.playerLabel || sheet.label || "");
     sheet.playerSelectable = !!devToolsState.characterSheetPlayerSelectable;
     sheet.rowOffsets = JSON.parse(JSON.stringify(devToolsState.characterSheetRowOffsets || []));
@@ -4192,8 +4762,23 @@
           if (!variant.id?.trim()) {
             pushSpeciesError(speciesKey, "Species '" + (entry.id || ("#" + (index + 1))) + "' variant #" + (variantIndex + 1) + " needs an id.");
           }
-          if (!variant.sprite?.trim()) {
-            pushSpeciesError(speciesKey, "Species '" + (entry.id || ("#" + (index + 1))) + "' variant '" + (variant.id || ("#" + (variantIndex + 1))) + "' needs a sprite path.");
+          const portraitConfig = getVariantPortraitConfig(variant);
+          const overworldConfig = getVariantOverworldConfig(variant);
+          if (!portraitConfig.imagePath && !portraitConfig.sheetId) {
+            pushSpeciesError(speciesKey, "Species '" + (entry.id || ("#" + (index + 1))) + "' variant '" + (variant.id || ("#" + (variantIndex + 1))) + "' needs a portrait image or portrait sheet.");
+          } else if (portraitConfig.sheetId) {
+            const portraitSheet = getVariantPortraitSheet(content, variant);
+            if (!portraitSheet || getSpriteSheetKind(portraitSheet) !== "monster") {
+              pushSpeciesError(speciesKey, "Species '" + (entry.id || ("#" + (index + 1))) + "' variant '" + (variant.id || ("#" + (variantIndex + 1))) + "' references a missing portrait spritesheet.");
+            }
+          }
+          if (overworldConfig.sheetId) {
+            const sheet = getAvailableCharacterSheets(content).find(function (entry) {
+              return entry.id === overworldConfig.sheetId;
+            }) || null;
+            if (!sheet || getSpriteSheetKind(sheet) !== "monster") {
+              pushSpeciesError(speciesKey, "Species '" + (entry.id || ("#" + (index + 1))) + "' variant '" + (variant.id || ("#" + (variantIndex + 1))) + "' references a missing monster spritesheet.");
+            }
           }
         });
       }
@@ -4306,13 +4891,45 @@
       }
 
       const variantRows = (selectedSpecies.variants || []).map(function (variant, index) {
+        const portraitConfig = getVariantPortraitConfig(variant);
+        const overworldConfig = getVariantOverworldConfig(variant);
+        const portraitImageOptions = ['<option value="">Select Portrait Image</option>'].concat(
+          getMonsterImageOptions(content).map(function (imagePath) {
+            const selected = portraitConfig.imagePath === imagePath ? " selected" : "";
+            return '<option value="' + escapeHtml(imagePath) + '"' + selected + '>' + escapeHtml(imagePath.replace(/^assets\/Monsters\//, "")) + "</option>";
+          })
+        ).join("");
+        const monsterSheetOptions = ['<option value="">Select Portrait Sheet</option>'].concat(
+          getMonsterSheetOptions(content).map(function (sheet) {
+            const selected = portraitConfig.sheetId === sheet.id ? " selected" : "";
+            return '<option value="' + escapeHtml(sheet.id) + '"' + selected + '>' + escapeHtml(sheet.label) + "</option>";
+          })
+        ).join("");
+        const monsterOverworldSheetOptions = ['<option value="">Select Overworld Sheet</option>'].concat(
+          getMonsterSheetOptions(content).map(function (sheet) {
+            const selected = overworldConfig.sheetId === sheet.id ? " selected" : "";
+            return '<option value="' + escapeHtml(sheet.id) + '"' + selected + '>' + escapeHtml(sheet.label) + "</option>";
+          })
+        ).join("");
         return [
           '<div class="dev-subcard">',
           '<div class="section-heading"><h3>Variant ' + (index + 1) + '</h3><div class="topbar-stats"><button class="secondary-button" type="button" data-action="duplicate-variant" data-variant-index="' + index + '">Duplicate</button><button class="secondary-button" type="button" data-action="delete-variant" data-variant-index="' + index + '">Delete</button></div></div>',
           '<div class="form-grid">',
           '<label class="input-group"><span>Variant ID</span><input data-dev-variant-field="id" data-variant-index="' + index + '" value="' + escapeHtml(variant.id || "") + '" /></label>',
-          '<label class="input-group"><span>Sprite Path</span><input data-dev-variant-field="sprite" data-variant-index="' + index + '" value="' + escapeHtml(variant.sprite || "") + '" /></label>',
+          '<label class="input-group"><span>Portrait Image</span><select data-dev-variant-field="portrait.imagePath" data-variant-index="' + index + '">' + portraitImageOptions + '</select></label>',
+          '<label class="input-group"><span>Portrait Sheet</span><select data-dev-variant-field="portrait.sheetId" data-variant-index="' + index + '">' + monsterSheetOptions + '</select></label>',
+          '<label class="input-group"><span>Portrait Row (0-based)</span><input type="number" min="0" step="1" data-dev-variant-field="portrait.row" data-variant-index="' + index + '" value="' + Number(portraitConfig.row || 0) + '" /></label>',
+          '<label class="input-group"><span>Portrait Frame (0-based)</span><input type="number" min="0" step="1" data-dev-variant-field="portrait.frame" data-variant-index="' + index + '" value="' + Number(portraitConfig.frame || 0) + '" /></label>',
+          '<label class="input-group"><span>Overworld Sheet</span><select data-dev-variant-field="overworld.sheetId" data-variant-index="' + index + '">' + monsterOverworldSheetOptions + '</select></label>',
+          '<label class="input-group"><span>Down Row (0-based)</span><input type="number" min="0" step="1" data-dev-variant-field="overworld.rows.down" data-variant-index="' + index + '" value="' + Number(overworldConfig.rows?.down || 0) + '" /></label>',
+          '<label class="input-group"><span>Left Row (0-based)</span><input type="number" min="0" step="1" data-dev-variant-field="overworld.rows.left" data-variant-index="' + index + '" value="' + Number(overworldConfig.rows?.left || 0) + '" /></label>',
+          '<label class="input-group"><span>Right Row (0-based)</span><input type="number" min="0" step="1" data-dev-variant-field="overworld.rows.right" data-variant-index="' + index + '" value="' + Number(overworldConfig.rows?.right || 0) + '" /></label>',
+          '<label class="input-group"><span>Up Row (0-based)</span><input type="number" min="0" step="1" data-dev-variant-field="overworld.rows.up" data-variant-index="' + index + '" value="' + Number(overworldConfig.rows?.up || 0) + '" /></label>',
+          '<label class="input-group"><span>Idle Frame (0-based)</span><input type="number" min="0" step="1" data-dev-variant-field="overworld.idleFrame" data-variant-index="' + index + '" value="' + Number(overworldConfig.idleFrame || 0) + '" /></label>',
+          '<label class="input-group"><span>Walk Frames</span><input data-dev-variant-field="overworld.walkFrames" data-variant-index="' + index + '" value="' + escapeHtml((overworldConfig.walkFrames || []).join(", ")) + '" /></label>',
+          '<label class="input-group"><span>Frame Duration Ms</span><input type="number" min="60" step="10" data-dev-variant-field="overworld.frameDurationMs" data-variant-index="' + index + '" value="' + Number(overworldConfig.frameDurationMs || 180) + '" /></label>',
           '</div>',
+          '<p class="dev-helper-text">Portrait controls the static UI image used in saves, registry, party, bank, and battle. If Portrait Image is set, it is used first. Overworld controls idle and walking animation on the map. Leave Overworld Sheet blank to reuse the portrait as a static world sprite.</p>',
           '</div>',
         ].join("");
       }).join("");
@@ -4330,9 +4947,25 @@
         const selected = previewVariant?.id === variant.id ? " selected" : "";
         return '<option value="' + escapeHtml(variant.id) + '"' + selected + ">" + escapeHtml(variant.id) + "</option>";
       }).join("");
-      const previewImage = previewVariant?.sprite
-        ? '<img class="monster-preview-image" src="' + escapeHtml(previewVariant.sprite) + '" alt="' + escapeHtml(selectedSpecies.name) + ' preview" />'
+      const previewImage = previewVariant
+        ? renderMonsterVariantVisualMarkup(selectedSpecies.id, previewVariant.id || "default", "monster-preview-image", "default")
         : '<div class="monster-preview-image monster-preview-fallback">No preview path</div>';
+      const previewPortraitConfig = getVariantPortraitConfig(previewVariant);
+      const previewPortraitSheet = getVariantPortraitSheet(content, previewVariant);
+      const previewOverworldConfig = getVariantOverworldConfig(previewVariant);
+      const previewOverworldSheet = getVariantOverworldSheet(content, previewVariant);
+      const previewPortraitSummary = previewPortraitConfig.imagePath
+        || ((previewPortraitSheet?.label || "Unassigned") + " · row " + Number(previewPortraitConfig.row || 0) + " · frame " + Number(previewPortraitConfig.frame || 0));
+      const previewOverworldSummary = (previewOverworldSheet?.label
+        || (previewPortraitConfig.imagePath ? "Static portrait image" : (previewPortraitSheet?.label || "Unassigned")))
+        + " · rows d/l/r/u " + [
+          Number((previewOverworldSheet ? previewOverworldConfig.rows?.down : previewPortraitConfig.row) || 0),
+          Number((previewOverworldSheet ? previewOverworldConfig.rows?.left : previewPortraitConfig.row) || 0),
+          Number((previewOverworldSheet ? previewOverworldConfig.rows?.right : previewPortraitConfig.row) || 0),
+          Number((previewOverworldSheet ? previewOverworldConfig.rows?.up : previewPortraitConfig.row) || 0),
+        ].join("/")
+        + " · idle " + Number((previewOverworldSheet ? previewOverworldConfig.idleFrame : previewPortraitConfig.frame) || 0)
+        + " · walk " + (previewOverworldSheet ? (previewOverworldConfig.walkFrames || []).join(", ") : "static");
 
       return [
         '<section class="dev-editor">',
@@ -4350,7 +4983,7 @@
         '</section>',
         '<section class="dev-tools-layout">',
         '<section class="panel-block"><div class="section-heading"><h3>Assigned Skills</h3></div><div class="dev-checklist">' + skillAssignment + '</div></section>',
-        '<section class="panel-block"><div class="section-heading"><h3>Species Preview</h3></div><div class="monster-preview-card">' + previewImage + '<div><p><strong>' + escapeHtml(selectedSpecies.name) + '</strong></p><p>ID: ' + escapeHtml(selectedSpecies.id) + '</p><p>Growth: ' + escapeHtml(selectedSpecies.growth || "medium") + '</p><label class="input-group"><span>Preview Variant</span><select data-action="select-preview-variant">' + previewVariantOptions + '</select></label><p>Sprite: ' + escapeHtml(previewVariant?.sprite || "None") + '</p></div></div></section>',
+        '<section class="panel-block"><div class="section-heading"><h3>Species Preview</h3></div><div class="monster-preview-card">' + previewImage + '<div><p><strong>' + escapeHtml(selectedSpecies.name) + '</strong></p><p>ID: ' + escapeHtml(selectedSpecies.id) + '</p><p>Growth: ' + escapeHtml(selectedSpecies.growth || "medium") + '</p><label class="input-group"><span>Preview Variant</span><select data-action="select-preview-variant">' + previewVariantOptions + '</select></label><p>Portrait: ' + escapeHtml(previewPortraitSummary) + '</p><p>Overworld: ' + escapeHtml(previewOverworldSummary) + '</p></div></div></section>',
         '</section>',
         '<section class="panel-block"><div class="section-heading"><h3>Variants</h3><button class="secondary-button" type="button" data-action="add-variant">Add Variant</button></div>' + variantRows + '</section>',
       ].join("");
@@ -4656,13 +5289,22 @@
   function renderCharacterDevToolsScreen(root, content, devToolsState) {
     const sheet = ensureCharacterDevSelection(devToolsState, content);
     ensureDevToolsPlayerSpriteSettings(devToolsState, content);
+    ensureDevToolsMonsterSpriteSettings(devToolsState, content);
+    const isMonsterSheet = getSpriteSheetKind(sheet) === "monster";
+    const effectiveRenderWidth = getEffectiveRenderWidthForSheet(content, sheet);
     const selectedRow = devToolsState.characterSheetSelectedRow || 0;
     const selectedFrame = devToolsState.characterSheetSelectedFrame || 0;
     const compareRow = typeof devToolsState.characterSheetCompareRow === "number" ? devToolsState.characterSheetCompareRow : Math.min(1, Math.max(1, (devToolsState.characterSheetRows || 1) - 1));
     const directionLabels = ["Down", "Left", "Right", "Up"];
-    const sidebarItems = getAvailableCharacterSheets(content).map(function (entry) {
-      const selected = entry.id === devToolsState.selectedCharacterSheetId ? " compact-list-selected" : "";
-      return '<li class="' + selected.trim() + '"><button type="button" class="link-button" data-dev-select-character-sheet="' + escapeHtml(entry.id) + '"><strong>' + escapeHtml(entry.label) + '</strong><span>' + escapeHtml(entry.path) + "</span></button></li>";
+    const sidebarItems = getCharacterSheetGroups(content).map(function (group) {
+      const hasSelected = group.sheets.some(function (entry) {
+        return entry.id === devToolsState.selectedCharacterSheetId;
+      });
+      const groupItems = group.sheets.map(function (entry) {
+        const selected = entry.id === devToolsState.selectedCharacterSheetId ? " compact-list-selected" : "";
+        return '<li class="' + selected.trim() + '"><button type="button" class="link-button" data-dev-select-character-sheet="' + escapeHtml(entry.id) + '"><strong>' + escapeHtml(entry.label) + '</strong><span>' + escapeHtml(entry.path) + "</span></button></li>";
+      }).join("");
+      return '<details class="dev-sheet-group"' + (hasSelected ? " open" : "") + '><summary>' + escapeHtml(group.label) + "</summary><ul class=\"compact-list dev-map-list dev-sheet-group-list\">" + groupItems + "</ul></details>";
     }).join("");
     const rowOptions = Array.from({ length: Math.max(1, devToolsState.characterSheetRows || 1) }).map(function (_, index) {
       const selected = index === selectedRow ? " selected" : "";
@@ -4684,19 +5326,23 @@
     root.innerHTML = [
       '<main class="dev-screen">',
       '<header class="game-topbar">',
-      '<div><span class="eyebrow">Dev Tools</span><strong>Character Sprite Checker</strong></div>',
+      '<div><span class="eyebrow">Dev Tools</span><strong>Sprite Sheet Checker</strong></div>',
       '<div class="topbar-stats"><button class="' + (devToolsState.section === "maps" ? "secondary-button" : "primary-button") + '" type="button" data-action="dev-section-maps">Maps</button><button class="' + (devToolsState.section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button><button class="' + (devToolsState.section === "arenas" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-arenas">Arenas</button><button class="' + (devToolsState.section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button><button class="' + (devToolsState.section === "characters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-characters">Characters</button><button class="secondary-button" type="button" data-action="back-to-title">Back</button><button class="secondary-button" type="button" data-action="load-folder">Load Project Folder</button></div>',
       '</header>',
       '<section class="dev-screen-layout">',
-      '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>Sprite Sheets</h2></div><ul class="compact-list dev-map-list">' + sidebarItems + '</ul></aside>',
+      '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>Sprite Sheets</h2></div><div class="dev-sheet-group-wrap">' + sidebarItems + '</div></aside>',
       '<section class="dev-main">',
       '<section class="panel-block dev-editor-panel">',
-      '<div class="section-heading"><h2>Game Sprite Defaults</h2></div>',
-      '<div class="form-grid">',
-      '<label class="input-group"><span>Sprite Width</span><input type="number" min="64" max="384" step="1" data-dev-character-field="playerSpriteRenderWidth" value="' + Number(devToolsState.playerSpriteRenderWidth || PLAYER_RENDER_WIDTH) + '" /></label>',
-      '<label class="input-group"><span>Sprite Anchor Y</span><input type="number" min="-128" max="128" step="1" data-dev-character-field="playerSpriteAnchorOffsetY" value="' + Number(devToolsState.playerSpriteAnchorOffsetY || 0) + '" /></label>',
-      '</div>',
-      '<p class="dev-helper-text">These values are global defaults for the whole game and are saved to <code>settings.json</code>, not to an individual character sheet.</p>',
+      '<div class="section-heading"><h2>' + (isMonsterSheet ? "Monster Sprite Defaults" : "Character Sprite Defaults") + '</h2></div>',
+      '<div class="form-grid">' +
+        (isMonsterSheet
+          ? '<label class="input-group"><span>Global Monster Width</span><input type="number" min="' + MIN_MONSTER_RENDER_WIDTH + '" max="384" step="1" data-dev-character-field="monsterSpriteRenderWidth" value="' + Number(devToolsState.monsterSpriteRenderWidth || MONSTER_RENDER_WIDTH) + '" /></label>'
+          : '<label class="input-group"><span>Global Character Width</span><input type="number" min="' + MIN_PLAYER_RENDER_WIDTH + '" max="384" step="1" data-dev-character-field="playerSpriteRenderWidth" value="' + Number(devToolsState.playerSpriteRenderWidth || PLAYER_RENDER_WIDTH) + '" /></label>' +
+            '<label class="input-group"><span>Sprite Anchor Y</span><input type="number" min="-128" max="128" step="1" data-dev-character-field="playerSpriteAnchorOffsetY" value="' + Number(devToolsState.playerSpriteAnchorOffsetY || 0) + '" /></label>')
+      + '</div>',
+      '<p class="dev-helper-text">' + (isMonsterSheet
+        ? 'This width becomes the default render size for monster sheets across the game. Individual monster sheets can still override it below.'
+        : 'These values are global defaults for all player character sheets and are saved to <code>settings.json</code>, not to one sheet.') + '</p>',
       '<div class="title-actions"><button class="secondary-button" type="button" data-action="export-settings-json">Export settings.json</button></div>',
       '</section>',
       '<section class="panel-block dev-editor-panel">',
@@ -4707,9 +5353,10 @@
       '<label class="input-group"><span>Base Cut Height</span><input type="number" value="' + Number(devToolsState.characterSheetFrameHeight || sheet?.frameHeight || CHARACTER_SHEET_FRAME_HEIGHT) + '" disabled /></label>',
       '<label class="input-group"><span>Offset X</span><input type="number" step="1" data-dev-character-field="offsetX" value="' + Number(devToolsState.characterSheetOffsetX || 0) + '" /></label>',
       '<label class="input-group"><span>Offset Y</span><input type="number" step="1" data-dev-character-field="offsetY" value="' + Number(devToolsState.characterSheetOffsetY || 0) + '" /></label>',
+      '<label class="input-group"><span>' + (isMonsterSheet ? "Monster Width Override" : "Width Override") + '</span><input type="number" min="' + (isMonsterSheet ? MIN_MONSTER_RENDER_WIDTH : MIN_PLAYER_RENDER_WIDTH) + '" max="384" step="1" data-dev-character-field="renderWidthOverride" placeholder="' + effectiveRenderWidth + '" value="' + escapeHtml(devToolsState.characterSheetRenderWidthOverride ?? "") + '" /></label>',
       '<label class="input-group"><span>Preview Scale</span><input type="number" min="0.5" max="6" step="0.25" data-dev-character-field="previewScale" value="' + Number(devToolsState.characterSheetPreviewScale || 1.5) + '" /></label>',
-      '<label class="input-group"><span>Player Avatar Label</span><input type="text" data-dev-character-field="playerLabel" value="' + escapeHtml(devToolsState.characterSheetPlayerLabel || sheet?.label || "") + '" /></label>',
-      '<label class="input-group"><span>Available To Player</span><select data-dev-character-field="playerSelectable"><option value="true"' + (devToolsState.characterSheetPlayerSelectable ? " selected" : "") + '>Yes</option><option value="false"' + (!devToolsState.characterSheetPlayerSelectable ? " selected" : "") + '>No</option></select></label>',
+      (isMonsterSheet ? "" : '<label class="input-group"><span>Player Avatar Label</span><input type="text" data-dev-character-field="playerLabel" value="' + escapeHtml(devToolsState.characterSheetPlayerLabel || sheet?.label || "") + '" /></label>'),
+      (isMonsterSheet ? "" : '<label class="input-group"><span>Available To Player</span><select data-dev-character-field="playerSelectable"><option value="true"' + (devToolsState.characterSheetPlayerSelectable ? " selected" : "") + '>Yes</option><option value="false"' + (!devToolsState.characterSheetPlayerSelectable ? " selected" : "") + '>No</option></select></label>'),
       '<label class="input-group"><span>Active Row</span><select data-dev-character-field="selectedRow">' + rowOptions + '</select></label>',
       '<label class="input-group"><span>Compare Row</span><select data-dev-character-field="compareRow">' + compareRowOptions + '</select></label>',
       '<label class="input-group"><span>Active Frame</span><select data-dev-character-field="selectedFrame">' + frameOptions + '</select></label>',
@@ -4720,7 +5367,9 @@
       '<label class="input-group"><span>Frame Cut Width</span><input type="number" step="1" data-dev-character-field="frameWidthAdjust" value="' + Number(selectedFrameOffset.width || 0) + '" /></label>',
       '<label class="input-group"><span>Frame Cut Height</span><input type="number" step="1" data-dev-character-field="frameHeightAdjust" value="' + Number(selectedFrameOffset.height || 0) + '" /></label>',
       '</div>',
-      '<p class="dev-helper-text">Character sheets now use a fixed base cut height of ' + CHARACTER_SHEET_FRAME_HEIGHT + 'px, so extra bottom padding will not stretch the default frame. Use global offsets for the whole sheet, row offsets for one direction row, and frame cut values for individual cells. Frame cut X/Y/Width/Height only affects the selected frame, so you can fix one drifted frame without moving its neighbors.</p>',
+      '<p class="dev-helper-text">' + (isMonsterSheet
+        ? 'Use the global monster width in <code>settings.json</code> for all monster sheets, or set a width override here for just this file. The current effective width for this sheet is <strong>' + effectiveRenderWidth + 'px</strong>.'
+        : 'Character sheets use a fixed base cut height of ' + CHARACTER_SHEET_FRAME_HEIGHT + 'px, so extra bottom padding will not stretch the default frame. Use global offsets for the whole sheet, row offsets for one direction row, and frame cut values for individual cells. Frame cut X/Y/Width/Height only affects the selected frame, so you can fix one drifted frame without moving its neighbors.') + '</p>',
       '<div class="title-actions"><button class="secondary-button" type="button" data-action="export-character-sheets-json">Export character-sheets.json</button></div>',
       '</section>',
       '<section class="dev-preview-grid dev-character-preview-grid">',
@@ -4860,6 +5509,135 @@
   function drawAvatarPreviewCanvases(root, content) {
     root.querySelectorAll("[data-avatar-preview-sheet]").forEach(function (canvas) {
       drawAvatarPreviewCanvas(canvas, content, canvas.getAttribute("data-avatar-preview-sheet") || "");
+    });
+  }
+
+  function drawMonsterVariantCanvas(canvas, content, speciesId, variantId, mode) {
+    if (!(canvas instanceof HTMLCanvasElement)) {
+      return;
+    }
+
+    const species = getSpecies(content, speciesId);
+    const variant = getSpeciesVariant(species, variantId || "default");
+    const ctx = canvas.getContext("2d");
+    const cssWidth = Math.max(1, Math.round(canvas.clientWidth || Number(canvas.width) || 96));
+    const cssHeight = Math.max(1, Math.round(canvas.clientHeight || Number(canvas.height) || 96));
+    const pixelRatio = window.devicePixelRatio || 1;
+    const nextWidth = Math.max(1, Math.round(cssWidth * pixelRatio));
+    const nextHeight = Math.max(1, Math.round(cssHeight * pixelRatio));
+
+    if (canvas.width !== nextWidth || canvas.height !== nextHeight) {
+      canvas.width = nextWidth;
+      canvas.height = nextHeight;
+    }
+
+    ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    ctx.clearRect(0, 0, cssWidth, cssHeight);
+
+    if (!species || !variant) {
+      return;
+    }
+
+    const fallbackLetter = (species.name || species.id || "?").slice(0, 1);
+    const portraitSheet = getVariantPortraitSheet(content, variant);
+    const portraitConfig = getVariantPortraitConfig(variant);
+    const overworldSheet = getVariantOverworldSheet(content, variant);
+    const overworldConfig = getVariantOverworldConfig(variant);
+
+    const drawFallback = function () {
+      ctx.fillStyle = "#1f4d73";
+      ctx.font = "700 " + Math.max(18, Math.round(Math.min(cssWidth, cssHeight) * 0.44)) + "px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(fallbackLetter, cssWidth / 2, cssHeight / 2);
+    };
+
+    const activeSheet = mode === "overworld"
+      ? (overworldSheet || portraitSheet)
+      : portraitSheet;
+    const activeRow = mode === "overworld"
+      ? (overworldSheet ? overworldConfig.row : portraitConfig.row)
+      : portraitConfig.row;
+    const activeFrame = mode === "overworld"
+      ? (overworldSheet ? overworldConfig.idleFrame : portraitConfig.frame)
+      : portraitConfig.frame;
+
+    if ((mode !== "overworld" || !overworldSheet) && portraitConfig.imagePath) {
+      const image = getImage(portraitConfig.imagePath);
+      if (!image.complete || !image.naturalWidth) {
+        drawFallback();
+        return;
+      }
+
+      const padding = Math.max(4, Math.round(Math.min(cssWidth, cssHeight) * 0.08));
+      const scale = Math.min(
+        (cssWidth - padding * 2) / image.naturalWidth,
+        (cssHeight - padding * 2) / image.naturalHeight
+      );
+      const drawWidth = image.naturalWidth * scale;
+      const drawHeight = image.naturalHeight * scale;
+      const drawX = Math.round((cssWidth - drawWidth) / 2);
+      const drawY = Math.round((cssHeight - drawHeight) / 2);
+
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(image, drawX, drawY, drawWidth, drawHeight);
+      return;
+    }
+
+    if (activeSheet?.path) {
+      const image = getImage(activeSheet.path);
+      if (!image.complete || !image.naturalWidth) {
+        drawFallback();
+        return;
+      }
+
+      const renderConfig = buildCharacterSheetRenderConfig(activeSheet);
+      ensureCharacterDevSelection(renderConfig, content);
+      const sourceRect = getCharacterFrameSourceRect(
+        renderConfig,
+        image,
+        Math.max(0, Math.min((renderConfig.characterSheetRows || 1) - 1, activeRow)),
+        Math.max(0, Math.min((renderConfig.characterSheetColumns || 1) - 1, activeFrame))
+      );
+      const padding = Math.max(4, Math.round(Math.min(cssWidth, cssHeight) * 0.08));
+      const scale = Math.min(
+        (cssWidth - padding * 2) / sourceRect.sw,
+        (cssHeight - padding * 2) / sourceRect.sh
+      );
+      const drawWidth = sourceRect.sw * scale;
+      const drawHeight = sourceRect.sh * scale;
+      const drawX = Math.round((cssWidth - drawWidth) / 2);
+      const drawY = Math.round((cssHeight - drawHeight) / 2);
+
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(
+        image,
+        sourceRect.sx,
+        sourceRect.sy,
+        sourceRect.sw,
+        sourceRect.sh,
+        drawX,
+        drawY,
+        drawWidth,
+        drawHeight
+      );
+      return;
+    }
+
+    drawFallback();
+  }
+
+  function drawMonsterVariantCanvases(root, content) {
+    root.querySelectorAll("[data-monster-visual-species]").forEach(function (canvas) {
+      drawMonsterVariantCanvas(
+        canvas,
+        content,
+        canvas.getAttribute("data-monster-visual-species") || "",
+        canvas.getAttribute("data-monster-visual-variant") || "default",
+        canvas.getAttribute("data-monster-visual-mode") || "default"
+      );
     });
   }
 
@@ -5880,9 +6658,12 @@
         characterSheetRows: getCharacterSheetConfig(content, CHARACTER_SHEET_OPTIONS[0]?.id || "")?.rows || CHARACTER_SHEET_OPTIONS[0]?.rows || 4,
         characterSheetFrameHeight: getCharacterSheetConfig(content, CHARACTER_SHEET_OPTIONS[0]?.id || "")?.frameHeight || CHARACTER_SHEET_FRAME_HEIGHT,
         playerSpriteRenderWidth: content.settings?.defaults?.playerSpriteRenderWidth || PLAYER_RENDER_WIDTH,
+        monsterSpriteRenderWidth: content.settings?.defaults?.monsterSpriteRenderWidth || MONSTER_RENDER_WIDTH,
         playerSpriteAnchorOffsetY: content.settings?.defaults?.playerSpriteAnchorOffsetY || PLAYER_SPRITE_ANCHOR_OFFSET_Y,
         characterSheetOffsetX: 0,
         characterSheetOffsetY: 0,
+        characterSheetKind: getSpriteSheetKind(getCharacterSheetConfig(content, CHARACTER_SHEET_OPTIONS[0]?.id || "")),
+        characterSheetRenderWidthOverride: getCharacterSheetConfig(content, CHARACTER_SHEET_OPTIONS[0]?.id || "")?.renderWidth ?? null,
         characterSheetSelectedRow: 0,
         characterSheetCompareRow: 1,
         characterSheetPreviewScale: 1.5,
@@ -5897,6 +6678,11 @@
           "character-sheet": { left: 0, top: 0 },
           "character-row": { left: 0, top: 0 },
           "character-animation": { left: 0, top: 0 },
+        },
+        layoutScroll: {
+          window: { left: 0, top: 0 },
+          main: { left: 0, top: 0 },
+          sidebarList: { left: 0, top: 0 },
         },
         drag: null,
       },
@@ -6223,6 +7009,8 @@
           const rootHandle = await window.showDirectoryPicker();
           const nextContent = await loadContentFromDirectory(rootHandle);
           validateContent(nextContent);
+          clearRuntimeCaches(this.content, { includeImages: true });
+          clearRuntimeCaches(nextContent);
           this.content = nextContent;
           syncMonsterDevSelection(this.content, this.devTools);
           syncArenaDevSelection(this.content, this.devTools);
@@ -6288,9 +7076,16 @@
         } else if (field === "offsetY") {
           this.devTools.characterSheetOffsetY = Number(rawValue || 0);
         } else if (field === "playerSpriteRenderWidth") {
-          this.devTools.playerSpriteRenderWidth = Math.max(64, Number(rawValue || PLAYER_RENDER_WIDTH));
+          this.devTools.playerSpriteRenderWidth = clampRenderWidth(rawValue || PLAYER_RENDER_WIDTH, "character", PLAYER_RENDER_WIDTH);
+        } else if (field === "monsterSpriteRenderWidth") {
+          this.devTools.monsterSpriteRenderWidth = clampRenderWidth(rawValue || MONSTER_RENDER_WIDTH, "monster", MONSTER_RENDER_WIDTH);
         } else if (field === "playerSpriteAnchorOffsetY") {
           this.devTools.playerSpriteAnchorOffsetY = Number(rawValue || 0);
+        } else if (field === "renderWidthOverride") {
+          const selectedSheet = getSelectedCharacterSheet(this.devTools, this.content);
+          this.devTools.characterSheetRenderWidthOverride = rawValue === ""
+            ? null
+            : clampRenderWidth(rawValue, getSpriteSheetKind(selectedSheet), getDefaultRenderWidthForSheet(this.content, selectedSheet));
         } else if (field === "playerLabel") {
           this.devTools.characterSheetPlayerLabel = String(rawValue || "");
         } else if (field === "playerSelectable") {
@@ -6327,6 +7122,7 @@
 
         ensureCharacterDevSelection(this.devTools, this.content);
         syncDevToolsPlayerSpriteSettings(this.content, this.devTools);
+        syncDevToolsMonsterSpriteSettings(this.content, this.devTools);
         syncDevToolsCharacterSheet(this.content, this.devTools);
         if (shouldRender !== false) {
           this.render();
@@ -6353,6 +7149,16 @@
         if (this.state.screen !== "dev-tools") {
           return;
         }
+        if (!this.devTools.layoutScroll) {
+          this.devTools.layoutScroll = {
+            window: { left: 0, top: 0 },
+            main: { left: 0, top: 0 },
+            sidebarList: { left: 0, top: 0 },
+          };
+        }
+        this.devTools.layoutScroll.window = captureScrollState(null);
+        this.devTools.layoutScroll.main = captureScrollState(root.querySelector(".dev-main"));
+        this.devTools.layoutScroll.sidebarList = captureScrollState(root.querySelector(".dev-map-list"));
         root.querySelectorAll("[data-preview-role]").forEach((scroller) => {
           const role = scroller.getAttribute("data-preview-role");
           if (!role) {
@@ -6376,6 +7182,9 @@
           scroller.scrollLeft = this.devTools.previewScroll[role]?.left || 0;
           scroller.scrollTop = this.devTools.previewScroll[role]?.top || 0;
         });
+        restoreScrollState(root.querySelector(".dev-main"), this.devTools.layoutScroll.main);
+        restoreScrollState(root.querySelector(".dev-map-list"), this.devTools.layoutScroll.sidebarList);
+        restoreScrollState(null, this.devTools.layoutScroll.window);
       },
       selectTransition: function (transitionId) {
         this.devTools.selectedTransitionId = transitionId;
@@ -6476,7 +7285,24 @@
         species.variants = species.variants || [];
         species.variants.push({
           id: "variant-" + (species.variants.length + 1),
-          sprite: species.variants[0]?.sprite || "assets/monsters/new-monster.png",
+          portrait: JSON.parse(JSON.stringify(species.variants[0]?.portrait || {
+            imagePath: "",
+            sheetId: "",
+            row: 0,
+            frame: 0,
+          })),
+          overworld: JSON.parse(JSON.stringify(species.variants[0]?.overworld || {
+            sheetId: "",
+            rows: {
+              down: 0,
+              left: 1,
+              right: 2,
+              up: 3,
+            },
+            idleFrame: 0,
+            walkFrames: [0, 1, 2, 3],
+            frameDurationMs: 180,
+          })),
         });
         this.devTools.selectedPreviewVariantId = species.variants[species.variants.length - 1]?.id || this.devTools.selectedPreviewVariantId;
         this.render();
@@ -6538,6 +7364,7 @@
           y: 128,
           levelMin: 2,
           levelMax: 4,
+          walkRange: 0,
           respawnSeconds: 120,
           monsterOptions: [
             {
@@ -6855,7 +7682,26 @@
           return;
         }
 
-        variant[field] = rawValue;
+        if (field.includes(".")) {
+          const parts = field.split(".");
+          let current = variant;
+          for (let index = 0; index < parts.length - 1; index += 1) {
+            if (!current[parts[index]] || typeof current[parts[index]] !== "object") {
+              current[parts[index]] = {};
+            }
+            current = current[parts[index]];
+          }
+          const leaf = parts[parts.length - 1];
+          if (["row", "frame", "idleFrame", "frameDurationMs", "down", "left", "right", "up"].includes(leaf)) {
+            current[leaf] = Number(rawValue || 0);
+          } else if (leaf === "walkFrames") {
+            current[leaf] = normalizeFrameList(rawValue, current.idleFrame || 0);
+          } else {
+            current[leaf] = rawValue;
+          }
+        } else {
+          variant[field] = rawValue;
+        }
         if (shouldRender !== false) {
           this.render();
         }
@@ -6953,6 +7799,7 @@
       },
       exportSettingsJson: function () {
         syncDevToolsPlayerSpriteSettings(this.content, this.devTools);
+        syncDevToolsMonsterSpriteSettings(this.content, this.devTools);
         const payload = {
           defaults: Object.assign({}, this.content.settings?.defaults || fallbackContent.settings.defaults),
           allowedZoomLevels: this.content.settings?.allowedZoomLevels || fallbackContent.settings.allowedZoomLevels,
@@ -7324,6 +8171,7 @@
         const previousUiSignature = getWorldUiSignature(this.state, this.content);
         const hadBattle = Boolean(this.state.battle);
         updateRespawns(this.state, this.content);
+        moveWildMonsters(this.state, this.content, deltaMs);
         movePlayer(this.state, this.content, deltaMs);
         updateCamera(this.state, this.content, deltaMs);
         const nextUiSignature = getWorldUiSignature(this.state, this.content);
@@ -7381,13 +8229,15 @@
           if (this.devTools.section === "characters") {
             drawCharacterDevCanvases(root, this.devTools);
           }
+          drawMonsterVariantCanvases(root, this.content);
           attachDevToolsHandlers(root, this);
-          this.restoreDevPreviewScroll();
           restoreFocusableState(root, focusState);
+          this.restoreDevPreviewScroll();
           return;
         }
 
         renderWorld(root, this.state, this.content, this.saveManager, this.devTools);
+        drawMonsterVariantCanvases(root, this.content);
         attachInputHandlers(root, this);
         restoreFocusableState(root, focusState);
       },
@@ -7435,7 +8285,9 @@
     }
 
     try {
+      clearRuntimeCaches(ACTIVE_APP?.content, { includeImages: true });
       const content = loadEmbeddedContent();
+      clearRuntimeCaches(content);
       validateContent(content);
       const saveManager = createSaveManager(window.localStorage);
       const app = createApp(root, content, saveManager);

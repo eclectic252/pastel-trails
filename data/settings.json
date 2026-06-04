@@ -4,6 +4,7 @@
     "zoom": 100,
     "partySize": 6,
     "playerSpriteRenderWidth": 155,
+    "monsterSpriteRenderWidth": 128,
     "playerSpriteAnchorOffsetY": 20,
     "arenaLeaderMinLevel": 1,
     "arenaLeaderMaxLevel": 10,

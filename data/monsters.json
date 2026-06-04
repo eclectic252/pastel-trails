@@ -1,82 +1,6 @@
 {
   "species": [
     {
-      "id": "equira",
-      "name": "Equira",
-      "baseStats": {
-        "hp": 20,
-        "attack": 8,
-        "defense": 6,
-        "speed": 9
-      },
-      "growth": "medium",
-      "skills": [
-        "basic-attack"
-      ],
-      "variants": [
-        {
-          "id": "default",
-          "sprite": "assets/Monsters/Equira/equira-classic-ready.png"
-        },
-        {
-          "id": "snow",
-          "sprite": "assets/Monsters/Equira/equira-snow-ready.png"
-        },
-        {
-          "id": "Glam",
-          "sprite": "assets/Monsters/Equira/equira-rose-ready.png"
-        }
-      ]
-    },
-    {
-      "id": "fluffram",
-      "name": "Fluffram",
-      "baseStats": {
-        "hp": 18,
-        "attack": 7,
-        "defense": 7,
-        "speed": 6
-      },
-      "growth": "fast",
-      "skills": [
-        "basic-attack"
-      ],
-      "variants": [
-        {
-          "id": "default",
-          "sprite": "assets/Monsters/Fluffram/highland-cow-classic-ready.png"
-        },
-        {
-          "id": "snow",
-          "sprite": "assets/Monsters/Fluffram/highland-cow-snow-ready.png"
-        },
-        {
-          "id": "glam",
-          "sprite": "assets/Monsters/Fluffram/highland-cow-glam-ready.png"
-        }
-      ]
-    },
-    {
-      "id": "scalyn",
-      "name": "Scalyn",
-      "baseStats": {
-        "hp": 10,
-        "attack": 5,
-        "defense": 5,
-        "speed": 5
-      },
-      "growth": "medium",
-      "skills": [
-        "basic-attack"
-      ],
-      "variants": [
-        {
-          "id": "default",
-          "sprite": "assets/Monsters/Scalyn/frost_dragon_128x128.png"
-        }
-      ]
-    },
-    {
       "id": "Pawlit",
       "name": "Pawlit",
       "baseStats": {
@@ -92,15 +16,55 @@
       "variants": [
         {
           "id": "default",
-          "sprite": "assets/Monsters/Pawlit/meadowmew-golden-ready.png"
+          "portrait": {
+            "imagePath": "assets/Monsters/Pawlit/pawlit-classic-ready-transparent.png",
+            "row": 0,
+            "frame": 0,
+            "sheetId": "pawlit-classic-walksheet"
+          },
+          "overworld": {
+            "sheetId": "assets-monsters-pawlit-pawlit-classic-walksheet",
+            "rows": {
+              "down": 0,
+              "left": 1,
+              "right": 2,
+              "up": 3
+            },
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 190
+          }
         },
         {
-          "id": "Grass",
-          "sprite": "assets/Monsters/Pawlit/meadowmew-classic-ready.png"
-        },
-        {
-          "id": "Lilac",
-          "sprite": "assets/Monsters/Pawlit/meadowmew-lilac-ready.png"
+          "id": "Tide",
+          "portrait": {
+            "imagePath": "assets/Monsters/Pawlit/pawlit-blue-ready-hires.png",
+            "row": 0,
+            "frame": 0,
+            "sheetId": "pawlit-classic-walksheet"
+          },
+          "overworld": {
+            "sheetId": "assets-monsters-pawlit-pawlit-blue-walksheet",
+            "rows": {
+              "down": 0,
+              "left": 1,
+              "right": 2,
+              "up": 3
+            },
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 190
+          }
         }
       ]
     }

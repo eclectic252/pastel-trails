@@ -95,35 +95,102 @@ function prettifyCharacterSheetLabel(pathValue) {
     .join(" ");
 }
 
+function isLikelyMonsterSheetPath(relativePath) {
+  const normalized = String(relativePath || "").toLowerCase();
+  return normalized.includes("/monster spritesheets/")
+    || normalized.includes("walksheet")
+    || normalized.includes("spritesheet");
+}
+
+async function loadMonsterAssets() {
+  const monsterRoot = path.join(projectRoot, "assets", "Monsters");
+
+  try {
+    const pngFiles = await collectPngFiles(monsterRoot);
+    return {
+      images: pngFiles.map((absolutePath) => path.relative(projectRoot, absolutePath).split(path.sep).join("/")).sort(),
+    };
+  } catch {
+    return { images: [] };
+  }
+}
+
 async function loadCharacterSheets() {
   const saved = await readOptionalJson("data/character-sheets.json", { sheets: [] });
-  const spriteRoot = path.join(projectRoot, "assets", "Characters", "Boardwalk girl sprite");
+  const spriteRoots = [
+    {
+      directoryPath: path.join(projectRoot, "assets", "Characters"),
+      kind: "character",
+      defaultPlayerSelectable: true,
+    },
+    {
+      directoryPath: path.join(projectRoot, "assets", "Monsters"),
+      kind: "monster",
+      defaultPlayerSelectable: false,
+    },
+  ];
   let discovered = [];
 
   try {
-    const pngFiles = await collectPngFiles(spriteRoot);
-    discovered = pngFiles.map((absolutePath) => {
-      const relativePath = path.relative(projectRoot, absolutePath).split(path.sep).join("/");
-      const savedEntry = (saved.sheets || []).find((entry) => entry.path === relativePath);
-      const baseId = path.basename(relativePath, path.extname(relativePath))
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "");
+    const discoveredMap = new Map();
 
-      return {
-        id: savedEntry?.id || baseId,
-        label: savedEntry?.label || prettifyCharacterSheetLabel(relativePath),
-        playerLabel: savedEntry?.playerLabel || savedEntry?.label || prettifyCharacterSheetLabel(relativePath),
-        playerSelectable: savedEntry?.playerSelectable ?? true,
-        path: relativePath,
-        columns: savedEntry?.columns || 4,
-        rows: savedEntry?.rows || 4,
-        offsetX: savedEntry?.offsetX || 0,
-        offsetY: savedEntry?.offsetY || 0,
-        rowOffsets: savedEntry?.rowOffsets || [],
-        frameOffsets: savedEntry?.frameOffsets || [],
-      };
+    for (const spriteRoot of spriteRoots) {
+      let pngFiles = [];
+      try {
+        pngFiles = await collectPngFiles(spriteRoot.directoryPath);
+      } catch {
+        pngFiles = [];
+      }
+
+      pngFiles.forEach((absolutePath) => {
+        const relativePath = path.relative(projectRoot, absolutePath).split(path.sep).join("/");
+        if (spriteRoot.kind === "monster" && !isLikelyMonsterSheetPath(relativePath)) {
+          return;
+        }
+        const savedEntry = (saved.sheets || []).find((entry) => entry.path === relativePath);
+        const baseId = relativePath
+          .replace(/\.[^.]+$/, "")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "");
+
+        discoveredMap.set(relativePath, {
+          id: savedEntry?.id || baseId,
+          label: savedEntry?.label || prettifyCharacterSheetLabel(relativePath),
+          playerLabel: savedEntry?.playerLabel || savedEntry?.label || prettifyCharacterSheetLabel(relativePath),
+          playerSelectable: savedEntry?.playerSelectable ?? spriteRoot.defaultPlayerSelectable,
+          kind: savedEntry?.kind || spriteRoot.kind,
+          group: savedEntry?.group || relativePath.split("/").slice(1, -1).join(" / "),
+          path: relativePath,
+          columns: savedEntry?.columns || 4,
+          rows: savedEntry?.rows || 4,
+          frameHeight: savedEntry?.frameHeight || 313,
+          offsetX: savedEntry?.offsetX || 0,
+          offsetY: savedEntry?.offsetY || 0,
+          renderWidth: savedEntry?.renderWidth ?? null,
+          rowOffsets: savedEntry?.rowOffsets || [],
+          frameOffsets: savedEntry?.frameOffsets || [],
+        });
+      });
+    }
+
+    (saved.sheets || []).forEach((savedEntry) => {
+      if (!savedEntry?.path || discoveredMap.has(savedEntry.path)) {
+        return;
+      }
+
+      discoveredMap.set(savedEntry.path, {
+        ...savedEntry,
+        label: savedEntry.label || prettifyCharacterSheetLabel(savedEntry.path),
+        playerLabel: savedEntry.playerLabel || savedEntry.label || prettifyCharacterSheetLabel(savedEntry.path),
+        kind: savedEntry.kind || "character",
+        group: savedEntry.group || savedEntry.path.split("/").slice(1, -1).join(" / "),
+        frameHeight: savedEntry.frameHeight || 313,
+        renderWidth: savedEntry.renderWidth ?? null,
+      });
     });
+
+    discovered = Array.from(discoveredMap.values());
   } catch {
     discovered = saved.sheets || [];
   }
@@ -235,7 +302,7 @@ async function loadMapMetadata(mapIds, maps) {
 }
 
 async function buildLocalContent() {
-  const [settings, themes, items, skills, monsters, towns, arenas, trainers, characterSheets, maps] = await Promise.all([
+  const [settings, themes, items, skills, monsters, towns, arenas, trainers, characterSheets, monsterAssets, maps] = await Promise.all([
     readJson("data/settings.json"),
     readJson("data/themes.json"),
     readJson("data/items.json"),
@@ -255,6 +322,7 @@ async function buildLocalContent() {
     readOptionalJson("data/arenas.json", { arenas: [] }),
     readJson("data/trainers.json"),
     loadCharacterSheets(),
+    loadMonsterAssets(),
     loadMaps(),
   ]);
 
@@ -270,6 +338,7 @@ async function buildLocalContent() {
     arenas,
     trainers,
     characterSheets,
+    monsterAssets,
     maps,
     mapMetadata,
   };

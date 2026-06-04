@@ -68,13 +68,9 @@
               "speciesId": "Pawlit",
               "weight": 50,
               "variantId": "default"
-            },
-            {
-              "speciesId": "Pawlit",
-              "weight": 50,
-              "variantId": "Grass"
             }
-          ]
+          ],
+          "walkRange": 200
         },
         {
           "id": "spawn-2",
@@ -89,14 +85,10 @@
             {
               "speciesId": "Pawlit",
               "weight": 50,
-              "variantId": "default"
-            },
-            {
-              "speciesId": "Pawlit",
-              "weight": 60,
-              "variantId": "Lilac"
+              "variantId": "Tide"
             }
-          ]
+          ],
+          "walkRange": 525
         }
       ],
       "spawnTable": []
