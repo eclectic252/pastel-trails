@@ -70,7 +70,7 @@
               "variantId": "default"
             }
           ],
-          "walkRange": 200
+          "walkRange": 291
         },
         {
           "id": "spawn-2",
@@ -88,7 +88,7 @@
               "variantId": "Tide"
             }
           ],
-          "walkRange": 525
+          "walkRange": 531
         }
       ],
       "spawnTable": []

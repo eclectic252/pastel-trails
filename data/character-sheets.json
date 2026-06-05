@@ -1252,6 +1252,284 @@
       ]
     },
     {
+      "id": "assets-characters-boardwalk-girl-sprite-equestrian-girl-pink-walksheet",
+      "label": "Equestrian Girl Pink Walksheet",
+      "playerLabel": "Equestrian Girl Pink",
+      "playerSelectable": true,
+      "kind": "character",
+      "group": "Characters / Boardwalk girl sprite",
+      "path": "assets/Characters/Boardwalk girl sprite/equestrian_girl_pink_walksheet.png",
+      "columns": 4,
+      "rows": 4,
+      "frameHeight": 313,
+      "offsetX": 0,
+      "offsetY": 0,
+      "renderWidth": null,
+      "rowOffsets": [
+        {
+          "x": 0,
+          "y": 19
+        },
+        {
+          "x": 0,
+          "y": 37
+        },
+        {
+          "x": 0,
+          "y": 29
+        },
+        {
+          "x": 0,
+          "y": 51
+        }
+      ],
+      "frameOffsets": [
+        [
+          {
+            "x": 59,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -14,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -92,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -180,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 53,
+            "y": -12,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -20,
+            "y": -9,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -98,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -171,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 60,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -13,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -90,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -173,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 57,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -27,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -90,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -183,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ]
+      ]
+    },
+    {
+      "id": "assets-characters-boardwalk-girl-sprite-equestrian-girl-walksheet-v1-fullsize-transparent",
+      "label": "Equestrian Girl Walksheet V1 Fullsize Transparent",
+      "playerLabel": "Equestrian Girl Black Vest",
+      "playerSelectable": true,
+      "kind": "character",
+      "group": "Characters / Boardwalk girl sprite",
+      "path": "assets/Characters/Boardwalk girl sprite/equestrian_girl_walksheet_v1_fullsize_transparent.png",
+      "columns": 4,
+      "rows": 4,
+      "frameHeight": 313,
+      "offsetX": 0,
+      "offsetY": 0,
+      "renderWidth": null,
+      "rowOffsets": [
+        {
+          "x": 0,
+          "y": 6
+        },
+        {
+          "x": 0,
+          "y": 15
+        },
+        {
+          "x": 0,
+          "y": 15
+        },
+        {
+          "x": 0,
+          "y": 25
+        }
+      ],
+      "frameOffsets": [
+        [
+          {
+            "x": 25,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -33,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -92,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -160,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 11,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -51,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -101,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -165,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 44,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -18,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -71,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -130,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 27,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -34,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -85,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -139,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ]
+      ]
+    },
+    {
       "id": "man-walksheet-v1-4x4-source-alpha",
       "label": "Man Walksheet V1 4x4 Source Alpha",
       "playerLabel": "Electric Jacket Man",
@@ -1821,6 +2099,145 @@
       "offsetX": 0,
       "offsetY": 0,
       "renderWidth": 100,
+      "rowOffsets": [
+        {
+          "x": 0,
+          "y": 14
+        },
+        {
+          "x": 0,
+          "y": 9
+        },
+        {
+          "x": 0,
+          "y": 2
+        },
+        {
+          "x": 0,
+          "y": 69
+        }
+      ],
+      "frameOffsets": [
+        [
+          {
+            "x": 37,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -12,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -58,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -101,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 32,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 18,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 5,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -18,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 16,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -20,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -10,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -53,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 50,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -5,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -37,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -84,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ]
+      ]
+    },
+    {
+      "id": "assets-monsters-pawlit-pawlit-pink-walksheet",
+      "label": "Pawlit Pink Walksheet",
+      "playerLabel": "Pawlit Pink Walksheet",
+      "playerSelectable": false,
+      "kind": "monster",
+      "group": "Monsters / Pawlit",
+      "path": "assets/Monsters/Pawlit/pawlit-pink-walksheet.png",
+      "columns": 4,
+      "rows": 4,
+      "frameHeight": 313,
+      "offsetX": 0,
+      "offsetY": 0,
+      "renderWidth": null,
       "rowOffsets": [
         {
           "x": 0,
