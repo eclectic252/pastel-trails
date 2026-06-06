@@ -294,6 +294,7 @@ async function loadMapMetadata(mapIds, maps) {
       interactions: rawMeta.interactions || map.interactions || [],
       spawnZones: rawMeta.spawnZones || [],
       trainers: rawMeta.trainers || [],
+      npcs: rawMeta.npcs || [],
       mapMonstersPanel: rawMeta.mapMonstersPanel || [],
     };
   }

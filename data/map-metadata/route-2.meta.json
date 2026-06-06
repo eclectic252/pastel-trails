@@ -95,5 +95,21 @@
     }
   ],
   "trainers": [],
+  "npcs": [
+    {
+      "id": "npc-1",
+      "type": "dialogue",
+      "x": 1216,
+      "y": 448,
+      "label": "New NPC",
+      "text": "Hello there!",
+      "sheetId": "assets-characters-boardwalk-girl-sprite-bouganvillea2-walksheet-v1-transparent",
+      "facing": "down",
+      "interactionRadius": 88,
+      "data": {
+        "trainerId": ""
+      }
+    }
+  ],
   "mapMonstersPanel": []
 }

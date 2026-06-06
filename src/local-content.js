@@ -77,6 +77,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "speed": 5
         },
         "growth": "medium",
+        "overworldDisplayMode": "walk",
         "skills": [
           "basic-attack"
         ],
@@ -116,6 +117,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               "sheetId": "pawlit-classic-walksheet"
             },
             "overworld": {
+              "displayMode": "portrait",
               "sheetId": "assets-monsters-pawlit-pawlit-tide-walksheet",
               "rows": {
                 "down": 0,
@@ -2310,6 +2312,145 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             },
             {
               "x": -36,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ]
+        ]
+      },
+      {
+        "id": "assets-characters-boardwalk-girl-sprite-western-red-shirt-walksheet-v1-transparent",
+        "label": "Western Red Shirt Walksheet V1 Transparent",
+        "playerLabel": "Western Red Shirt ",
+        "playerSelectable": true,
+        "kind": "character",
+        "group": "Characters / Boardwalk girl sprite",
+        "path": "assets/Characters/Boardwalk girl sprite/western_red_shirt_walksheet_v1_transparent.png",
+        "columns": 4,
+        "rows": 4,
+        "frameHeight": 313,
+        "offsetX": 0,
+        "offsetY": 0,
+        "renderWidth": null,
+        "rowOffsets": [
+          {
+            "x": 0,
+            "y": 9
+          },
+          {
+            "x": 0,
+            "y": 1
+          },
+          {
+            "x": 0,
+            "y": 2
+          },
+          {
+            "x": 0,
+            "y": -14
+          }
+        ],
+        "frameOffsets": [
+          [
+            {
+              "x": 27,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -14,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -54,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -81,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 27,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -5,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -48,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -80,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 23,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -9,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -48,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -82,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 22,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -22,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -59,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -80,
               "y": 0,
               "width": 0,
               "height": 0
@@ -38678,6 +38819,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         }
       ],
       "trainers": [],
+      "npcs": [],
       "mapMonstersPanel": []
     },
     "camelia-ranch": {
@@ -38716,6 +38858,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         }
       ],
       "trainers": [],
+      "npcs": [],
       "mapMonstersPanel": []
     },
     "jasmine-bay": {
@@ -38766,6 +38909,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         }
       ],
       "trainers": [],
+      "npcs": [],
       "mapMonstersPanel": []
     },
     "lily-harbor": {
@@ -38847,6 +38991,22 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         }
       ],
       "trainers": [],
+      "npcs": [
+        {
+          "id": "lily-guide-1",
+          "type": "dialogue",
+          "x": 2112,
+          "y": 1088,
+          "label": "Harbor Guide",
+          "text": "The healing center is to the east, and the arena is just west of here.",
+          "sheetId": "dawn-tan-overalls",
+          "facing": "down",
+          "interactionRadius": 96,
+          "data": {
+            "trainerId": ""
+          }
+        }
+      ],
       "mapMonstersPanel": []
     },
     "plumeria-shores": {
@@ -38885,6 +39045,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         }
       ],
       "trainers": [],
+      "npcs": [],
       "mapMonstersPanel": []
     },
     "route-1": {
@@ -38959,6 +39120,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         }
       ],
       "trainers": [],
+      "npcs": [],
       "mapMonstersPanel": []
     },
     "route-2": {
@@ -39058,6 +39220,22 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         }
       ],
       "trainers": [],
+      "npcs": [
+        {
+          "id": "npc-1",
+          "type": "dialogue",
+          "x": 1216,
+          "y": 448,
+          "label": "New NPC",
+          "text": "Hello there!",
+          "sheetId": "assets-characters-boardwalk-girl-sprite-bouganvillea2-walksheet-v1-transparent",
+          "facing": "down",
+          "interactionRadius": 88,
+          "data": {
+            "trainerId": ""
+          }
+        }
+      ],
       "mapMonstersPanel": []
     },
     "route-3": {
@@ -39181,6 +39359,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         }
       ],
       "trainers": [],
+      "npcs": [],
       "mapMonstersPanel": []
     }
   }

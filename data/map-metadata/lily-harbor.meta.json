@@ -77,5 +77,21 @@
     }
   ],
   "trainers": [],
+  "npcs": [
+    {
+      "id": "lily-guide-1",
+      "type": "dialogue",
+      "x": 2112,
+      "y": 1088,
+      "label": "Harbor Guide",
+      "text": "The healing center is to the east, and the arena is just west of here.",
+      "sheetId": "dawn-tan-overalls",
+      "facing": "down",
+      "interactionRadius": 96,
+      "data": {
+        "trainerId": ""
+      }
+    }
+  ],
   "mapMonstersPanel": []
 }

@@ -17,6 +17,7 @@
   const MIN_PLAYER_RENDER_WIDTH = 64;
   const MIN_MONSTER_RENDER_WIDTH = 16;
   const PLAYER_SPRITE_ANCHOR_OFFSET_Y = 20;
+  const INTERACTION_PROMPT_RADIUS = 88;
   const PLAYER_WALK_ANIMATION_MS = {
     horizontal: 130,
     vertical: 120,
@@ -190,6 +191,7 @@
         interactions: [],
         spawnZones: [],
         trainers: [],
+        npcs: [],
         mapMonstersPanel: [],
       },
     },
@@ -312,6 +314,7 @@
         interactions: rawMeta.interactions || normalizedMap.interactions || [],
         spawnZones: rawMeta.spawnZones || [],
         trainers: rawMeta.trainers || [],
+        npcs: rawMeta.npcs || [],
         mapMonstersPanel: rawMeta.mapMonstersPanel || [],
       };
     });
@@ -781,6 +784,20 @@
     }) || species?.variants?.[0] || null;
   }
 
+  function getMonsterOverworldDisplayMode(species, variant) {
+    const variantMode = String(variant?.overworld?.displayMode || "").trim().toLowerCase();
+    if (variantMode === "portrait" || variantMode === "walk") {
+      return variantMode;
+    }
+
+    const speciesMode = String(species?.overworldDisplayMode || "").trim().toLowerCase();
+    if (speciesMode === "portrait" || speciesMode === "walk") {
+      return speciesMode;
+    }
+
+    return "walk";
+  }
+
   function getMonsterSheetOptions(content) {
     return getAvailableCharacterSheets(content).filter(function (entry) {
       return getSpriteSheetKind(entry) === "monster";
@@ -851,6 +868,7 @@
         right: rightRow,
         up: upRow,
       },
+      displayMode: String(config.displayMode || "").trim().toLowerCase(),
       idleFrame,
       walkFrames: normalizeFrameList(config.walkFrames, idleFrame),
       frameDurationMs: Math.max(60, Number(config.frameDurationMs || 180)),
@@ -1072,7 +1090,7 @@
   }
 
   function getWorldUiSignature(state, content) {
-    const activeInteraction = getActiveInteraction(state, content);
+    const promptTarget = getInteractionPromptTarget(state, content);
     const encounterPreviewKey = getEncounterPreviewEntries(state, content).map(function (entry) {
       return entry.speciesId + "::" + entry.variantId + "::" + (entry.isCurrent === false ? "inactive" : "active");
     }).join("|");
@@ -1085,7 +1103,8 @@
       state.message,
       state.settings.encounterPreview ? "preview-on" : "preview-off",
       state.settings.encounterPreviewMode || "available",
-      activeInteraction?.id || "",
+      promptTarget?.kind || "",
+      promptTarget?.interaction?.id || promptTarget?.npc?.id || promptTarget?.wildMonster?.id || "",
       encounterPreviewKey,
     ].join("~");
   }
@@ -1233,6 +1252,14 @@
     return mapMeta.interactions;
   }
 
+  function getEditableNpcs(mapMeta) {
+    if (!Array.isArray(mapMeta.npcs)) {
+      mapMeta.npcs = [];
+    }
+
+    return mapMeta.npcs;
+  }
+
   function createDefaultInteraction(index) {
     return {
       id: "interaction-" + index,
@@ -1247,6 +1274,24 @@
         shopId: "",
         arenaId: "",
         crestId: "",
+      },
+    };
+  }
+
+  function createDefaultNpc(content, index) {
+    const defaultSheet = getPlayerAvatarOptions(content)[0] || getAvailableCharacterSheets(content)[0] || null;
+    return {
+      id: "npc-" + index,
+      type: "dialogue",
+      x: 128,
+      y: 128,
+      label: "New NPC",
+      text: "Hello there!",
+      sheetId: defaultSheet?.id || "",
+      facing: "down",
+      interactionRadius: 88,
+      data: {
+        trainerId: "",
       },
     };
   }
@@ -1266,7 +1311,32 @@
     }
   }
 
-  function getActiveInteraction(state, content) {
+  function buildNpcPrompt(npc) {
+    if (npc?.type === "trainer") {
+      return "Press E to challenge";
+    }
+
+    return "Press E to talk";
+  }
+
+  function buildWildMonsterPrompt(monster, content) {
+    const species = getSpecies(content, monster?.speciesId);
+    return "Press E to battle " + (species?.name || "wild monster");
+  }
+
+  function getMapInteractionById(content, mapId, interactionId) {
+    return getEditableInteractions(content.mapMetadata[mapId] || {}).find(function (interaction) {
+      return interaction.id === interactionId;
+    }) || null;
+  }
+
+  function getNpcById(content, mapId, npcId) {
+    return getEditableNpcs(content.mapMetadata[mapId] || {}).find(function (npc) {
+      return npc.id === npcId;
+    }) || null;
+  }
+
+  function getActiveMapInteraction(state, content) {
     if (state.screen !== "world" || state.battle || state.interaction) {
       return null;
     }
@@ -1275,6 +1345,73 @@
     return interactions.find(function (interaction) {
       return pointInRect(state.world.position.x, state.world.position.y, interaction);
     }) || null;
+  }
+
+  function getNearbyNpcTarget(state, content) {
+    const npcs = getEditableNpcs(content.mapMetadata[state.world.currentMapId] || {});
+    let best = null;
+
+    npcs.forEach(function (npc) {
+      const radius = Math.max(24, Number(npc.interactionRadius || INTERACTION_PROMPT_RADIUS));
+      const distance = Math.hypot(Number(npc.x || 0) - state.world.position.x, Number(npc.y || 0) - state.world.position.y);
+      if (distance > radius) {
+        return;
+      }
+
+      if (!best || distance < best.distance) {
+        best = {
+          kind: "npc",
+          npc,
+          distance,
+          prompt: buildNpcPrompt(npc),
+        };
+      }
+    });
+
+    return best;
+  }
+
+  function getNearbyWildMonsterTarget(state, content) {
+    let best = null;
+
+    (state.world.wildMonsters || []).forEach(function (monster) {
+      if (!monster?.active) {
+        return;
+      }
+
+      const distance = Math.hypot(Number(monster.x || 0) - state.world.position.x, Number(monster.y || 0) - state.world.position.y);
+      if (distance > INTERACTION_PROMPT_RADIUS) {
+        return;
+      }
+
+      if (!best || distance < best.distance) {
+        best = {
+          kind: "wild-monster",
+          wildMonster: monster,
+          distance,
+          prompt: buildWildMonsterPrompt(monster, content),
+        };
+      }
+    });
+
+    return best;
+  }
+
+  function getInteractionPromptTarget(state, content) {
+    if (state.screen !== "world" || state.battle || state.interaction) {
+      return null;
+    }
+
+    const interaction = getActiveMapInteraction(state, content);
+    if (interaction) {
+      return {
+        kind: "map-interaction",
+        interaction,
+        prompt: buildInteractionPrompt(interaction),
+      };
+    }
+
+    return getNearbyNpcTarget(state, content) || getNearbyWildMonsterTarget(state, content) || null;
   }
 
   function getTownEntryForCurrentMap(content, mapId) {
@@ -1519,6 +1656,37 @@
     };
   }
 
+  function openNpcInteraction(state, content, npc) {
+    const label = npc.label || npc.id || "NPC";
+    const trainerId = npc.data?.trainerId || "";
+    const trainer = trainerId
+      ? (content.trainers?.trainers || []).find(function (entry) {
+          return entry.id === trainerId;
+        }) || null
+      : null;
+
+    if (npc.type === "trainer") {
+      state.message = "You approached " + label + ".";
+      state.interaction = {
+        id: npc.id,
+        type: "npc-trainer",
+        title: label,
+        text: npc.text || (trainer
+          ? (trainer.name || label) + " is ready for a battle once trainer encounters are connected."
+          : "This trainer battle is not wired up yet, but this NPC is ready for it."),
+      };
+      return;
+    }
+
+    state.message = "You talked to " + label + ".";
+    state.interaction = {
+      id: npc.id,
+      type: "npc",
+      title: label,
+      text: npc.text || "This character is waiting for dialogue.",
+    };
+  }
+
   function createWildMonstersForMap(content, mapId, position) {
     const mapMeta = content.mapMetadata[mapId];
     if (mapMeta?.safezone) {
@@ -1541,6 +1709,7 @@
       {
         id: "wild-1",
         speciesId: emberfox.id,
+        variantId: getSpeciesVariant(emberfox, "")?.id || "default",
         level: 3,
         x: playerSpawn.x + 160,
         y: playerSpawn.y + 48,
@@ -1552,6 +1721,7 @@
       {
         id: "wild-2",
         speciesId: secondSpecies.id,
+        variantId: getSpeciesVariant(secondSpecies, "")?.id || "default",
         level: 4,
         x: playerSpawn.x + 320,
         y: playerSpawn.y + 200,
@@ -2609,15 +2779,6 @@
       Math.abs(state.world.position.x - previousX) > 0.01 || Math.abs(state.world.position.y - previousY) > 0.01
     );
 
-    const encountered = state.world.wildMonsters.find(function (monster) {
-      return monster.active && Math.hypot(monster.x - state.world.position.x, monster.y - state.world.position.y) < 40;
-    });
-
-    if (encountered) {
-      startBattle(state, content, encountered.id);
-      return;
-    }
-
     const transition = findTriggeredTransition(state, content);
     if (transition) {
       applyTransition(state, content, transition);
@@ -2894,6 +3055,7 @@
     const portraitConfig = getVariantPortraitConfig(variant);
     const overworldSheet = getVariantOverworldSheet(content, variant);
     const overworldConfig = getVariantOverworldConfig(variant);
+    const displayMode = getMonsterOverworldDisplayMode(species, variant);
     const zoomScale = Math.max(0.1, Number(ACTIVE_APP?.state?.settings?.zoom || 100) / 100);
     const useSmoothSampling = Math.abs(zoomScale - 1) > 0.001;
     const screenX = Math.round((monster.x - camera.x) * zoomScale);
@@ -2935,7 +3097,7 @@
       ctx.restore();
     };
 
-    if (overworldSheet?.path) {
+    if (displayMode !== "portrait" && overworldSheet?.path) {
       const image = getImage(overworldSheet.path);
       if (image.complete && image.naturalWidth) {
         const runtimeCharacterConfig = buildCharacterSheetRenderConfig(overworldSheet);
@@ -3010,6 +3172,49 @@
     ctx.font = "14px sans-serif";
     ctx.fillText("!", screenX - 4, screenY + 5);
     drawWildMonsterLabel();
+  }
+
+  function drawNpcSprite(ctx, npc, content, camera) {
+    const sheet = getCharacterSheetConfig(content, npc?.sheetId || "");
+    if (!sheet?.path) {
+      return;
+    }
+
+    const image = getImage(sheet.path);
+    if (!image.complete || !image.naturalWidth) {
+      return;
+    }
+
+    const runtimeCharacterConfig = buildCharacterSheetRenderConfig(sheet);
+    ensureCharacterDevSelection(runtimeCharacterConfig, content);
+    const rowByFacing = {
+      down: 0,
+      left: 1,
+      right: 2,
+      up: 3,
+    };
+    const rowIndex = rowByFacing[npc?.facing] ?? 0;
+    const sourceRect = getCharacterFrameSourceRect(
+      runtimeCharacterConfig,
+      image,
+      Math.max(0, Math.min((runtimeCharacterConfig.characterSheetRows || 1) - 1, rowIndex)),
+      0
+    );
+    const zoomScale = Math.max(0.1, Number(ACTIVE_APP?.state?.settings?.zoom || 100) / 100);
+    const spriteSize = getEffectiveRenderWidthForSheet(content, sheet) * zoomScale;
+    const screenX = Math.round((Number(npc.x || 0) - camera.x) * zoomScale);
+    const screenY = Math.round((Number(npc.y || 0) - camera.y) * zoomScale);
+    const drawX = Math.round(screenX - spriteSize / 2);
+    const drawY = Math.round(screenY - spriteSize / 2);
+    const useSmoothSampling = Math.abs(zoomScale - 1) > 0.001;
+
+    ctx.save();
+    ctx.imageSmoothingEnabled = useSmoothSampling;
+    if (useSmoothSampling) {
+      ctx.imageSmoothingQuality = "high";
+    }
+    ctx.drawImage(image, sourceRect.sx, sourceRect.sy, sourceRect.sw, sourceRect.sh, drawX, drawY, spriteSize, spriteSize);
+    ctx.restore();
   }
 
   function drawPlayerSprite(ctx, state, content, camera) {
@@ -3102,6 +3307,10 @@
       }
 
       drawWildMonsterSprite(ctx, monster, content, camera);
+    });
+
+    getEditableNpcs(content.mapMetadata[state.world.currentMapId] || {}).forEach(function (npc) {
+      drawNpcSprite(ctx, npc, content, camera);
     });
 
     drawPlayerSprite(ctx, state, content, camera);
@@ -3764,6 +3973,7 @@
     const transitions = mapMeta?.transitions || [];
     const visibleSpawns = getEditableVisibleSpawns(mapMeta);
     const interactions = getEditableInteractions(mapMeta);
+    const npcs = getEditableNpcs(mapMeta);
     const editorMode = devToolsState.editorMode || "transitions";
     const selectedTransitionId = devToolsState.selectedTransitionId || transitions[0]?.id || "";
     const selectedTransition = transitions.find(function (transition) {
@@ -3777,6 +3987,10 @@
     const selectedInteraction = interactions.find(function (interaction) {
       return interaction.id === selectedInteractionId;
     }) || interactions[0] || null;
+    const selectedNpcId = devToolsState.selectedNpcId || npcs[0]?.id || "";
+    const selectedNpc = npcs.find(function (npc) {
+      return npc.id === selectedNpcId;
+    }) || npcs[0] || null;
     const arenaOptions = ['<option value="">Unlinked</option>'].concat(
       ensureArenaCatalog(content).map(function (arena) {
         const selected = selectedInteraction?.data?.arenaId === arena.id ? " selected" : "";
@@ -3933,6 +4147,47 @@
         ].join("")
       : '<section class="dev-editor"><h3>No Interaction Selected</h3><p>Add a new interaction to begin editing.</p></section>';
 
+    const npcTypeOptions = ["dialogue", "trainer"].map(function (type) {
+      const selected = selectedNpc?.type === type ? " selected" : "";
+      return '<option value="' + type + '"' + selected + ">" + escapeHtml(type) + "</option>";
+    }).join("");
+    const npcSheetOptions = ['<option value="">Select Character Sheet</option>'].concat(
+      getPlayerAvatarOptions(content).map(function (sheet) {
+        const selected = selectedNpc?.sheetId === sheet.id ? " selected" : "";
+        return '<option value="' + escapeHtml(sheet.id) + '"' + selected + ">" + escapeHtml(sheet.playerLabel || sheet.label || sheet.id) + "</option>";
+      })
+    ).join("");
+    const npcItems = npcs.length
+      ? npcs.map(function (npc) {
+          const selected = npc.id === selectedNpcId ? " compact-list-selected" : "";
+          return '<li class="' + selected.trim() + '"><button type="button" class="link-button" data-dev-select-npc="' + npc.id + '">' +
+            "<strong>" + escapeHtml(npc.label || npc.id) + "</strong><span>" + escapeHtml(npc.type || "dialogue") + " @ " + Number(npc.x || 0) + "," + Number(npc.y || 0) + "</span></button></li>";
+        }).join("")
+      : "<li>No NPCs defined yet.</li>";
+    const npcEditor = selectedNpc
+      ? [
+          '<section class="dev-editor">',
+          "<h3>Edit NPC</h3>",
+          '<div class="form-grid">',
+          '<label class="input-group"><span>ID</span><input data-dev-npc-field="id" value="' + escapeHtml(selectedNpc.id || "") + '" /></label>',
+          '<label class="input-group"><span>Type</span><select data-dev-npc-field="type">' + npcTypeOptions + "</select></label>",
+          '<label class="input-group"><span>Label</span><input data-dev-npc-field="label" value="' + escapeHtml(selectedNpc.label || "") + '" /></label>',
+          '<label class="input-group"><span>Character Sheet</span><select data-dev-npc-field="sheetId">' + npcSheetOptions + "</select></label>",
+          '<label class="input-group"><span>X</span><input type="number" step="1" data-dev-npc-field="x" value="' + Number(selectedNpc.x || 0) + '" /></label>',
+          '<label class="input-group"><span>Y</span><input type="number" step="1" data-dev-npc-field="y" value="' + Number(selectedNpc.y || 0) + '" /></label>',
+          '<label class="input-group"><span>Facing</span><select data-dev-npc-field="facing"><option value="down"' + (selectedNpc.facing === "down" || !selectedNpc.facing ? " selected" : "") + '>Down</option><option value="left"' + (selectedNpc.facing === "left" ? " selected" : "") + '>Left</option><option value="right"' + (selectedNpc.facing === "right" ? " selected" : "") + '>Right</option><option value="up"' + (selectedNpc.facing === "up" ? " selected" : "") + '>Up</option></select></label>',
+          '<label class="input-group"><span>Interaction Radius</span><input type="number" min="24" step="1" data-dev-npc-field="interactionRadius" value="' + Number(selectedNpc.interactionRadius || INTERACTION_PROMPT_RADIUS) + '" /></label>',
+          '<label class="input-group"><span>Trainer ID</span><input data-dev-npc-field="data.trainerId" value="' + escapeHtml(selectedNpc.data?.trainerId || "") + '" /></label>',
+          '<label class="input-group dev-input-group-wide"><span>Text</span><textarea rows="4" data-dev-npc-field="text">' + escapeHtml(selectedNpc.text || "") + '</textarea></label>',
+          "</div>",
+          '<div class="title-actions">',
+          '<button class="secondary-button" type="button" data-action="duplicate-npc">Duplicate</button>',
+          '<button class="secondary-button" type="button" data-action="delete-npc">Delete</button>',
+          "</div>",
+          "</section>",
+        ].join("")
+      : '<section class="dev-editor"><h3>No NPC Selected</h3><p>Add an NPC to begin editing.</p></section>';
+
     const mapSettings = [
       '<section class="panel-block map-settings-panel">',
       '<div class="section-heading"><h3>Map Settings</h3></div>',
@@ -3949,14 +4204,16 @@
     return [
       "<p>Editing <strong>" + escapeHtml(mapMeta?.displayName || mapId) + "</strong>. Changes are in-memory until you export the metadata JSON. Click the map preview to place the selected item. For transitions and interactions, drag the right, bottom, or corner handles to resize. Target Spawn X/Y are where the player arrives on the target map.</p>",
       mapSettings,
-      '<div class="editor-mode-toggle"><button class="' + (editorMode === "transitions" ? "primary-button" : "secondary-button") + '" type="button" data-action="mode-transitions">Transition Zones</button><button class="' + (editorMode === "spawns" ? "primary-button" : "secondary-button") + '" type="button" data-action="mode-spawns">Wild Spawns</button><button class="' + (editorMode === "interactions" ? "primary-button" : "secondary-button") + '" type="button" data-action="mode-interactions">Interactions</button></div>',
+      '<div class="editor-mode-toggle"><button class="' + (editorMode === "transitions" ? "primary-button" : "secondary-button") + '" type="button" data-action="mode-transitions">Transition Zones</button><button class="' + (editorMode === "spawns" ? "primary-button" : "secondary-button") + '" type="button" data-action="mode-spawns">Wild Spawns</button><button class="' + (editorMode === "interactions" ? "primary-button" : "secondary-button") + '" type="button" data-action="mode-interactions">Interactions</button><button class="' + (editorMode === "npcs" ? "primary-button" : "secondary-button") + '" type="button" data-action="mode-npcs">NPCs</button></div>',
       '<div class="dev-tools-layout">',
       (
         editorMode === "transitions"
           ? '<section class="panel-block"><div class="section-heading"><h3>Transitions</h3><button class="secondary-button" type="button" data-action="add-transition">Add</button></div><ul class="compact-list dev-list">' + transitionItems + "</ul></section>" + transitionEditor
           : editorMode === "spawns"
             ? '<section class="panel-block"><div class="section-heading"><h3>Wild Spawns</h3><button class="secondary-button" type="button" data-action="add-spawn">Add</button></div><ul class="compact-list dev-list">' + spawnItems + "</ul></section>" + spawnEditor
-            : '<section class="panel-block"><div class="section-heading"><h3>Interactions</h3><button class="secondary-button" type="button" data-action="add-interaction">Add</button></div><ul class="compact-list dev-list">' + interactionItems + "</ul></section>" + interactionEditor
+            : editorMode === "npcs"
+              ? '<section class="panel-block"><div class="section-heading"><h3>NPCs</h3><button class="secondary-button" type="button" data-action="add-npc">Add</button></div><ul class="compact-list dev-list">' + npcItems + "</ul></section>" + npcEditor
+              : '<section class="panel-block"><div class="section-heading"><h3>Interactions</h3><button class="secondary-button" type="button" data-action="add-interaction">Add</button></div><ul class="compact-list dev-list">' + interactionItems + "</ul></section>" + interactionEditor
       ),
       "</div>",
       '<div class="title-actions">',
@@ -4012,6 +4269,7 @@
 
     const transitions = content.mapMetadata[mapId]?.transitions || [];
     const visibleSpawns = getEditableVisibleSpawns(content.mapMetadata[mapId]);
+    const npcs = getEditableNpcs(content.mapMetadata[mapId]);
     transitions.forEach(function (transition) {
       const isSelected = transition.id === devToolsState.selectedTransitionId;
       const x = offsetX + transition.x * scale;
@@ -4109,6 +4367,37 @@
       if (isSelected && (devToolsState.editorMode || "transitions") === "interactions") {
         drawResizeHandles(interaction);
       }
+      ctx.restore();
+    });
+
+    npcs.forEach(function (npc) {
+      const isSelected = npc.id === devToolsState.selectedNpcId;
+      const x = offsetX + Number(npc.x || 0) * scale;
+      const y = offsetY + Number(npc.y || 0) * scale;
+      const radius = Math.max(24, Number(npc.interactionRadius || INTERACTION_PROMPT_RADIUS)) * scale;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.fillStyle = isSelected ? "rgba(125, 92, 215, 0.12)" : "rgba(125, 92, 215, 0.08)";
+      ctx.strokeStyle = isSelected ? "rgba(125, 92, 215, 0.48)" : "rgba(125, 92, 215, 0.22)";
+      ctx.lineWidth = 1.5;
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.fillStyle = isSelected ? "rgba(91, 64, 191, 0.95)" : "rgba(91, 64, 191, 0.86)";
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = isSelected ? 4 : 2;
+      ctx.arc(x, y, isSelected ? 12 : 9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "rgba(30, 35, 42, 0.9)";
+      const label = (npc.label || npc.id) + " · " + (npc.type || "dialogue");
+      const metrics = ctx.measureText(label);
+      ctx.fillRect(x + 12, y - 10, metrics.width + 14, 22);
+      ctx.fillStyle = "#fff";
+      ctx.font = "12px sans-serif";
+      ctx.fillText(label, x + 19, y + 5);
       ctx.restore();
     });
 
@@ -4269,6 +4558,7 @@
     pushSelector("data-dev-town-field");
     pushSelector("data-dev-spawn-option-field");
     pushSelector("data-dev-interaction-field");
+    pushSelector("data-dev-npc-field");
     pushSelector("data-dev-character-field");
     pushSelector("data-dev-arena-field");
     pushSelector("data-dev-arena-team-field");
@@ -4416,6 +4706,7 @@
         speed: 5,
       },
       growth: "medium",
+      overworldDisplayMode: "walk",
       skills: starterSkill ? [starterSkill] : [],
       variants: [
         {
@@ -4428,6 +4719,7 @@
             frame: 0,
           },
           overworld: {
+            displayMode: "",
             sheetId: "",
             row: 0,
             idleFrame: 0,
@@ -4747,6 +5039,9 @@
       if (!entry.name?.trim()) {
         pushSpeciesError(speciesKey, "Species '" + (entry.id || ("#" + (index + 1))) + "' needs a name.");
       }
+      if (!["walk", "portrait", ""].includes(String(entry.overworldDisplayMode || "").trim().toLowerCase())) {
+        pushSpeciesError(speciesKey, "Species '" + (entry.id || ("#" + (index + 1))) + "' has an invalid default overworld mode.");
+      }
 
       ["hp", "attack", "defense", "speed"].forEach(function (statKey) {
         const value = Number(entry.baseStats?.[statKey]);
@@ -4764,6 +5059,9 @@
           }
           const portraitConfig = getVariantPortraitConfig(variant);
           const overworldConfig = getVariantOverworldConfig(variant);
+          if (!["walk", "portrait", ""].includes(String(overworldConfig.displayMode || "").trim().toLowerCase())) {
+            pushSpeciesError(speciesKey, "Species '" + (entry.id || ("#" + (index + 1))) + "' variant '" + (variant.id || ("#" + (variantIndex + 1))) + "' has an invalid overworld mode override.");
+          }
           if (!portraitConfig.imagePath && !portraitConfig.sheetId) {
             pushSpeciesError(speciesKey, "Species '" + (entry.id || ("#" + (index + 1))) + "' variant '" + (variant.id || ("#" + (variantIndex + 1))) + "' needs a portrait image or portrait sheet.");
           } else if (portraitConfig.sheetId) {
@@ -4836,7 +5134,7 @@
       '<section class="dev-main">',
       '<section class="panel-block dev-preview-controls"><div class="section-heading"><h2>Preview Zoom</h2><span>' + previewZoom + '%</span></div><div class="title-actions"><button class="' + (previewZoom === 100 ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-zoom" data-zoom="100">100%</button><button class="' + (previewZoom === 80 ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-zoom" data-zoom="80">80%</button><button class="' + (previewZoom === 60 ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-zoom" data-zoom="60">60%</button><button class="' + (previewZoom === 30 ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-zoom" data-zoom="30">30%</button><button class="' + (previewZoom === 10 ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-zoom" data-zoom="10">10%</button></div></section>',
       '<section class="dev-preview-grid">',
-      '<section class="map-panel dev-map-panel"><div class="dev-canvas-scroll" data-preview-role="source"><canvas class="dev-map-canvas" width="' + sourcePreviewSize.width + '" height="' + sourcePreviewSize.height + '"></canvas></div><div class="map-caption">Source map preview. Click to place the selected ' + (devToolsState.editorMode === "spawns" ? "wild spawn point." : devToolsState.editorMode === "interactions" ? "interaction zone." : "transition rectangle.") + "</div></section>",
+      '<section class="map-panel dev-map-panel"><div class="dev-canvas-scroll" data-preview-role="source"><canvas class="dev-map-canvas" width="' + sourcePreviewSize.width + '" height="' + sourcePreviewSize.height + '"></canvas></div><div class="map-caption">Source map preview. Click to place the selected ' + (devToolsState.editorMode === "spawns" ? "wild spawn point." : devToolsState.editorMode === "interactions" ? "interaction zone." : devToolsState.editorMode === "npcs" ? "NPC." : "transition rectangle.") + "</div></section>",
       (
         devToolsState.editorMode === "transitions"
           ? '<section class="map-panel dev-map-panel"><div class="section-heading"><h2>Target Map</h2><span>' + escapeHtml(targetMapName) + '</span></div><div class="dev-canvas-scroll" data-preview-role="target"><canvas class="dev-target-canvas" width="' + (targetPreviewSize?.width || 960) + '" height="' + (targetPreviewSize?.height || 640) + '"></canvas></div><div class="map-caption">Click to place the player arrival point on the target map.</div></section>'
@@ -4893,6 +5191,7 @@
       const variantRows = (selectedSpecies.variants || []).map(function (variant, index) {
         const portraitConfig = getVariantPortraitConfig(variant);
         const overworldConfig = getVariantOverworldConfig(variant);
+        const displayMode = getMonsterOverworldDisplayMode(selectedSpecies, variant);
         const portraitImageOptions = ['<option value="">Select Portrait Image</option>'].concat(
           getMonsterImageOptions(content).map(function (imagePath) {
             const selected = portraitConfig.imagePath === imagePath ? " selected" : "";
@@ -4920,6 +5219,7 @@
           '<label class="input-group"><span>Portrait Sheet</span><select data-dev-variant-field="portrait.sheetId" data-variant-index="' + index + '">' + monsterSheetOptions + '</select></label>',
           '<label class="input-group"><span>Portrait Row (0-based)</span><input type="number" min="0" step="1" data-dev-variant-field="portrait.row" data-variant-index="' + index + '" value="' + Number(portraitConfig.row || 0) + '" /></label>',
           '<label class="input-group"><span>Portrait Frame (0-based)</span><input type="number" min="0" step="1" data-dev-variant-field="portrait.frame" data-variant-index="' + index + '" value="' + Number(portraitConfig.frame || 0) + '" /></label>',
+          '<label class="input-group"><span>Overworld Mode Override</span><select data-dev-variant-field="overworld.displayMode" data-variant-index="' + index + '"><option value=""' + (!overworldConfig.displayMode ? " selected" : "") + '>Use Species Default</option><option value="walk"' + (overworldConfig.displayMode === "walk" ? " selected" : "") + '>Walk Animation</option><option value="portrait"' + (overworldConfig.displayMode === "portrait" ? " selected" : "") + '>Default Sprite</option></select></label>',
           '<label class="input-group"><span>Overworld Sheet</span><select data-dev-variant-field="overworld.sheetId" data-variant-index="' + index + '">' + monsterOverworldSheetOptions + '</select></label>',
           '<label class="input-group"><span>Down Row (0-based)</span><input type="number" min="0" step="1" data-dev-variant-field="overworld.rows.down" data-variant-index="' + index + '" value="' + Number(overworldConfig.rows?.down || 0) + '" /></label>',
           '<label class="input-group"><span>Left Row (0-based)</span><input type="number" min="0" step="1" data-dev-variant-field="overworld.rows.left" data-variant-index="' + index + '" value="' + Number(overworldConfig.rows?.left || 0) + '" /></label>',
@@ -4929,7 +5229,7 @@
           '<label class="input-group"><span>Walk Frames</span><input data-dev-variant-field="overworld.walkFrames" data-variant-index="' + index + '" value="' + escapeHtml((overworldConfig.walkFrames || []).join(", ")) + '" /></label>',
           '<label class="input-group"><span>Frame Duration Ms</span><input type="number" min="60" step="10" data-dev-variant-field="overworld.frameDurationMs" data-variant-index="' + index + '" value="' + Number(overworldConfig.frameDurationMs || 180) + '" /></label>',
           '</div>',
-          '<p class="dev-helper-text">Portrait controls the static UI image used in saves, registry, party, bank, and battle. If Portrait Image is set, it is used first. Overworld controls idle and walking animation on the map. Leave Overworld Sheet blank to reuse the portrait as a static world sprite.</p>',
+          '<p class="dev-helper-text">Portrait controls the static UI image used in saves, registry, party, bank, and battle. This variant currently resolves to <strong>' + escapeHtml(displayMode) + '</strong> on the overworld. Leave the override blank to inherit the species default.</p>',
           '</div>',
         ].join("");
       }).join("");
@@ -4954,9 +5254,10 @@
       const previewPortraitSheet = getVariantPortraitSheet(content, previewVariant);
       const previewOverworldConfig = getVariantOverworldConfig(previewVariant);
       const previewOverworldSheet = getVariantOverworldSheet(content, previewVariant);
+      const previewDisplayMode = getMonsterOverworldDisplayMode(selectedSpecies, previewVariant);
       const previewPortraitSummary = previewPortraitConfig.imagePath
         || ((previewPortraitSheet?.label || "Unassigned") + " · row " + Number(previewPortraitConfig.row || 0) + " · frame " + Number(previewPortraitConfig.frame || 0));
-      const previewOverworldSummary = (previewOverworldSheet?.label
+      const previewOverworldSummary = "Mode " + previewDisplayMode + " · " + (previewOverworldSheet?.label
         || (previewPortraitConfig.imagePath ? "Static portrait image" : (previewPortraitSheet?.label || "Unassigned")))
         + " · rows d/l/r/u " + [
           Number((previewOverworldSheet ? previewOverworldConfig.rows?.down : previewPortraitConfig.row) || 0),
@@ -4975,6 +5276,7 @@
         '<label class="input-group"><span>ID</span><input data-dev-species-field="id" value="' + escapeHtml(selectedSpecies.id || "") + '" /></label>',
         '<label class="input-group"><span>Name</span><input data-dev-species-field="name" value="' + escapeHtml(selectedSpecies.name || "") + '" /></label>',
         '<label class="input-group"><span>Growth</span><input data-dev-species-field="growth" value="' + escapeHtml(selectedSpecies.growth || "") + '" /></label>',
+        '<label class="input-group"><span>Default Overworld Mode</span><select data-dev-species-field="overworldDisplayMode"><option value="walk"' + ((selectedSpecies.overworldDisplayMode || "walk") === "walk" ? " selected" : "") + '>Walk Animation</option><option value="portrait"' + (selectedSpecies.overworldDisplayMode === "portrait" ? " selected" : "") + '>Default Sprite</option></select></label>',
         '<label class="input-group"><span>HP</span><input type="number" step="1" data-dev-species-field="baseStats.hp" value="' + Number(selectedSpecies.baseStats?.hp || 0) + '" /></label>',
         '<label class="input-group"><span>Attack</span><input type="number" step="1" data-dev-species-field="baseStats.attack" value="' + Number(selectedSpecies.baseStats?.attack || 0) + '" /></label>',
         '<label class="input-group"><span>Defense</span><input type="number" step="1" data-dev-species-field="baseStats.defense" value="' + Number(selectedSpecies.baseStats?.defense || 0) + '" /></label>',
@@ -5543,6 +5845,7 @@
     const portraitConfig = getVariantPortraitConfig(variant);
     const overworldSheet = getVariantOverworldSheet(content, variant);
     const overworldConfig = getVariantOverworldConfig(variant);
+    const displayMode = getMonsterOverworldDisplayMode(species, variant);
 
     const drawFallback = function () {
       ctx.fillStyle = "#1f4d73";
@@ -5552,17 +5855,18 @@
       ctx.fillText(fallbackLetter, cssWidth / 2, cssHeight / 2);
     };
 
+    const useOverworldSheet = mode === "overworld" && displayMode !== "portrait" && overworldSheet;
     const activeSheet = mode === "overworld"
-      ? (overworldSheet || portraitSheet)
+      ? (useOverworldSheet || portraitSheet)
       : portraitSheet;
     const activeRow = mode === "overworld"
-      ? (overworldSheet ? overworldConfig.row : portraitConfig.row)
+      ? (useOverworldSheet ? overworldConfig.row : portraitConfig.row)
       : portraitConfig.row;
     const activeFrame = mode === "overworld"
-      ? (overworldSheet ? overworldConfig.idleFrame : portraitConfig.frame)
+      ? (useOverworldSheet ? overworldConfig.idleFrame : portraitConfig.frame)
       : portraitConfig.frame;
 
-    if ((mode !== "overworld" || !overworldSheet) && portraitConfig.imagePath) {
+    if ((mode !== "overworld" || !useOverworldSheet) && portraitConfig.imagePath) {
       const image = getImage(portraitConfig.imagePath);
       if (!image.complete || !image.naturalWidth) {
         drawFallback();
@@ -5884,9 +6188,12 @@
     const saveSlots = saveManager.listSaves();
     const activeMonster = state.party[0];
     const activeSpecies = getSpecies(content, activeMonster.speciesId);
-    const activeInteraction = getActiveInteraction(state, content);
+    const promptTarget = getInteractionPromptTarget(state, content);
     const currentTime = new Intl.DateTimeFormat([], { hour: "numeric", minute: "2-digit" }).format(new Date());
     const encounterPreviewIcons = renderEncounterPreviewIcons(state, content);
+    const promptMarkup = promptTarget
+      ? '<div class="world-interaction-prompt" data-world-interaction-prompt><strong>Press E</strong><span>' + escapeHtml(promptTarget.prompt) + "</span></div>"
+      : "";
 
     root.innerHTML = [
       '<main class="game-shell">',
@@ -5895,7 +6202,7 @@
       '<div class="topbar-stats"><span class="world-clock">' + currentTime + "</span><span>$" + state.player.money + '</span><button class="secondary-button" type="button" data-action="open-settings">Settings</button><button class="secondary-button" type="button" data-action="save">Save</button><button class="secondary-button" type="button" data-action="title">Title</button></div>',
       "</header>",
       '<section class="play-area">',
-      '<div class="map-panel"><canvas class="world-canvas" width="' + VIEWPORT.width + '" height="' + VIEWPORT.height + '"></canvas><div class="map-caption">Move with arrow keys or WASD. Touch a pink marker to battle.' + (activeInteraction ? " " + escapeHtml(buildInteractionPrompt(activeInteraction)) + "." : "") + '</div></div>',
+      '<div class="map-panel"><div class="world-stage"><canvas class="world-canvas" width="' + VIEWPORT.width + '" height="' + VIEWPORT.height + '"></canvas>' + promptMarkup + '</div><div class="map-caption">Move with arrow keys or WASD. Walk near wild monsters, NPCs, or map hotspots, then press E to interact.</div></div>',
       '<aside class="status-panel">',
       '<section class="panel-block"><h2>Now Playing</h2><p>' + state.message + "</p></section>",
       '<section class="panel-block"><h2>Party Lead</h2><p>' + activeSpecies.name + " Lv " + activeMonster.level + "</p><p>HP " + activeMonster.currentHp + "/" + activeMonster.stats.hp + "</p></section>",
@@ -5925,6 +6232,25 @@
     const currentTime = new Intl.DateTimeFormat([], { hour: "numeric", minute: "2-digit" }).format(new Date());
     if (clock.textContent !== currentTime) {
       clock.textContent = currentTime;
+    }
+
+    const promptNode = root.querySelector("[data-world-interaction-prompt]");
+    const promptTarget = ACTIVE_APP ? getInteractionPromptTarget(ACTIVE_APP.state, ACTIVE_APP.content) : null;
+    if (!promptTarget && promptNode) {
+      promptNode.remove();
+      return;
+    }
+
+    if (promptTarget && !promptNode) {
+      const stage = root.querySelector(".world-stage");
+      if (stage) {
+        stage.insertAdjacentHTML("beforeend", '<div class="world-interaction-prompt" data-world-interaction-prompt><strong>Press E</strong><span>' + escapeHtml(promptTarget.prompt) + "</span></div>");
+      }
+      return;
+    }
+
+    if (promptTarget && promptNode) {
+      promptNode.innerHTML = "<strong>Press E</strong><span>" + escapeHtml(promptTarget.prompt) + "</span>";
     }
   }
 
@@ -6132,6 +6458,9 @@
     root.querySelector('[data-action="mode-interactions"]')?.addEventListener("click", function () {
       app.setDevEditorMode("interactions");
     });
+    root.querySelector('[data-action="mode-npcs"]')?.addEventListener("click", function () {
+      app.setDevEditorMode("npcs");
+    });
     root.querySelectorAll('[data-action="dev-zoom"]').forEach(function (button) {
       button.addEventListener("click", function () {
         app.setDevPreviewZoom(Number(button.getAttribute("data-zoom")));
@@ -6148,11 +6477,20 @@
     root.querySelector('[data-action="add-interaction"]')?.addEventListener("click", function () {
       app.addInteraction();
     });
+    root.querySelector('[data-action="add-npc"]')?.addEventListener("click", function () {
+      app.addNpc();
+    });
     root.querySelector('[data-action="duplicate-interaction"]')?.addEventListener("click", function () {
       app.duplicateInteraction();
     });
     root.querySelector('[data-action="delete-interaction"]')?.addEventListener("click", function () {
       app.deleteInteraction();
+    });
+    root.querySelector('[data-action="duplicate-npc"]')?.addEventListener("click", function () {
+      app.duplicateNpc();
+    });
+    root.querySelector('[data-action="delete-npc"]')?.addEventListener("click", function () {
+      app.deleteNpc();
     });
 
     root.querySelector('[data-action="export-map-metadata"]')?.addEventListener("click", function () {
@@ -6192,6 +6530,11 @@
     root.querySelectorAll("[data-dev-select-interaction]").forEach(function (button) {
       button.addEventListener("click", function () {
         app.selectInteraction(button.getAttribute("data-dev-select-interaction"));
+      });
+    });
+    root.querySelectorAll("[data-dev-select-npc]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.selectNpc(button.getAttribute("data-dev-select-npc"));
       });
     });
     root.querySelectorAll("[data-dev-select-species]").forEach(function (button) {
@@ -6400,6 +6743,22 @@
         });
       }
     });
+    root.querySelectorAll("[data-dev-npc-field]").forEach(function (field) {
+      const useDeferredRender = isDeferredDevTextField(field);
+      const eventName = field.tagName === "SELECT"
+        ? "change"
+        : useDeferredRender
+          ? "input"
+          : "input";
+      field.addEventListener(eventName, function () {
+        app.updateNpcField(field.getAttribute("data-dev-npc-field"), field.value, !useDeferredRender);
+      });
+      if (useDeferredRender) {
+        field.addEventListener("change", function () {
+          app.updateNpcField(field.getAttribute("data-dev-npc-field"), field.value);
+        });
+      }
+    });
     root.querySelectorAll("[data-dev-character-field]").forEach(function (field) {
       const useDeferredRender = isDeferredDevTextField(field);
       const eventName = field.tagName === "SELECT" ? "change" : "input";
@@ -6520,6 +6879,12 @@
             app.setDevEditorMode("interactions");
             return;
           }
+          if (action === "mode-npcs") {
+            event.preventDefault();
+            event.stopPropagation();
+            app.setDevEditorMode("npcs");
+            return;
+          }
           if (action === "add-transition") {
             event.preventDefault();
             event.stopPropagation();
@@ -6579,6 +6944,12 @@
         const interactionEl = target.closest("[data-dev-select-interaction]");
         if (interactionEl instanceof HTMLElement) {
           app.selectInteraction(interactionEl.getAttribute("data-dev-select-interaction"));
+          return;
+        }
+
+        const npcEl = target.closest("[data-dev-select-npc]");
+        if (npcEl instanceof HTMLElement) {
+          app.selectNpc(npcEl.getAttribute("data-dev-select-npc"));
           return;
         }
 
@@ -6648,6 +7019,7 @@
         selectedTransitionId: "",
         selectedSpawnId: "",
         selectedInteractionId: "",
+        selectedNpcId: "",
         editorMode: "transitions",
         monsterSubMode: "species",
         selectedSpeciesId: content.monsters?.species?.[0]?.id || "",
@@ -6725,6 +7097,8 @@
         this.devTools.selectedSpawnId = visibleSpawns[0]?.id || "";
         const interactions = getEditableInteractions(this.content.mapMetadata[this.devTools.selectedMapId]);
         this.devTools.selectedInteractionId = interactions[0]?.id || "";
+        const npcs = getEditableNpcs(this.content.mapMetadata[this.devTools.selectedMapId]);
+        this.devTools.selectedNpcId = npcs[0]?.id || "";
         syncMonsterDevSelection(this.content, this.devTools);
         syncArenaDevSelection(this.content, this.devTools);
         ensureCharacterDevSelection(this.devTools, this.content);
@@ -6847,14 +7221,20 @@
           return;
         }
 
-        const interaction = getActiveInteraction(this.state, this.content);
-        if (!interaction) {
+        const target = getInteractionPromptTarget(this.state, this.content);
+        if (!target) {
           this.state.message = "There is nothing to interact with here.";
           this.render();
           return;
         }
 
-        openInteraction(this.state, this.content, interaction);
+        if (target.kind === "wild-monster") {
+          startBattle(this.state, this.content, target.wildMonster.id);
+        } else if (target.kind === "npc") {
+          openNpcInteraction(this.state, this.content, target.npc);
+        } else {
+          openInteraction(this.state, this.content, target.interaction);
+        }
         this.render();
       },
       confirmHealingCenter: function () {
@@ -6862,7 +7242,7 @@
           return;
         }
 
-        const interaction = getActiveInteraction(this.state, this.content) || this.content.mapMetadata[this.state.world.currentMapId]?.interactions?.find((entry) => entry.id === this.state.interaction.id);
+        const interaction = getMapInteractionById(this.content, this.state.world.currentMapId, this.state.interaction.id);
         if (!interaction) {
           this.state.interaction = null;
           this.render();
@@ -6980,8 +7360,7 @@
           return;
         }
 
-        const interaction = getActiveInteraction(this.state, this.content)
-          || this.content.mapMetadata[this.state.world.currentMapId]?.interactions?.find((entry) => entry.id === this.state.interaction.id);
+        const interaction = getMapInteractionById(this.content, this.state.world.currentMapId, this.state.interaction.id);
         if (!interaction) {
           this.state.interaction = null;
           this.render();
@@ -7020,6 +7399,7 @@
           this.devTools.selectedTransitionId = nextContent.mapMetadata[this.devTools.selectedMapId]?.transitions?.[0]?.id || "";
           this.devTools.selectedSpawnId = getEditableVisibleSpawns(nextContent.mapMetadata[this.devTools.selectedMapId])[0]?.id || "";
           this.devTools.selectedInteractionId = getEditableInteractions(nextContent.mapMetadata[this.devTools.selectedMapId])[0]?.id || "";
+          this.devTools.selectedNpcId = getEditableNpcs(nextContent.mapMetadata[this.devTools.selectedMapId])[0]?.id || "";
           if (keepDevTools || this.state.screen === "dev-tools") {
             this.showDevTools(this.devTools.selectedMapId);
           } else {
@@ -7039,6 +7419,8 @@
         this.devTools.selectedSpawnId = visibleSpawns[0]?.id || "";
         const interactions = getEditableInteractions(this.content.mapMetadata[mapId]);
         this.devTools.selectedInteractionId = interactions[0]?.id || "";
+        const npcs = getEditableNpcs(this.content.mapMetadata[mapId]);
+        this.devTools.selectedNpcId = npcs[0]?.id || "";
         this.render();
       },
       selectTownMap: function (mapId) {
@@ -7201,6 +7583,11 @@
         this.devTools.editorMode = "interactions";
         this.render();
       },
+      selectNpc: function (npcId) {
+        this.devTools.selectedNpcId = npcId;
+        this.devTools.editorMode = "npcs";
+        this.render();
+      },
       selectSpecies: function (speciesId) {
         this.devTools.selectedSpeciesId = speciesId;
         this.devTools.monsterSubMode = "species";
@@ -7292,6 +7679,7 @@
             frame: 0,
           })),
           overworld: JSON.parse(JSON.stringify(species.variants[0]?.overworld || {
+            displayMode: "",
             sheetId: "",
             rows: {
               down: 0,
@@ -7386,6 +7774,14 @@
         this.devTools.editorMode = "interactions";
         this.render();
       },
+      addNpc: function () {
+        const npcs = getEditableNpcs(this.content.mapMetadata[this.devTools.selectedMapId]);
+        const next = createDefaultNpc(this.content, npcs.length + 1);
+        npcs.push(next);
+        this.devTools.selectedNpcId = next.id;
+        this.devTools.editorMode = "npcs";
+        this.render();
+      },
       duplicateTransition: function () {
         const mapMeta = this.content.mapMetadata[this.devTools.selectedMapId];
         const current = mapMeta.transitions.find((entry) => entry.id === this.devTools.selectedTransitionId);
@@ -7432,6 +7828,22 @@
         this.devTools.selectedInteractionId = duplicate.id;
         this.render();
       },
+      duplicateNpc: function () {
+        const npcs = getEditableNpcs(this.content.mapMetadata[this.devTools.selectedMapId]);
+        const current = npcs.find((entry) => entry.id === this.devTools.selectedNpcId);
+        if (!current) {
+          return;
+        }
+
+        const duplicate = JSON.parse(JSON.stringify(current));
+        duplicate.id = current.id + "-copy";
+        duplicate.label = (current.label || current.id) + " Copy";
+        duplicate.x += 64;
+        duplicate.y += 64;
+        npcs.push(duplicate);
+        this.devTools.selectedNpcId = duplicate.id;
+        this.render();
+      },
       deleteTransition: function () {
         const mapMeta = this.content.mapMetadata[this.devTools.selectedMapId];
         mapMeta.transitions = mapMeta.transitions.filter((entry) => entry.id !== this.devTools.selectedTransitionId);
@@ -7450,6 +7862,13 @@
         const nextInteractions = getEditableInteractions(mapMeta).filter((entry) => entry.id !== this.devTools.selectedInteractionId);
         mapMeta.interactions = nextInteractions;
         this.devTools.selectedInteractionId = nextInteractions[0]?.id || "";
+        this.render();
+      },
+      deleteNpc: function () {
+        const mapMeta = this.content.mapMetadata[this.devTools.selectedMapId];
+        const nextNpcs = getEditableNpcs(mapMeta).filter((entry) => entry.id !== this.devTools.selectedNpcId);
+        mapMeta.npcs = nextNpcs;
+        this.devTools.selectedNpcId = nextNpcs[0]?.id || "";
         this.render();
       },
       addSpawnOption: function () {
@@ -7571,6 +7990,37 @@
           interaction[path] = value;
           if (path === "id") {
             this.devTools.selectedInteractionId = rawValue;
+          }
+        }
+
+        if (shouldRender !== false) {
+          this.render();
+        }
+      },
+      updateNpcField: function (path, rawValue, shouldRender) {
+        const npcs = getEditableNpcs(this.content.mapMetadata[this.devTools.selectedMapId]);
+        const npc = npcs.find((entry) => entry.id === this.devTools.selectedNpcId);
+        if (!npc) {
+          return;
+        }
+
+        const stringFields = new Set(["id", "type", "label", "text", "sheetId", "facing", "data.trainerId"]);
+        const value = stringFields.has(path) ? rawValue : Number(rawValue || 0);
+
+        if (path.includes(".")) {
+          const parts = path.split(".");
+          let current = npc;
+          for (let index = 0; index < parts.length - 1; index += 1) {
+            if (!current[parts[index]] || typeof current[parts[index]] !== "object") {
+              current[parts[index]] = {};
+            }
+            current = current[parts[index]];
+          }
+          current[parts[parts.length - 1]] = value;
+        } else {
+          npc[path] = value;
+          if (path === "id") {
+            this.devTools.selectedNpcId = rawValue;
           }
         }
 
@@ -7751,6 +8201,7 @@
           interactions: mapMeta.interactions,
           spawnZones: mapMeta.spawnZones,
           trainers: mapMeta.trainers,
+          npcs: mapMeta.npcs,
           mapMonstersPanel: mapMeta.mapMonstersPanel,
         };
 
@@ -8051,6 +8502,15 @@
           interaction.x = Math.max(0, Math.round(point.worldX / tileSize) * tileSize);
           interaction.y = Math.max(0, Math.round(point.worldY / tileSize) * tileSize);
           this.state.message = "Moved interaction " + interaction.id + " to " + interaction.x + ", " + interaction.y + ".";
+        } else if (this.devTools.editorMode === "npcs") {
+          const npcs = getEditableNpcs(this.content.mapMetadata[mapId]);
+          const npc = npcs.find((entry) => entry.id === this.devTools.selectedNpcId);
+          if (!npc) {
+            return;
+          }
+          npc.x = Math.max(0, Math.round(point.worldX / tileSize) * tileSize + tileSize / 2);
+          npc.y = Math.max(0, Math.round(point.worldY / tileSize) * tileSize + tileSize / 2);
+          this.state.message = "Moved NPC " + npc.id + " to " + npc.x + ", " + npc.y + ".";
         } else {
           const mapMeta = this.content.mapMetadata[mapId];
           const transition = mapMeta.transitions.find((entry) => entry.id === this.devTools.selectedTransitionId);

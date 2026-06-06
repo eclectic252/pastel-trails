@@ -10,6 +10,7 @@
         "speed": 5
       },
       "growth": "medium",
+      "overworldDisplayMode": "walk",
       "skills": [
         "basic-attack"
       ],
@@ -49,6 +50,7 @@
             "sheetId": "pawlit-classic-walksheet"
           },
           "overworld": {
+            "displayMode": "portrait",
             "sheetId": "assets-monsters-pawlit-pawlit-tide-walksheet",
             "rows": {
               "down": 0,
