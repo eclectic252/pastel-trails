@@ -1113,6 +1113,145 @@
       ]
     },
     {
+      "id": "assets-characters-boardwalk-girl-sprite-bouganvillea2-walksheet-v1-transparent",
+      "label": "Bouganvillea2 Walksheet V1 Transparent",
+      "playerLabel": "Bouganvillea2 Walksheet V1 Transparent",
+      "playerSelectable": true,
+      "kind": "character",
+      "group": "Characters / Boardwalk girl sprite",
+      "path": "assets/Characters/Boardwalk girl sprite/bouganvillea2-walksheet-v1-transparent.png",
+      "columns": 4,
+      "rows": 4,
+      "frameHeight": 313,
+      "offsetX": 0,
+      "offsetY": 0,
+      "renderWidth": null,
+      "rowOffsets": [
+        {
+          "x": 0,
+          "y": 20
+        },
+        {
+          "x": 0,
+          "y": 18
+        },
+        {
+          "x": 0,
+          "y": 38
+        },
+        {
+          "x": 0,
+          "y": 58
+        }
+      ],
+      "frameOffsets": [
+        [
+          {
+            "x": 49,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -36,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -98,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -186,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 35,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -58,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -115,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -207,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 36,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -49,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -112,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -170,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 53,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -32,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -96,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -181,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ]
+      ]
+    },
+    {
       "id": "dawn-view-blue-walksheet-v5-fullsize-transparent",
       "label": "Dawn View Blue Walksheet V5 Fullsize Transparent",
       "playerLabel": "Blue Flower Overalls",
@@ -1661,6 +1800,145 @@
           },
           {
             "x": -47,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ]
+      ]
+    },
+    {
+      "id": "assets-characters-boardwalk-girl-sprite-navy-pants-white-top-walksheet-v1",
+      "label": "Navy Pants White Top Walksheet V1",
+      "playerLabel": "Navy Pants White Top Walksheet V1",
+      "playerSelectable": true,
+      "kind": "character",
+      "group": "Characters / Boardwalk girl sprite",
+      "path": "assets/Characters/Boardwalk girl sprite/navy_pants_white_top_walksheet_v1.png",
+      "columns": 4,
+      "rows": 4,
+      "frameHeight": 313,
+      "offsetX": 0,
+      "offsetY": 0,
+      "renderWidth": null,
+      "rowOffsets": [
+        {
+          "x": 0,
+          "y": -1
+        },
+        {
+          "x": 0,
+          "y": -8
+        },
+        {
+          "x": 0,
+          "y": -16
+        },
+        {
+          "x": 0,
+          "y": -14
+        }
+      ],
+      "frameOffsets": [
+        [
+          {
+            "x": 35,
+            "y": -5,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -12,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -73,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -132,
+            "y": 1,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 23,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -37,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -94,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -158,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 42,
+            "y": -3,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -25,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -79,
+            "y": -1,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -150,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 38,
+            "y": -3,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -30,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -82,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -159,
             "y": 0,
             "width": 0,
             "height": 0
