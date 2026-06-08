@@ -27,6 +27,12 @@
   const MONSTER_WALK_STEP_MIN = 1;
   const MONSTER_WALK_STEP_MAX = 3;
   const MONSTER_WALK_PAUSE_MS = 900;
+  const OVERWORLD_LABEL_STYLE = {
+    background: "rgba(252, 246, 232, 0.96)",
+    border: "rgba(126, 90, 63, 0.95)",
+    text: "#24313c",
+    shadow: "rgba(70, 49, 31, 0.18)",
+  };
   const CHARACTER_SHEET_OPTIONS = [
     {
       id: "boardwalk-girl-check",
@@ -3069,32 +3075,12 @@
     const label = "Lv " + Number(monster.level || 1) + " " + (species?.name || monster.speciesId) + " (" + formatMonsterVariantLabel(variant?.id || monster.variantId || "default") + ")";
 
     const drawWildMonsterLabel = function () {
-      ctx.save();
-      const fontSize = Math.max(13, Math.round(15 * zoomScale));
-      ctx.font = "600 " + fontSize + "px Arial, sans-serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      const paddingX = 10;
-      const paddingY = 6;
-      const textWidth = ctx.measureText(label).width;
-      const pillWidth = textWidth + paddingX * 2;
-      const pillHeight = fontSize + paddingY * 2;
-      const pillX = Math.round(screenX - pillWidth / 2);
-      const pillY = Math.round(drawY - pillHeight - 8);
-      ctx.fillStyle = "rgba(23, 31, 40, 0.88)";
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.22)";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      if (typeof ctx.roundRect === "function") {
-        ctx.roundRect(pillX, pillY, pillWidth, pillHeight, 10);
-      } else {
-        ctx.rect(pillX, pillY, pillWidth, pillHeight);
-      }
-      ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle = "#ffffff";
-      ctx.fillText(label, screenX, pillY + pillHeight / 2 + 0.5);
-      ctx.restore();
+      drawOverworldLabel(ctx, {
+        label,
+        screenX,
+        topY: drawY - 8,
+        zoomScale,
+      });
     };
 
     if (displayMode !== "portrait" && overworldSheet?.path) {
@@ -3174,6 +3160,56 @@
     drawWildMonsterLabel();
   }
 
+  function drawOverworldLabel(ctx, options) {
+    const label = String(options?.label || "").trim();
+    if (!label) {
+      return;
+    }
+
+    const screenX = Number(options?.screenX || 0);
+    const topY = Number(options?.topY || 0);
+    const zoomScale = Math.max(0.1, Number(options?.zoomScale || 1));
+    const radius = Math.max(8, Math.round(10 * zoomScale));
+    const fontSize = Math.max(13, Math.round(15 * zoomScale));
+    const paddingX = Math.max(10, Math.round(11 * zoomScale));
+    const paddingY = Math.max(5, Math.round(6 * zoomScale));
+
+    ctx.save();
+    ctx.font = "600 " + fontSize + "px Avenir Next, Trebuchet MS, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "alphabetic";
+
+    const textWidth = ctx.measureText(label).width;
+    const metrics = ctx.measureText(label);
+    const textAscent = Number(metrics.actualBoundingBoxAscent || fontSize * 0.72);
+    const textDescent = Number(metrics.actualBoundingBoxDescent || fontSize * 0.28);
+    const pillWidth = textWidth + paddingX * 2;
+    const textHeight = textAscent + textDescent;
+    const pillHeight = Math.max(fontSize + paddingY * 2, textHeight + paddingY * 2);
+    const pillX = Math.round(screenX - pillWidth / 2);
+    const pillY = Math.round(topY - pillHeight);
+    const textY = Math.round(pillY + ((pillHeight - textHeight) / 2) + textAscent);
+
+    ctx.fillStyle = OVERWORLD_LABEL_STYLE.background;
+    ctx.strokeStyle = OVERWORLD_LABEL_STYLE.border;
+    ctx.lineWidth = Math.max(1, Math.round(1.25 * zoomScale));
+    ctx.shadowColor = OVERWORLD_LABEL_STYLE.shadow;
+    ctx.shadowBlur = Math.max(6, Math.round(10 * zoomScale));
+    ctx.shadowOffsetY = Math.max(1, Math.round(2 * zoomScale));
+    ctx.beginPath();
+    if (typeof ctx.roundRect === "function") {
+      ctx.roundRect(pillX, pillY, pillWidth, pillHeight, radius);
+    } else {
+      ctx.rect(pillX, pillY, pillWidth, pillHeight);
+    }
+    ctx.fill();
+    ctx.shadowColor = "transparent";
+    ctx.stroke();
+    ctx.fillStyle = OVERWORLD_LABEL_STYLE.text;
+    ctx.fillText(label, screenX, textY);
+    ctx.restore();
+  }
+
   function drawNpcSprite(ctx, npc, content, camera) {
     const sheet = getCharacterSheetConfig(content, npc?.sheetId || "");
     if (!sheet?.path) {
@@ -3215,6 +3251,13 @@
     }
     ctx.drawImage(image, sourceRect.sx, sourceRect.sy, sourceRect.sw, sourceRect.sh, drawX, drawY, spriteSize, spriteSize);
     ctx.restore();
+
+    drawOverworldLabel(ctx, {
+      label: npc?.label || npc?.id || "NPC",
+      screenX,
+      topY: drawY - 8,
+      zoomScale,
+    });
   }
 
   function drawPlayerSprite(ctx, state, content, camera) {
@@ -3325,6 +3368,24 @@
 
     const remaining = Math.max(0, Math.ceil((timestamp - Date.now()) / 1000));
     return remaining + "s";
+  }
+
+  function prefersTouchUi() {
+    return typeof window !== "undefined"
+      && typeof window.matchMedia === "function"
+      && window.matchMedia("(pointer: coarse)").matches;
+  }
+
+  function getWorldPromptVerb() {
+    return prefersTouchUi() ? "Tap Interact" : "Press E";
+  }
+
+  function rewritePromptForDisplay(prompt) {
+    if (!prompt) {
+      return "";
+    }
+
+    return String(prompt).replace(/^Press E/i, getWorldPromptVerb());
   }
 
   function getInventoryQuantity(state, itemId) {
@@ -6191,18 +6252,20 @@
     const promptTarget = getInteractionPromptTarget(state, content);
     const currentTime = new Intl.DateTimeFormat([], { hour: "numeric", minute: "2-digit" }).format(new Date());
     const encounterPreviewIcons = renderEncounterPreviewIcons(state, content);
+    const promptVerb = getWorldPromptVerb();
+    const promptText = promptTarget ? rewritePromptForDisplay(promptTarget.prompt) : "";
     const promptMarkup = promptTarget
-      ? '<div class="world-interaction-prompt" data-world-interaction-prompt><strong>Press E</strong><span>' + escapeHtml(promptTarget.prompt) + "</span></div>"
+      ? '<button class="world-interaction-prompt" type="button" data-world-interaction-prompt><strong>' + escapeHtml(promptVerb) + "</strong><span>" + escapeHtml(promptText) + "</span></button>"
       : "";
 
     root.innerHTML = [
       '<main class="game-shell">',
       '<header class="game-topbar">',
-      '<div class="world-location-header"><span class="eyebrow">Location</span><div class="world-location-line"><strong>' + mapName + "</strong>" + encounterPreviewIcons + "</div></div>",
-      '<div class="topbar-stats"><span class="world-clock">' + currentTime + "</span><span>$" + state.player.money + '</span><button class="secondary-button" type="button" data-action="open-settings">Settings</button><button class="secondary-button" type="button" data-action="save">Save</button><button class="secondary-button" type="button" data-action="title">Title</button></div>',
+      '<div class="world-location-header"><div class="world-location-line"><span class="world-location-tag">Location</span><strong>' + mapName + '</strong>' + encounterPreviewIcons + '</div><div class="world-meta-row"><span class="world-clock">' + currentTime + '</span><span class="world-currency">$' + state.player.money + '</span></div></div>',
+      '<div class="topbar-stats"><button class="secondary-button" type="button" data-action="title">Title</button><div class="world-topbar-actions"><button class="secondary-button" type="button" data-action="save">Save</button><button class="secondary-button" type="button" data-action="open-settings">Settings</button></div></div>',
       "</header>",
       '<section class="play-area">',
-      '<div class="map-panel"><div class="world-stage"><canvas class="world-canvas" width="' + VIEWPORT.width + '" height="' + VIEWPORT.height + '"></canvas>' + promptMarkup + '</div><div class="map-caption">Move with arrow keys or WASD. Walk near wild monsters, NPCs, or map hotspots, then press E to interact.</div></div>',
+      '<div class="map-panel"><div class="world-stage"><canvas class="world-canvas" width="' + VIEWPORT.width + '" height="' + VIEWPORT.height + '"></canvas>' + promptMarkup + '</div><div class="map-caption">Move with arrow keys or WASD. Walk near wild monsters, NPCs, or map hotspots, then ' + escapeHtml(promptVerb) + ' to interact.</div><section class="mobile-controls" aria-label="Mobile gameplay controls"><section class="touch-controls touch-controls-mobile"><button data-touch="ArrowUp" aria-label="Move up">Up</button><div><button data-touch="ArrowLeft" aria-label="Move left">Left</button><button data-touch="ArrowDown" aria-label="Move down">Down</button><button data-touch="ArrowRight" aria-label="Move right">Right</button></div></section></section></div>',
       '<aside class="status-panel">',
       '<section class="panel-block"><h2>Now Playing</h2><p>' + state.message + "</p></section>",
       '<section class="panel-block"><h2>Party Lead</h2><p>' + activeSpecies.name + " Lv " + activeMonster.level + "</p><p>HP " + activeMonster.currentHp + "/" + activeMonster.stats.hp + "</p></section>",
@@ -6210,7 +6273,7 @@
         return "<li><span>" + item.itemId + "</span><strong>x" + item.quantity + "</strong></li>";
       }).join("") + "</ul></section>",
       '<section class="panel-block"><h2>Save Slots</h2><p>' + saveSlots.length + " stored locally in this browser.</p></section>",
-      '<section class="touch-controls"><button data-touch="ArrowUp">Up</button><div><button data-touch="ArrowLeft">Left</button><button data-touch="ArrowDown">Down</button><button data-touch="ArrowRight">Right</button></div></section>',
+      '<section class="touch-controls touch-controls-sidebar"><button data-touch="ArrowUp" aria-label="Move up">Up</button><div><button data-touch="ArrowLeft" aria-label="Move left">Left</button><button data-touch="ArrowDown" aria-label="Move down">Down</button><button data-touch="ArrowRight" aria-label="Move right">Right</button></div></section>',
       "</aside>",
       "</section>",
       '<nav class="world-menu-bar"><button class="secondary-button" type="button" data-open-panel="map">Map</button><button class="secondary-button" type="button" data-open-panel="character">Character</button><button class="secondary-button" type="button" data-open-panel="inventory">Inventory</button><button class="secondary-button" type="button" data-open-panel="monsters">Monsters</button><button class="secondary-button" type="button" data-open-panel="registry">Registry</button><button class="secondary-button" type="button" data-open-panel="quests">Quests</button></nav>',
@@ -6238,19 +6301,17 @@
     const promptTarget = ACTIVE_APP ? getInteractionPromptTarget(ACTIVE_APP.state, ACTIVE_APP.content) : null;
     if (!promptTarget && promptNode) {
       promptNode.remove();
-      return;
     }
 
     if (promptTarget && !promptNode) {
       const stage = root.querySelector(".world-stage");
       if (stage) {
-        stage.insertAdjacentHTML("beforeend", '<div class="world-interaction-prompt" data-world-interaction-prompt><strong>Press E</strong><span>' + escapeHtml(promptTarget.prompt) + "</span></div>");
+        stage.insertAdjacentHTML("beforeend", '<button class="world-interaction-prompt" type="button" data-world-interaction-prompt><strong>' + escapeHtml(getWorldPromptVerb()) + "</strong><span>" + escapeHtml(rewritePromptForDisplay(promptTarget.prompt)) + "</span></button>");
       }
-      return;
     }
 
     if (promptTarget && promptNode) {
-      promptNode.innerHTML = "<strong>Press E</strong><span>" + escapeHtml(promptTarget.prompt) + "</span>";
+      promptNode.innerHTML = "<strong>" + escapeHtml(getWorldPromptVerb()) + "</strong><span>" + escapeHtml(rewritePromptForDisplay(promptTarget.prompt)) + "</span>";
     }
   }
 
@@ -6258,8 +6319,13 @@
     root.querySelector('[data-action="save"]')?.addEventListener("click", function () {
       app.saveCurrentGame();
     });
-    root.querySelector('[data-action="open-settings"]')?.addEventListener("click", function () {
-      app.openWorldPanel("settings");
+    root.querySelectorAll('[data-action="open-settings"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.openWorldPanel("settings");
+      });
+    });
+    root.querySelector('[data-world-interaction-prompt]')?.addEventListener("click", function () {
+      app.tryInteract();
     });
     root.querySelector('[data-action="close-world-panel"]')?.addEventListener("click", function () {
       app.closeWorldPanel();

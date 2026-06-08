@@ -30,6 +30,7 @@ body {
     radial-gradient(circle at top left, rgba(255, 242, 203, 0.95), transparent 28%),
     radial-gradient(circle at bottom right, rgba(194, 232, 238, 0.95), transparent 24%),
     linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+  overscroll-behavior-y: contain;
 }
 
 button {
@@ -54,7 +55,7 @@ button {
 .game-shell {
   width: min(1280px, calc(100vw - 2rem));
   margin: 0 auto;
-  padding: 0 0 2rem;
+  padding: 0 0 calc(2rem + env(safe-area-inset-bottom, 0px));
 }
 
 .title-card,
@@ -402,16 +403,18 @@ button {
 .game-topbar {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 1rem;
   padding: 1rem 1.25rem;
-  border-radius: var(--radius-lg);
+  border-radius: 0;
 }
 
 .topbar-stats {
   display: flex;
-  align-items: center;
-  gap: 0.8rem;
+  align-items: flex-start;
+  gap: 0.55rem;
+  justify-items: end;
+  flex: 0 0 auto;
 }
 
 .world-location-header {
@@ -424,6 +427,30 @@ button {
   align-items: center;
   gap: 0.8rem;
   flex-wrap: wrap;
+}
+
+.world-location-tag {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.74rem;
+}
+
+.world-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.75rem;
+}
+
+.world-topbar-actions {
+  display: flex;
+  gap: 0.55rem;
+  width: auto;
+}
+
+.topbar-stats > .secondary-button:first-child {
+  min-width: 110px;
 }
 
 .encounter-preview-strip {
@@ -575,11 +602,16 @@ button {
 
 .map-panel {
   padding: 1rem;
-  border-radius: var(--radius-xl);
+  border-radius: 0;
+}
+
+.map-panel .world-stage {
+  margin: -1rem -1rem 0;
 }
 
 .world-stage {
   position: relative;
+  touch-action: none;
 }
 
 .world-canvas {
@@ -587,7 +619,7 @@ button {
   max-width: 100%;
   display: block;
   margin: 0 auto;
-  border-radius: 20px;
+  border-radius: 0;
   background: #8ecbd2;
 }
 
@@ -598,6 +630,7 @@ button {
   transform: translateX(-50%);
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.65rem;
   padding: 0.75rem 1rem;
   border-radius: 999px;
@@ -605,7 +638,9 @@ button {
   color: #fff;
   box-shadow: 0 12px 30px rgba(18, 24, 32, 0.25);
   border: 1px solid rgba(255, 255, 255, 0.16);
-  pointer-events: none;
+  appearance: none;
+  cursor: pointer;
+  touch-action: manipulation;
 }
 
 .world-interaction-prompt strong {
@@ -641,6 +676,10 @@ button {
   color: var(--muted);
 }
 
+.mobile-controls {
+  display: none;
+}
+
 .status-panel {
   display: grid;
   gap: 0.9rem;
@@ -670,9 +709,19 @@ button {
 }
 
 .touch-controls button {
+  min-height: 52px;
   padding: 0.85rem 0.6rem;
   color: var(--text);
   background: var(--accent-soft);
+  touch-action: manipulation;
+}
+
+.touch-controls-mobile {
+  max-width: 360px;
+}
+
+.touch-controls-sidebar {
+  display: grid;
 }
 
 .battle-overlay {
@@ -1620,7 +1669,7 @@ button {
   .title-screen,
   .game-shell {
     width: min(100vw - 1rem, 100%);
-    padding-top: 0.5rem;
+    padding-top: 0;
   }
 
   .title-card {
@@ -1643,12 +1692,56 @@ button {
     align-items: flex-start;
   }
 
+  .world-topbar-actions {
+    width: 100%;
+  }
+
   .status-panel {
     grid-template-columns: 1fr;
   }
 
   .world-menu-bar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .world-location-line {
+    align-items: flex-start;
+  }
+
+  .world-interaction-prompt {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    transform: none;
+    justify-content: center;
+    padding: 0.8rem 0.9rem;
+  }
+
+  .world-interaction-prompt span {
+    white-space: normal;
+    text-align: center;
+  }
+
+  .mobile-controls {
+    display: grid;
+    margin-top: 0.9rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid rgba(57, 79, 91, 0.1);
+  }
+
+  .touch-controls-mobile {
+    justify-self: center;
+    width: min(100%, 320px);
+  }
+
+  .touch-controls-mobile button {
+    min-height: 56px;
+    font-size: 0.95rem;
+    font-weight: 700;
+  }
+
+  .touch-controls-sidebar {
+    display: none;
   }
 
   .battle-actions {
@@ -1662,5 +1755,148 @@ button {
 
   .battle-action-grid-root {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .game-shell {
+    width: 100%;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .game-topbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 128px;
+    align-items: start;
+    gap: 0.45rem;
+    padding: 0.65rem 0.8rem;
+    border-radius: 0;
+  }
+
+  .world-location-header {
+    gap: 0;
+  }
+
+  .world-location-line {
+    align-items: baseline;
+    gap: 0.35rem;
+  }
+
+  .world-location-line strong {
+    font-size: 1rem;
+    line-height: 1.1;
+  }
+
+  .world-location-tag {
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+  }
+
+  .topbar-stats {
+    width: 128px;
+    display: grid;
+    gap: 0.35rem;
+    justify-items: stretch;
+  }
+
+  .world-meta-row {
+    justify-content: flex-start;
+    gap: 0.35rem;
+    font-size: 0.92rem;
+    line-height: 1;
+  }
+
+  .world-currency::before {
+    content: "\00b7";
+    margin-right: 0.35rem;
+    color: var(--muted);
+  }
+
+  .world-topbar-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.35rem;
+  }
+
+  .topbar-stats .secondary-button {
+    width: 100%;
+    min-height: 34px;
+    padding: 0.52rem 0.45rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+  }
+
+  .play-area {
+    gap: 0.75rem;
+  }
+
+  .status-panel {
+    gap: 0.75rem;
+  }
+
+  .panel-block {
+    padding: 0.9rem;
+  }
+
+  .world-menu-bar {
+    position: sticky;
+    bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+    z-index: 6;
+    gap: 0.55rem;
+    margin-top: 0.75rem;
+    padding: 0.65rem;
+    border-radius: 22px;
+    background: rgba(255, 250, 242, 0.94);
+    border: 1px solid rgba(57, 79, 91, 0.12);
+    box-shadow: 0 16px 32px rgba(38, 52, 65, 0.14);
+    backdrop-filter: blur(12px);
+  }
+
+  .world-menu-bar .secondary-button {
+    min-height: 52px;
+    padding: 0.85rem 0.5rem;
+  }
+  .battle-modal,
+  .world-panel-modal,
+  .dev-modal {
+    width: min(100vw - 0.75rem, 100%);
+  }
+
+  .battle-command-shell,
+  .battle-topbar,
+  .battle-stage {
+    grid-template-columns: 1fr;
+  }
+
+  .battle-stage {
+    min-height: 0;
+  }
+
+  .battle-party-rail {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(78px, 1fr);
+    overflow-x: auto;
+  }
+
+  .battle-battler-enemy,
+  .battle-battler-player {
+    position: relative;
+    top: auto;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    justify-self: center;
+  }
+
+  .battle-field {
+    display: grid;
+    gap: 1rem;
+    min-height: 0;
+    padding: 0.5rem 0;
+  }
+
+  .battle-field::before {
+    display: none;
   }
 }
