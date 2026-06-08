@@ -3,6 +3,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
     "defaults": {
       "theme": "classic",
       "zoom": 100,
+      "walkSpeed": 260,
       "partySize": 6,
       "playerSpriteRenderWidth": 155,
       "monsterSpriteRenderWidth": 128,

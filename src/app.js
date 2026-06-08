@@ -89,6 +89,7 @@
       defaults: {
         theme: "classic",
         zoom: 100,
+        walkSpeed: 260,
         partySize: 6,
         playerSpriteRenderWidth: PLAYER_RENDER_WIDTH,
         monsterSpriteRenderWidth: MONSTER_RENDER_WIDTH,
@@ -1672,24 +1673,32 @@
       : null;
 
     if (npc.type === "trainer") {
+      const text = npc.text || (trainer
+        ? (trainer.name || label) + " is ready for a battle once trainer encounters are connected."
+        : "This trainer battle is not wired up yet, but this NPC is ready for it.");
+      const pages = splitDialoguePages(text);
       state.message = "You approached " + label + ".";
       state.interaction = {
         id: npc.id,
         type: "npc-trainer",
         title: label,
-        text: npc.text || (trainer
-          ? (trainer.name || label) + " is ready for a battle once trainer encounters are connected."
-          : "This trainer battle is not wired up yet, but this NPC is ready for it."),
+        text,
+        pages,
+        pageIndex: 0,
       };
       return;
     }
 
+    const text = npc.text || "This character is waiting for dialogue.";
+    const pages = splitDialoguePages(text);
     state.message = "You talked to " + label + ".";
     state.interaction = {
       id: npc.id,
       type: "npc",
       title: label,
-      text: npc.text || "This character is waiting for dialogue.",
+      text,
+      pages,
+      pageIndex: 0,
     };
   }
 
@@ -2217,6 +2226,7 @@
 
     state.world.currentMapId = town.mapId;
     state.world.position = { x: town.spawn.x, y: town.spawn.y };
+    state.world.wildMonsters = createWildMonstersForMap(content, town.mapId, state.world.position);
     syncCameraToPlayer(state, content);
   }
 
@@ -2747,7 +2757,7 @@
   }
 
   function movePlayer(state, content, deltaMs) {
-    if (state.screen !== "world" || state.battle || state.interaction) {
+    if (state.screen !== "world" || state.battle) {
       updatePlayerVisualState(state, deltaMs, 0, 0, false);
       return;
     }
@@ -2765,8 +2775,17 @@
       return;
     }
 
+    if (state.interaction && !isNpcDialogueInteraction(state.interaction)) {
+      updatePlayerVisualState(state, deltaMs, 0, 0, false);
+      return;
+    }
+
+    if (isNpcDialogueInteraction(state.interaction)) {
+      state.interaction = null;
+    }
+
     const length = Math.hypot(dx, dy) || 1;
-    const speed = 260;
+    const speed = Number(state.settings.walkSpeed || 260);
     const map = content.maps[state.world.currentMapId];
     const previousX = state.world.position.x;
     const previousY = state.world.position.y;
@@ -3370,6 +3389,49 @@
     return remaining + "s";
   }
 
+  function splitDialoguePages(text) {
+    const normalized = String(text || "").replace(/\s+/g, " ").trim();
+    if (!normalized) {
+      return ["..."];
+    }
+
+    const segments = normalized
+      .split(/(?<=[.!?])\s+/)
+      .map(function (entry) {
+        return entry.trim();
+      })
+      .filter(Boolean);
+
+    const pages = [];
+    let current = "";
+    const maxPageLength = 110;
+
+    segments.forEach(function (segment) {
+      if (!current) {
+        current = segment;
+        return;
+      }
+
+      if ((current + " " + segment).length <= maxPageLength) {
+        current += " " + segment;
+        return;
+      }
+
+      pages.push(current);
+      current = segment;
+    });
+
+    if (current) {
+      pages.push(current);
+    }
+
+    return pages.length ? pages : [normalized];
+  }
+
+  function isNpcDialogueInteraction(interaction) {
+    return interaction?.type === "npc" || interaction?.type === "npc-trainer";
+  }
+
   function prefersTouchUi() {
     return typeof window !== "undefined"
       && typeof window.matchMedia === "function"
@@ -3799,6 +3861,10 @@
       return "";
     }
 
+    if (state.interaction.type === "npc" || state.interaction.type === "npc-trainer") {
+      return "";
+    }
+
     if (state.interaction.type === "healing-center") {
       const confirmBody = state.interaction.phase === "confirm"
         ? '<div class="battle-log"><p>' + escapeHtml(state.interaction.text) + '</p><p>' + escapeHtml(state.interaction.confirmText || "") + "</p></div>"
@@ -3873,6 +3939,26 @@
       "</section>",
       "</div>",
     ].join("");
+  }
+
+  function renderWorldInfoBar(state) {
+    if (isNpcDialogueInteraction(state.interaction)) {
+      const pages = Array.isArray(state.interaction.pages) && state.interaction.pages.length
+        ? state.interaction.pages
+        : splitDialoguePages(state.interaction.text || "");
+      const pageIndex = Math.max(0, Math.min(pages.length - 1, Number(state.interaction.pageIndex || 0)));
+      const currentPage = pages[pageIndex] || "";
+      const hasNextPage = pageIndex < pages.length - 1;
+      return (
+        '<button class="map-info-bar map-info-bar-dialogue" type="button" data-action="advance-dialogue">' +
+          '<strong>' + escapeHtml(state.interaction.title || "NPC") + ':</strong> ' +
+          '<span>' + escapeHtml(currentPage) + '</span>' +
+          '<em class="map-info-bar-cue">' + escapeHtml(hasNextPage ? "▼ More" : "Tap, press E, or walk away to close") + '</em>' +
+        "</button>"
+      );
+    }
+
+    return '<div class="map-info-bar"><span>' + escapeHtml(state.message || "Explore the map.") + "</span></div>";
   }
 
   function renderWorldPanelModal(state, content) {
@@ -4000,11 +4086,20 @@
         const selected = Number(state.settings.zoom) === Number(zoom) ? " selected" : "";
         return '<option value="' + zoom + '"' + selected + ">" + zoom + "%</option>";
       }).join("");
+      const walkSpeedOptions = [
+        { value: 260, label: "Normal (260)" },
+        { value: 310, label: "Faster x1 (310)" },
+        { value: 360, label: "Faster x2 (360)" },
+      ].map(function (option) {
+        const selected = Number(state.settings.walkSpeed || 260) === Number(option.value) ? " selected" : "";
+        return '<option value="' + option.value + '"' + selected + ">" + option.label + "</option>";
+      }).join("");
       panelBody = [
         '<div class="form-grid">',
         '<label class="input-group"><span>Theme</span><select data-world-setting="theme">' + themeOptions + "</select></label>",
         '<label class="input-group"><span>Sprite Avatar</span><select data-world-player-field="avatarId">' + avatarOptions + "</select></label>",
         '<label class="input-group"><span>Map Zoom</span><select data-world-setting="zoom">' + zoomOptions + "</select></label>",
+        '<label class="input-group"><span>Walk Speed</span><select data-world-setting="walkSpeed">' + walkSpeedOptions + "</select></label>",
         '<label class="input-group"><span>Party Size</span><input type="number" min="1" max="12" data-world-setting="partySize" value="' + Number(state.settings.partySize) + '" /></label>',
         '<label class="input-group"><span>Arena Leader Min Level</span><input type="number" min="1" max="999" data-world-setting="arenaLeaderMinLevel" value="' + Number(state.settings.arenaLeaderMinLevel || 1) + '" /></label>',
         '<label class="input-group"><span>Arena Leader Max Level</span><input type="number" min="1" max="999" data-world-setting="arenaLeaderMaxLevel" value="' + Number(state.settings.arenaLeaderMaxLevel || 100) + '" /></label>',
@@ -6265,7 +6360,7 @@
       '<div class="topbar-stats"><button class="secondary-button" type="button" data-action="title">Title</button><div class="world-topbar-actions"><button class="secondary-button" type="button" data-action="save">Save</button><button class="secondary-button" type="button" data-action="open-settings">Settings</button></div></div>',
       "</header>",
       '<section class="play-area">',
-      '<div class="map-panel"><div class="world-stage"><canvas class="world-canvas" width="' + VIEWPORT.width + '" height="' + VIEWPORT.height + '"></canvas>' + promptMarkup + '</div><div class="map-caption">Move with arrow keys or WASD. Walk near wild monsters, NPCs, or map hotspots, then ' + escapeHtml(promptVerb) + ' to interact.</div><section class="mobile-controls" aria-label="Mobile gameplay controls"><section class="touch-controls touch-controls-mobile"><button data-touch="ArrowUp" aria-label="Move up">Up</button><div><button data-touch="ArrowLeft" aria-label="Move left">Left</button><button data-touch="ArrowDown" aria-label="Move down">Down</button><button data-touch="ArrowRight" aria-label="Move right">Right</button></div></section></section></div>',
+      '<div class="map-panel"><div class="world-stage"><canvas class="world-canvas" width="' + VIEWPORT.width + '" height="' + VIEWPORT.height + '"></canvas><section class="mobile-controls" aria-label="Gameplay controls"><section class="touch-controls touch-controls-mobile"><button data-touch="ArrowUp" aria-label="Move up">\u25b2</button><div><button data-touch="ArrowLeft" aria-label="Move left">\u25c0</button><button data-touch="ArrowDown" aria-label="Move down">\u25bc</button><button data-touch="ArrowRight" aria-label="Move right">\u25b6</button></div></section></section>' + promptMarkup + '</div>' + renderWorldInfoBar(state) + '</div>',
       '<aside class="status-panel">',
       '<section class="panel-block"><h2>Now Playing</h2><p>' + state.message + "</p></section>",
       '<section class="panel-block"><h2>Party Lead</h2><p>' + activeSpecies.name + " Lv " + activeMonster.level + "</p><p>HP " + activeMonster.currentHp + "/" + activeMonster.stats.hp + "</p></section>",
@@ -6273,7 +6368,6 @@
         return "<li><span>" + item.itemId + "</span><strong>x" + item.quantity + "</strong></li>";
       }).join("") + "</ul></section>",
       '<section class="panel-block"><h2>Save Slots</h2><p>' + saveSlots.length + " stored locally in this browser.</p></section>",
-      '<section class="touch-controls touch-controls-sidebar"><button data-touch="ArrowUp" aria-label="Move up">Up</button><div><button data-touch="ArrowLeft" aria-label="Move left">Left</button><button data-touch="ArrowDown" aria-label="Move down">Down</button><button data-touch="ArrowRight" aria-label="Move right">Right</button></div></section>',
       "</aside>",
       "</section>",
       '<nav class="world-menu-bar"><button class="secondary-button" type="button" data-open-panel="map">Map</button><button class="secondary-button" type="button" data-open-panel="character">Character</button><button class="secondary-button" type="button" data-open-panel="inventory">Inventory</button><button class="secondary-button" type="button" data-open-panel="monsters">Monsters</button><button class="secondary-button" type="button" data-open-panel="registry">Registry</button><button class="secondary-button" type="button" data-open-panel="quests">Quests</button></nav>',
@@ -6337,6 +6431,9 @@
     root.querySelector('[data-action="close-interaction"]')?.addEventListener("click", function () {
       app.closeInteraction();
     });
+    root.querySelector('[data-action="advance-dialogue"]')?.addEventListener("click", function () {
+      app.advanceDialogue();
+    });
     root.querySelector('[data-action="confirm-healing-center"]')?.addEventListener("click", function () {
       app.confirmHealingCenter();
     });
@@ -6380,6 +6477,9 @@
 
     root.querySelectorAll("[data-touch]").forEach(function (button) {
       const key = button.getAttribute("data-touch");
+      const preventContextMenu = function (event) {
+        event.preventDefault();
+      };
       const press = function (event) {
         event.preventDefault();
         keysDown.add(key);
@@ -6393,6 +6493,7 @@
       button.addEventListener("pointerup", release);
       button.addEventListener("pointerleave", release);
       button.addEventListener("pointercancel", release);
+      button.addEventListener("contextmenu", preventContextMenu);
     });
   }
 
@@ -7247,7 +7348,7 @@
           return;
         }
 
-        if (key === "zoom" || key === "partySize" || key === "arenaLeaderMinLevel" || key === "arenaLeaderMaxLevel" || key === "arenaLeaderPartySize") {
+        if (key === "zoom" || key === "walkSpeed" || key === "partySize" || key === "arenaLeaderMinLevel" || key === "arenaLeaderMaxLevel" || key === "arenaLeaderPartySize") {
           this.state.settings[key] = Number(rawValue || 0);
         } else if (key === "shareExperience" || key === "mapDetails" || key === "encounterPreview") {
           this.state.settings[key] = rawValue === "true";
@@ -7277,13 +7378,35 @@
         this.state.interaction = null;
         this.render();
       },
+      advanceDialogue: function () {
+        if (this.state.screen !== "world" || !isNpcDialogueInteraction(this.state.interaction)) {
+          return;
+        }
+
+        const pages = Array.isArray(this.state.interaction.pages) && this.state.interaction.pages.length
+          ? this.state.interaction.pages
+          : splitDialoguePages(this.state.interaction.text || "");
+        const currentIndex = Math.max(0, Number(this.state.interaction.pageIndex || 0));
+        if (currentIndex < pages.length - 1) {
+          this.state.interaction.pages = pages;
+          this.state.interaction.pageIndex = currentIndex + 1;
+          this.render();
+          return;
+        }
+
+        this.closeInteraction();
+      },
       tryInteract: function () {
         if (this.state.screen !== "world" || this.state.battle) {
           return;
         }
 
         if (this.state.interaction) {
-          this.closeInteraction();
+          if (isNpcDialogueInteraction(this.state.interaction)) {
+            this.advanceDialogue();
+          } else {
+            this.closeInteraction();
+          }
           return;
         }
 

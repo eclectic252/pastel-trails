@@ -671,13 +671,46 @@ button {
   padding: 0.95rem 0.6rem;
 }
 
-.map-caption {
+.map-info-bar {
+  width: 100%;
   margin-top: 0.7rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(57, 79, 91, 0.12);
+  background: rgba(255, 251, 245, 0.9);
   color: var(--muted);
+  text-align: left;
+  line-height: 1.45;
+}
+
+.map-info-bar strong {
+  color: var(--text);
+}
+
+.map-info-bar-dialogue {
+  display: block;
+  max-height: 7.5rem;
+  overflow: auto;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.map-info-bar-cue {
+  display: block;
+  margin-top: 0.45rem;
+  color: var(--muted);
+  font-style: normal;
+  font-size: 0.82rem;
 }
 
 .mobile-controls {
-  display: none;
+  display: block;
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  z-index: 4;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .status-panel {
@@ -717,11 +750,34 @@ button {
 }
 
 .touch-controls-mobile {
-  max-width: 360px;
+  width: 148px;
+  gap: 0.35rem;
 }
 
 .touch-controls-sidebar {
-  display: grid;
+  display: none;
+}
+
+.touch-controls-mobile > button {
+  width: 56px;
+  justify-self: center;
+}
+
+.touch-controls-mobile > div {
+  gap: 0.35rem;
+}
+
+.touch-controls-mobile button {
+  min-height: 56px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 18px;
+  background: rgba(246, 251, 255, 0.26);
+  color: #fffef8;
+  box-shadow: 0 10px 24px rgba(19, 31, 39, 0.16);
+  backdrop-filter: blur(10px);
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .battle-overlay {
@@ -1709,12 +1765,13 @@ button {
   }
 
   .world-interaction-prompt {
-    left: 12px;
+    left: auto;
     right: 12px;
     bottom: 12px;
     transform: none;
     justify-content: center;
     padding: 0.8rem 0.9rem;
+    max-width: min(52vw, 280px);
   }
 
   .world-interaction-prompt span {
@@ -1723,21 +1780,12 @@ button {
   }
 
   .mobile-controls {
-    display: grid;
-    margin-top: 0.9rem;
-    padding-top: 0.9rem;
-    border-top: 1px solid rgba(57, 79, 91, 0.1);
+    left: 12px;
+    bottom: 12px;
   }
 
   .touch-controls-mobile {
-    justify-self: center;
-    width: min(100%, 320px);
-  }
-
-  .touch-controls-mobile button {
-    min-height: 56px;
-    font-size: 0.95rem;
-    font-weight: 700;
+    width: 148px;
   }
 
   .touch-controls-sidebar {
@@ -1825,6 +1873,20 @@ button {
     padding: 0.52rem 0.45rem;
     border-radius: 999px;
     font-size: 0.8rem;
+  }
+
+  .touch-controls-mobile {
+    width: 132px;
+  }
+
+  .touch-controls-mobile > button {
+    width: 50px;
+  }
+
+  .touch-controls-mobile button {
+    min-height: 50px;
+    font-size: 0.96rem;
+    font-weight: 700;
   }
 
   .play-area {
