@@ -1775,6 +1775,9 @@ button {
   html,
   body {
     height: 100%;
+  }
+
+  body[data-screen="world"] {
     overflow: hidden;
   }
 }

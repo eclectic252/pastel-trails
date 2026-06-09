@@ -706,6 +706,38 @@
     return image;
   }
 
+  function verifyImagePath(src) {
+    return new Promise(function (resolve) {
+      if (!src) {
+        resolve(false);
+        return;
+      }
+
+      const image = getImage(src);
+      if (image.complete) {
+        resolve(!!image.naturalWidth);
+        return;
+      }
+
+      const finish = function (didLoad) {
+        image.removeEventListener("load", handleLoad);
+        image.removeEventListener("error", handleError);
+        resolve(didLoad);
+      };
+
+      const handleLoad = function () {
+        finish(true);
+      };
+
+      const handleError = function () {
+        finish(false);
+      };
+
+      image.addEventListener("load", handleLoad);
+      image.addEventListener("error", handleError);
+    });
+  }
+
   function createSaveManager(storage) {
     function createPreview(save) {
       const uniqueCaught = Array.from(new Set(save.registry?.caught || []));
@@ -3606,8 +3638,6 @@
       "</main>",
     ].join("");
 
-    drawAvatarPreviewCanvases(root, content);
-
     root.querySelector('[data-action="new-game"]')?.addEventListener("click", function () {
       onAction("new-game");
     });
@@ -3630,6 +3660,8 @@
     root.querySelector('[data-action="open-dev-tools"]')?.addEventListener("click", function () {
       onAction("open-dev-tools");
     });
+
+    safeDrawAvatarPreviewCanvases(root, content);
   }
 
   function renderNewGameScreen(root, content, setup, onAction) {
@@ -3692,8 +3724,6 @@
       "</main>",
     ].join("");
 
-    drawAvatarPreviewCanvases(root, content);
-
     root.querySelectorAll("[data-select-starter]").forEach(function (button) {
       button.addEventListener("click", function () {
         onAction("select-starter", button.getAttribute("data-select-starter"));
@@ -3741,6 +3771,8 @@
     root.querySelector('[data-field="save-name"]')?.addEventListener("input", function (event) {
       onAction("set-save-name", event.target.value);
     });
+
+    safeDrawAvatarPreviewCanvases(root, content);
   }
 
   function renderBattleModal(state, content) {
@@ -5854,7 +5886,7 @@
       '<p class="dev-helper-text">' + (isMonsterSheet
         ? 'Use the global monster width in <code>settings.json</code> for all monster sheets, or set a width override here for just this file. The current effective width for this sheet is <strong>' + effectiveRenderWidth + 'px</strong>.'
         : 'Character sheets use a fixed base cut height of ' + CHARACTER_SHEET_FRAME_HEIGHT + 'px, so extra bottom padding will not stretch the default frame. Use global offsets for the whole sheet, row offsets for one direction row, and frame cut values for individual cells. Frame cut X/Y/Width/Height only affects the selected frame, so you can fix one drifted frame without moving its neighbors.') + '</p>',
-      '<div class="title-actions"><button class="secondary-button" type="button" data-action="export-character-sheets-json">Export character-sheets.json</button></div>',
+      '<div class="title-actions"><button class="secondary-button" type="button" data-action="delete-missing-character-sheets">Delete Missing Files</button><button class="secondary-button" type="button" data-action="resync-character-sheets">Resync From Folder</button><button class="secondary-button" type="button" data-action="export-character-sheets-json">Export character-sheets.json</button></div>',
       '</section>',
       '<section class="dev-preview-grid dev-character-preview-grid">',
       '<section class="map-panel dev-map-panel"><div class="section-heading"><h2>Full Sheet</h2><span>' + escapeHtml(sheet?.label || "Sheet") + '</span></div><div class="dev-canvas-scroll" data-preview-role="character-sheet"><canvas class="dev-character-sheet-canvas" width="720" height="520"></canvas></div><div class="map-caption">Grid overlay shows how the current columns, rows, and offsets will be cut.</div></section>',
@@ -5994,6 +6026,14 @@
     root.querySelectorAll("[data-avatar-preview-sheet]").forEach(function (canvas) {
       drawAvatarPreviewCanvas(canvas, content, canvas.getAttribute("data-avatar-preview-sheet") || "");
     });
+  }
+
+  function safeDrawAvatarPreviewCanvases(root, content) {
+    try {
+      drawAvatarPreviewCanvases(root, content);
+    } catch (error) {
+      console.error("Could not draw avatar previews.", error);
+    }
   }
 
   function drawMonsterVariantCanvas(canvas, content, speciesId, variantId, mode) {
@@ -6545,6 +6585,12 @@
     });
     root.querySelector('[data-action="load-folder"]')?.addEventListener("click", function () {
       app.loadProjectFolder(true);
+    });
+    root.querySelector('[data-action="delete-missing-character-sheets"]')?.addEventListener("click", function () {
+      app.deleteMissingCharacterSheets();
+    });
+    root.querySelector('[data-action="resync-character-sheets"]')?.addEventListener("click", function () {
+      app.resyncCharacterSheetsFromFolder();
     });
 
     root.querySelector('[data-action="monster-mode-species"]')?.addEventListener("click", function () {
@@ -7605,6 +7651,7 @@
           validateContent(nextContent);
           clearRuntimeCaches(this.content, { includeImages: true });
           clearRuntimeCaches(nextContent);
+          this.projectRootHandle = rootHandle;
           this.content = nextContent;
           syncMonsterDevSelection(this.content, this.devTools);
           syncArenaDevSelection(this.content, this.devTools);
@@ -7625,6 +7672,95 @@
             window.alert(error instanceof Error ? error.message : "Could not load the project folder.");
           }
         }
+      },
+      resyncCharacterSheetsFromFolder: async function () {
+        if (!this.projectRootHandle) {
+          window.alert("Load the project folder first so character sheets can be resynced from disk.");
+          return;
+        }
+
+        try {
+          syncDevToolsCharacterSheet(this.content, this.devTools);
+          const discoveredCharacterSheets = await loadCharacterSheetsFromDirectory(this.projectRootHandle);
+          const characterSheetsData = await tryReadJsonFromHandle(this.projectRootHandle, ["data", "character-sheets.json"]);
+          this.content.characterSheets = {
+            sheets: discoveredCharacterSheets.sheets.map((discovered) => {
+              const saved = (characterSheetsData?.sheets || []).find(function (entry) {
+                return entry.id === discovered.id || entry.path === discovered.path;
+              }) || {};
+              return Object.assign({}, discovered, saved, {
+                id: saved.id || discovered.id,
+                label: saved.label || discovered.label,
+                playerLabel: saved.playerLabel || discovered.playerLabel || discovered.label,
+                playerSelectable: saved.playerSelectable ?? discovered.playerSelectable ?? (discovered.kind !== "monster"),
+                kind: saved.kind || discovered.kind || "character",
+                group: saved.group || discovered.group,
+                renderWidth: saved.renderWidth === null || saved.renderWidth === ""
+                  ? null
+                  : (saved.renderWidth ?? discovered.renderWidth ?? null) === null
+                    ? null
+                    : clampRenderWidth(
+                      saved.renderWidth ?? discovered.renderWidth,
+                      saved.kind || discovered.kind || "character",
+                      discovered.renderWidth ?? ((saved.kind || discovered.kind || "character") === "monster" ? MONSTER_RENDER_WIDTH : PLAYER_RENDER_WIDTH)
+                    ),
+                path: discovered.path,
+              });
+            }),
+          };
+          this.content.monsterAssets = discoveredCharacterSheets.monsterAssets || { images: [] };
+          const selectedStillExists = ensureCharacterSheetCatalog(this.content).some((entry) => entry.id === this.devTools.selectedCharacterSheetId);
+          applyCharacterSheetToDevTools(this.content, this.devTools, selectedStillExists ? this.devTools.selectedCharacterSheetId : ensureCharacterSheetCatalog(this.content)[0]?.id || "");
+          this.state.message = "Character sheets resynced from the project folder.";
+          this.render();
+        } catch (error) {
+          window.alert(error instanceof Error ? error.message : "Could not resync character sheets from the project folder.");
+        }
+      },
+      deleteMissingCharacterSheets: async function () {
+        const sheets = ensureCharacterSheetCatalog(this.content);
+        if (!sheets.length) {
+          this.state.message = "No character sheets available to check.";
+          this.render();
+          return;
+        }
+
+        const results = await Promise.all(sheets.map(async function (sheet) {
+          return {
+            sheet,
+            exists: await verifyImagePath(sheet?.path || ""),
+          };
+        }));
+        const missing = results.filter(function (entry) {
+          return !entry.exists;
+        });
+
+        if (!missing.length) {
+          this.state.message = "No missing character sheet files were found.";
+          this.render();
+          return;
+        }
+
+        const missingIds = new Set(missing.map(function (entry) {
+          return entry.sheet.id;
+        }));
+        this.content.characterSheets.sheets = sheets.filter(function (sheet) {
+          return !missingIds.has(sheet.id);
+        });
+        this.content.monsterAssets = {
+          images: (this.content.monsterAssets?.images || []).filter(function (imagePath) {
+            return !missing.some(function (entry) {
+              return entry.sheet.path === imagePath;
+            });
+          }),
+        };
+
+        const nextSelectedId = ensureCharacterSheetCatalog(this.content).find(function (entry) {
+          return entry.id === this.devTools.selectedCharacterSheetId;
+        }, this)?.id || ensureCharacterSheetCatalog(this.content)[0]?.id || "";
+        applyCharacterSheetToDevTools(this.content, this.devTools, nextSelectedId);
+        this.state.message = "Deleted " + missing.length + " missing character sheet file" + (missing.length === 1 ? "" : "s") + ".";
+        this.render();
       },
       selectDevMap: function (mapId) {
         this.devTools.selectedMapId = mapId;
@@ -8861,6 +8997,7 @@
         }
       },
       render: function () {
+        document.body.setAttribute("data-screen", this.state.screen || "title");
         if (this.state.screen === "world") {
           document.body.setAttribute("data-theme", this.state.settings.theme || "classic");
         } else {
