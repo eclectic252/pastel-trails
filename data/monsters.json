@@ -1,77 +1,6 @@
 {
   "species": [
     {
-      "id": "Pawlit",
-      "name": "Pawlit",
-      "baseStats": {
-        "hp": 10,
-        "attack": 5,
-        "defense": 5,
-        "speed": 5
-      },
-      "growth": "medium",
-      "overworldDisplayMode": "walk",
-      "skills": [
-        "basic-attack"
-      ],
-      "variants": [
-        {
-          "id": "default",
-          "portrait": {
-            "imagePath": "assets/Monsters/Pawlit/pawlit-classic-ready-transparent.png",
-            "row": 0,
-            "frame": 0,
-            "sheetId": "pawlit-classic-walksheet"
-          },
-          "overworld": {
-            "sheetId": "assets-monsters-pawlit-pawlit-classic-walksheet",
-            "rows": {
-              "down": 0,
-              "left": 1,
-              "right": 2,
-              "up": 3
-            },
-            "idleFrame": 0,
-            "walkFrames": [
-              0,
-              1,
-              2,
-              3
-            ],
-            "frameDurationMs": 190,
-            "displayMode": "portrait"
-          }
-        },
-        {
-          "id": "Tide",
-          "portrait": {
-            "imagePath": "assets/Monsters/Pawlit/pawlit-blue-ready-hires.png",
-            "row": 0,
-            "frame": 0,
-            "sheetId": "pawlit-classic-walksheet"
-          },
-          "overworld": {
-            "displayMode": "portrait",
-            "sheetId": "assets-monsters-pawlit-pawlit-tide-walksheet",
-            "rows": {
-              "down": 0,
-              "left": 1,
-              "right": 2,
-              "up": 3
-            },
-            "idleFrame": 0,
-            "walkFrames": [
-              0,
-              1,
-              2,
-              3
-            ],
-            "frameDurationMs": 190
-          }
-        }
-      ]
-    },
-    {
       "id": "equira",
       "name": "Equira",
       "baseStats": {
@@ -649,6 +578,150 @@
             "frameDurationMs": 180
           },
           "label": "Snow"
+        },
+        {
+          "id": "fluffram-grass",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Fluffram/fluffram_grass.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "Grass"
+        },
+        {
+          "id": "fluffram-electric",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Fluffram/fluffram_electric.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "Electric"
+        },
+        {
+          "id": "fluffram-water",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Fluffram/fluffram_water.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "Water"
+        },
+        {
+          "id": "fluffram-fire",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Fluffram/fluffram_fire.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "Fire"
+        },
+        {
+          "id": "fluffram-pink",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Fluffram/fluffram_pink.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "Pink"
+        },
+        {
+          "id": "fluffram-dark",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Fluffram/fluffram_dark.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "Dark"
         }
       ]
     }

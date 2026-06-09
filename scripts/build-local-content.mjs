@@ -174,22 +174,6 @@ async function loadCharacterSheets() {
       });
     }
 
-    (saved.sheets || []).forEach((savedEntry) => {
-      if (!savedEntry?.path || discoveredMap.has(savedEntry.path)) {
-        return;
-      }
-
-      discoveredMap.set(savedEntry.path, {
-        ...savedEntry,
-        label: savedEntry.label || prettifyCharacterSheetLabel(savedEntry.path),
-        playerLabel: savedEntry.playerLabel || savedEntry.label || prettifyCharacterSheetLabel(savedEntry.path),
-        kind: savedEntry.kind || "character",
-        group: savedEntry.group || savedEntry.path.split("/").slice(1, -1).join(" / "),
-        frameHeight: savedEntry.frameHeight || 313,
-        renderWidth: savedEntry.renderWidth ?? null,
-      });
-    });
-
     discovered = Array.from(discoveredMap.values());
   } catch {
     discovered = saved.sheets || [];

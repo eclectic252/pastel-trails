@@ -92,6 +92,18 @@ button {
   line-height: 0.95;
 }
 
+.setup-title {
+  font-size: clamp(1.45rem, 3.2vw, 2.1rem);
+}
+
+.title-screen:has(.setup-title) {
+  padding-top: 0;
+}
+
+.title-screen:has(.setup-title) .title-card {
+  margin-top: 0;
+}
+
 .title-card p {
   margin: 0;
   max-width: 55ch;
@@ -188,6 +200,64 @@ button {
   border: 1px solid rgba(57, 79, 91, 0.12);
   background: rgba(255, 251, 245, 0.92);
   color: var(--text);
+}
+
+.starter-option-card {
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 0.9rem;
+  align-items: center;
+  padding: 0.9rem;
+}
+
+.starter-option-visual-wrap {
+  display: grid;
+  place-items: center;
+}
+
+.starter-option-preview {
+  width: 88px;
+  min-height: 88px;
+  object-fit: contain;
+  border-radius: 14px;
+  background: rgba(214, 237, 246, 0.45);
+  border: 1px solid rgba(57, 79, 91, 0.12);
+  padding: 0.35rem;
+}
+
+.starter-option-body {
+  display: grid;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.starter-option-title {
+  display: block;
+  line-height: 1.15;
+}
+
+.starter-option-title span {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.starter-option-stats {
+  font-size: 0.9rem;
+  line-height: 1.2;
+}
+
+.starter-option-controls {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.starter-option-controls .secondary-button,
+.starter-option-select {
+  width: 100%;
+  min-height: 40px;
+  padding: 0.58rem 0.7rem;
+  font-size: 0.84rem;
 }
 
 .option-card span,

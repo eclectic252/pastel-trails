@@ -803,11 +803,12 @@
     });
   }
 
-  function createMonsterInstance(species, level) {
+  function createMonsterInstance(species, level, variantId) {
+    const resolvedVariant = getSpeciesVariant(species, variantId || "");
     return {
       instanceId: window.crypto?.randomUUID ? window.crypto.randomUUID() : String(Date.now() + Math.random()),
       speciesId: species.id,
-      variantId: species.variants?.[0]?.id || "default",
+      variantId: resolvedVariant?.id || species.variants?.[0]?.id || "default",
       level,
       xp: 0,
       stats: Object.assign({}, species.baseStats),
@@ -1792,12 +1793,22 @@
     ];
   }
 
+  function buildStarterVariantSelections(content) {
+    return Object.fromEntries((content.monsters?.species || []).map(function (species) {
+      return [species.id, getSpeciesVariant(species, "")?.id || "default"];
+    }));
+  }
+
   function buildNewGameSetup(content) {
     const starterTowns = getStarterTownOptions(content);
     const avatarOptions = getPlayerAvatarOptions(content);
+    const starterVariantSelections = buildStarterVariantSelections(content);
+    const starterSpeciesId = content.monsters.species[0].id;
     return {
       screen: "new-game",
-      starterSpeciesId: content.monsters.species[0].id,
+      starterSpeciesId,
+      starterVariantId: starterVariantSelections[starterSpeciesId] || "default",
+      starterVariantSelections,
       townId: starterTowns[0].id,
       avatarId: avatarOptions[0]?.id || "",
       playerName: "Player",
@@ -1828,7 +1839,8 @@
       return town.id === options.townId;
     }) || starterTowns[0];
     const starterSpecies = getSpecies(content, options.starterSpeciesId) || content.monsters.species[0];
-    const party = [createMonsterInstance(starterSpecies, 5)];
+    const starterVariant = getSpeciesVariant(starterSpecies, options.starterVariantId || "");
+    const party = [createMonsterInstance(starterSpecies, 5, starterVariant?.id || "default")];
     const world = {
       currentMapId: starterTown.mapId,
       position: { x: starterTown.spawn.x, y: starterTown.spawn.y },
@@ -3682,11 +3694,19 @@
     const starterTowns = getStarterTownOptions(content);
     const speciesCards = content.monsters.species.map(function (species) {
       const selected = setup.starterSpeciesId === species.id ? " option-card-selected" : "";
+      const selectedVariantId = setup.starterVariantSelections?.[species.id] || getSpeciesVariant(species, "")?.id || "default";
+      const selectedVariant = getSpeciesVariant(species, selectedVariantId);
+      const variantLabel = formatMonsterVariantLabel(selectedVariant, selectedVariantId);
+      const visual = renderMonsterVariantVisualMarkup(species.id, selectedVariantId, "starter-option-preview", "default");
       return (
-        '<button class="option-card' + selected + '" type="button" data-select-starter="' + species.id + '">' +
-        "<strong>" + species.name + "</strong>" +
-        "<span>HP " + species.baseStats.hp + " · ATK " + species.baseStats.attack + " · DEF " + species.baseStats.defense + " · SPD " + species.baseStats.speed + "</span>" +
-        "</button>"
+        '<div class="option-card starter-option-card' + selected + '">' +
+        '<div class="starter-option-visual-wrap">' + visual + '</div>' +
+        '<div class="starter-option-body">' +
+        '<strong class="starter-option-title">' + species.name + ' <span>(' + escapeHtml(variantLabel) + ')</span></strong>' +
+        '<span class="starter-option-stats">HP ' + species.baseStats.hp + ' · ATK ' + species.baseStats.attack + ' · DEF ' + species.baseStats.defense + ' · SPD ' + species.baseStats.speed + "</span>" +
+        '<div class="starter-option-controls"><button class="secondary-button" type="button" data-cycle-starter-variant="' + species.id + '" data-cycle-direction="-1" aria-label="Previous variant">&#9664;</button><button class="primary-button starter-option-select" type="button" data-select-starter="' + species.id + '">Choose</button><button class="secondary-button" type="button" data-cycle-starter-variant="' + species.id + '" data-cycle-direction="1" aria-label="Next variant">&#9654;</button></div>' +
+        '</div>' +
+        "</div>"
       );
     }).join("");
 
@@ -3717,7 +3737,7 @@
       '<main class="title-screen">',
       '<section class="title-card title-card-wide">',
       '<div class="eyebrow">New Game Setup</div>',
-      "<h1>Build Your Start</h1>",
+      '<h1 class="setup-title">Build Your Start</h1>',
       "<p>" + setup.message + "</p>",
       '<section class="setup-section">',
       "<h2>Player</h2>",
@@ -3741,6 +3761,14 @@
     root.querySelectorAll("[data-select-starter]").forEach(function (button) {
       button.addEventListener("click", function () {
         onAction("select-starter", button.getAttribute("data-select-starter"));
+      });
+    });
+    root.querySelectorAll("[data-cycle-starter-variant]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        onAction("cycle-starter-variant", {
+          speciesId: button.getAttribute("data-cycle-starter-variant"),
+          direction: Number(button.getAttribute("data-cycle-direction") || 1),
+        });
       });
     });
 
@@ -3786,6 +3814,7 @@
       onAction("set-save-name", event.target.value);
     });
 
+    drawMonsterVariantCanvases(root, content);
     safeDrawAvatarPreviewCanvases(root, content);
   }
 
@@ -4878,7 +4907,9 @@
     const townName = starterTowns.find(function (town) {
       return town.id === setup.townId;
     })?.name || starterTowns[0].name;
-    const starterName = getSpecies(content, setup.starterSpeciesId)?.name || content.monsters.species[0].name;
+    const starterSpecies = getSpecies(content, setup.starterSpeciesId) || content.monsters.species[0];
+    const starterVariant = getSpeciesVariant(starterSpecies, setup.starterVariantId || "");
+    const starterName = (starterSpecies?.name || content.monsters.species[0].name) + " (" + formatMonsterVariantLabel(starterVariant, setup.starterVariantId || "default") + ")";
     const playerName = setup.playerName || "Player";
 
     return playerName + " starts in " + townName + " with " + starterName + ".";
@@ -7387,6 +7418,7 @@
         const starterTowns = getStarterTownOptions(this.content);
         const selectedTown = starterTowns.find((town) => town.id === this.state.townId) || starterTowns[0];
         const selectedSpecies = getSpecies(this.content, this.state.starterSpeciesId) || this.content.monsters.species[0];
+        const selectedVariant = getSpeciesVariant(selectedSpecies, this.state.starterVariantId || "");
         const playerName = (this.state.playerName || "Player").trim() || "Player";
         const saveName = (this.state.saveName || "").trim() || (playerName + " - " + selectedTown.name + " - " + selectedSpecies.name);
 
@@ -7395,6 +7427,7 @@
           avatarId: this.state.avatarId,
           townId: selectedTown.id,
           starterSpeciesId: selectedSpecies.id,
+          starterVariantId: selectedVariant?.id || "default",
           saveName,
         }, this.saveManager);
         this.devTools.open = false;
@@ -7550,6 +7583,25 @@
 
         if (action === "select-starter") {
           this.state.starterSpeciesId = value;
+          const species = getSpecies(this.content, value) || this.content.monsters.species[0];
+          this.state.starterVariantId = this.state.starterVariantSelections?.[value] || getSpeciesVariant(species, "")?.id || "default";
+        } else if (action === "cycle-starter-variant") {
+          const species = getSpecies(this.content, value.speciesId);
+          const variants = species?.variants || [];
+          if (!species || !variants.length) {
+            return;
+          }
+
+          const currentVariantId = this.state.starterVariantSelections?.[species.id] || variants[0].id || "default";
+          const currentIndex = Math.max(0, variants.findIndex((variant) => variant.id === currentVariantId));
+          const nextIndex = (currentIndex + variants.length + Number(value.direction || 1)) % variants.length;
+          const nextVariantId = variants[nextIndex]?.id || variants[0]?.id || "default";
+          this.state.starterVariantSelections = Object.assign({}, this.state.starterVariantSelections, {
+            [species.id]: nextVariantId,
+          });
+          if (this.state.starterSpeciesId === species.id) {
+            this.state.starterVariantId = nextVariantId;
+          }
         } else if (action === "select-town") {
           this.state.townId = value;
         } else if (action === "select-avatar") {
@@ -7562,7 +7614,14 @@
           return;
         } else if (action === "random-starter") {
           const pool = this.content.monsters.species;
-          this.state.starterSpeciesId = pool[Math.floor(Math.random() * pool.length)].id;
+          const species = pool[Math.floor(Math.random() * pool.length)];
+          const variants = species?.variants || [];
+          const variant = variants[Math.floor(Math.random() * Math.max(1, variants.length))] || getSpeciesVariant(species, "");
+          this.state.starterSpeciesId = species.id;
+          this.state.starterVariantId = variant?.id || "default";
+          this.state.starterVariantSelections = Object.assign({}, this.state.starterVariantSelections, {
+            [species.id]: variant?.id || "default",
+          });
         } else if (action === "random-town") {
           const pool = getStarterTownOptions(this.content);
           this.state.townId = pool[Math.floor(Math.random() * pool.length)].id;
