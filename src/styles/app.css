@@ -1482,6 +1482,14 @@ button {
   align-items: start;
 }
 
+.monster-variant-preview-card {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 0.9rem;
+  align-items: center;
+  margin-bottom: 0.9rem;
+}
+
 .dev-character-preview-grid {
   align-items: start;
 }
@@ -1517,6 +1525,16 @@ button {
   background: rgba(214, 237, 246, 0.55);
   border: 1px solid rgba(57, 79, 91, 0.12);
   padding: 0.75rem;
+}
+
+.monster-variant-preview-image {
+  width: 132px;
+  min-height: 132px;
+  object-fit: contain;
+  border-radius: 16px;
+  background: rgba(214, 237, 246, 0.55);
+  border: 1px solid rgba(57, 79, 91, 0.12);
+  padding: 0.55rem;
 }
 
 .monster-preview-fallback {
@@ -1797,10 +1815,49 @@ button {
 }
 
 @media (max-width: 760px) {
+  body[data-screen="world"] {
+    overflow: hidden;
+  }
+
   .title-screen,
   .game-shell {
     width: min(100vw - 1rem, 100%);
     padding-top: 0;
+  }
+
+  .game-shell {
+    min-height: 100dvh;
+    height: 100dvh;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    padding-bottom: 0;
+  }
+
+  .play-area {
+    min-height: 0;
+  }
+
+  .map-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .world-stage {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .world-canvas {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .map-info-bar {
+    flex: 0 0 auto;
+    margin-top: 0;
   }
 
   .title-card {
@@ -1880,7 +1937,9 @@ button {
 @media (max-width: 560px) {
   .game-shell {
     width: 100%;
-    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+    min-height: 100dvh;
+    height: 100dvh;
+    padding-bottom: 0;
   }
 
   .game-topbar {
@@ -2031,5 +2090,156 @@ button {
 
   .battle-field::before {
     display: none;
+  }
+}
+
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 560px) {
+  body[data-screen="world"] {
+    overflow: hidden;
+  }
+
+  .game-shell {
+    width: 100%;
+    min-height: 100dvh;
+    height: 100dvh;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    padding-bottom: 0;
+  }
+
+  .game-topbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 0.6rem;
+    padding: 0.6rem 0.85rem;
+  }
+
+  .world-location-line {
+    align-items: baseline;
+    gap: 0.45rem;
+  }
+
+  .world-location-line strong {
+    font-size: 0.98rem;
+    line-height: 1.1;
+  }
+
+  .world-location-tag {
+    font-size: 0.66rem;
+    letter-spacing: 0.1em;
+  }
+
+  .world-meta-row {
+    gap: 0.45rem;
+    font-size: 0.9rem;
+    line-height: 1;
+  }
+
+  .topbar-stats {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.35rem;
+  }
+
+  .world-topbar-actions {
+    display: flex;
+    gap: 0.35rem;
+  }
+
+  .topbar-stats .secondary-button,
+  .world-topbar-actions .secondary-button {
+    min-height: 34px;
+    padding: 0.5rem 0.8rem;
+    font-size: 0.8rem;
+  }
+
+  .play-area {
+    min-height: 0;
+  }
+
+  .map-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .world-stage {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .world-canvas {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .map-info-bar {
+    flex: 0 0 auto;
+    margin-top: 0;
+    padding: 0.55rem 0.85rem;
+    font-size: 0.9rem;
+    line-height: 1.25;
+    max-height: 3.2rem;
+    overflow: auto;
+  }
+
+  .map-info-bar-cue {
+    display: none;
+  }
+
+  .mobile-controls {
+    left: 10px;
+    bottom: 10px;
+  }
+
+  .touch-controls-mobile {
+    width: 120px;
+    gap: 0.28rem;
+  }
+
+  .touch-controls-mobile > button {
+    width: 44px;
+  }
+
+  .touch-controls-mobile > div {
+    gap: 0.28rem;
+  }
+
+  .touch-controls-mobile button {
+    min-height: 44px;
+    border-radius: 14px;
+    font-size: 0.9rem;
+  }
+
+  .world-interaction-prompt {
+    right: 10px;
+    bottom: 10px;
+    padding: 0.58rem 0.7rem;
+    max-width: min(38vw, 240px);
+  }
+
+  .world-interaction-prompt strong {
+    min-width: 36px;
+    font-size: 0.74rem;
+  }
+
+  .world-interaction-prompt span {
+    font-size: 0.78rem;
+  }
+
+  .world-menu-bar {
+    gap: 0;
+    padding: 0.45rem 0.3rem calc(0.45rem + env(safe-area-inset-bottom, 0px));
+    box-shadow: none;
+  }
+
+  .world-menu-bar .secondary-button {
+    min-height: 40px;
+    padding: 0.42rem 0.18rem;
+    border-radius: 12px;
+    font-size: 0.76rem;
   }
 }

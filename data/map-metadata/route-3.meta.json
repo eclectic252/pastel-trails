@@ -78,7 +78,8 @@
           "monsterOptions": [
             {
               "speciesId": "equira",
-              "weight": 60
+              "weight": 60,
+              "variantId": "default"
             },
             {
               "speciesId": "equira",
@@ -119,5 +120,6 @@
     }
   ],
   "trainers": [],
+  "npcs": [],
   "mapMonstersPanel": []
 }

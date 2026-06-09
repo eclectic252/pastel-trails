@@ -106,7 +106,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
                 2,
                 3
               ],
-              "frameDurationMs": 190
+              "frameDurationMs": 190,
+              "displayMode": "portrait"
             }
           },
           {
@@ -134,6 +135,47 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
                 3
               ],
               "frameDurationMs": 190
+            }
+          }
+        ]
+      },
+      {
+        "id": "equira",
+        "name": "Equira",
+        "baseStats": {
+          "hp": 10,
+          "attack": 5,
+          "defense": 5,
+          "speed": 5
+        },
+        "growth": "medium",
+        "overworldDisplayMode": "portrait",
+        "skills": [
+          "basic-attack"
+        ],
+        "variants": [
+          {
+            "id": "default",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Pawlit/equira.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 142
             }
           }
         ]
@@ -3715,12 +3757,16 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
   "monsterAssets": {
     "images": [
       "assets/Monsters/Pawlit/Pawlit_Tide_walksheet.png",
+      "assets/Monsters/Pawlit/equira.png",
+      "assets/Monsters/Pawlit/fluffram.png",
       "assets/Monsters/Pawlit/pawlit-blue-ready-hires.png",
       "assets/Monsters/Pawlit/pawlit-blue-walksheet.png",
       "assets/Monsters/Pawlit/pawlit-classic-ready-transparent.png",
       "assets/Monsters/Pawlit/pawlit-classic-walksheet.png",
       "assets/Monsters/Pawlit/pawlit-pink-ready-hires.png",
-      "assets/Monsters/Pawlit/pawlit-pink-walksheet.png"
+      "assets/Monsters/Pawlit/pawlit-pink-walksheet.png",
+      "assets/Monsters/Pawlit/pawlit_black.png",
+      "assets/Monsters/Pawlit/ruffin.png"
     ]
   },
   "maps": {
@@ -39319,7 +39365,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               "monsterOptions": [
                 {
                   "speciesId": "equira",
-                  "weight": 60
+                  "weight": 60,
+                  "variantId": "default"
                 },
                 {
                   "speciesId": "equira",

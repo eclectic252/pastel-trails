@@ -95,7 +95,6 @@
         monsterSpriteRenderWidth: MONSTER_RENDER_WIDTH,
         playerSpriteAnchorOffsetY: PLAYER_SPRITE_ANCHOR_OFFSET_Y,
         shareExperience: true,
-        mapDetails: true,
         encounterPreview: false,
         encounterPreviewMode: "available",
         arenaLeaderMinLevel: 1,
@@ -908,6 +907,9 @@
         up: upRow,
       },
       displayMode: String(config.displayMode || "").trim().toLowerCase(),
+      renderWidth: config.renderWidth === null || config.renderWidth === undefined || config.renderWidth === ""
+        ? null
+        : clampRenderWidth(config.renderWidth, "monster", MONSTER_RENDER_WIDTH),
       idleFrame,
       walkFrames: normalizeFrameList(config.walkFrames, idleFrame),
       frameDurationMs: Math.max(60, Number(config.frameDurationMs || 180)),
@@ -3138,7 +3140,9 @@
     const screenY = Math.round((monster.y - camera.y) * zoomScale);
     const map = content.maps[ACTIVE_APP?.state?.world?.currentMapId || ""];
     const fallbackSheet = overworldSheet || portraitSheet;
-    const overworldWidth = fallbackSheet ? getEffectiveRenderWidthForSheet(content, fallbackSheet) : (map?.tileSize || 128);
+    const overworldWidth = displayMode === "portrait" && overworldConfig.renderWidth
+      ? overworldConfig.renderWidth
+      : (fallbackSheet ? getEffectiveRenderWidthForSheet(content, fallbackSheet) : (map?.tileSize || 128));
     const spriteSize = overworldWidth * zoomScale;
     const drawX = Math.round(screenX - spriteSize / 2);
     const drawY = Math.round(screenY - spriteSize / 2);
@@ -4036,12 +4040,10 @@
     let panelBody = "";
 
     if (panel === "map") {
-      const availableMonsters = state.settings.mapDetails
-        ? (mapMeta.mapMonstersPanel || []).map(function (monsterId) {
-            const species = getSpecies(content, monsterId);
-            return "<li><span>" + escapeHtml(species?.name || monsterId) + "</span><strong>" + escapeHtml(monsterId) + "</strong></li>";
-          }).join("")
-        : '<li><span>Map details are hidden in Settings.</span></li>';
+      const availableMonsters = (mapMeta.mapMonstersPanel || []).map(function (monsterId) {
+        const species = getSpecies(content, monsterId);
+        return "<li><span>" + escapeHtml(species?.name || monsterId) + "</span><strong>" + escapeHtml(monsterId) + "</strong></li>";
+      }).join("");
 
       panelBody = [
         "<p>Current area: <strong>" + escapeHtml(mapMeta.displayName) + "</strong></p>",
@@ -4153,20 +4155,25 @@
       }).join("");
       panelBody = [
         '<section class="panel-block"><div class="section-heading"><h3>Now Playing</h3></div><p>' + escapeHtml(state.message || "Exploring the world.") + '</p><p><strong>Location:</strong> ' + escapeHtml(content.mapMetadata[state.world.currentMapId]?.displayName || state.world.currentMapId || "Unknown") + '</p><p><strong>Money:</strong> $' + Number(state.player.money || 0) + '</p><p><strong>Party Lead:</strong> ' + escapeHtml(activeSpecies?.name || activeMonster?.speciesId || "Unknown") + (activeMonster ? (" Lv " + Number(activeMonster.level || 1) + " · HP " + Number(activeMonster.currentHp || 0) + "/" + Number(activeMonster.stats?.hp || 0)) : "") + '</p><p><strong>Save Slots:</strong> ' + saveSlots.length + " stored locally in this browser.</p></section>",
-        '<div class="form-grid">',
-        '<label class="input-group"><span>Theme</span><select data-world-setting="theme">' + themeOptions + "</select></label>",
-        '<label class="input-group"><span>Sprite Avatar</span><select data-world-player-field="avatarId">' + avatarOptions + "</select></label>",
-        '<label class="input-group"><span>Map Zoom</span><select data-world-setting="zoom">' + zoomOptions + "</select></label>",
-        '<label class="input-group"><span>Walk Speed</span><select data-world-setting="walkSpeed">' + walkSpeedOptions + "</select></label>",
-        '<label class="input-group"><span>Party Size</span><input type="number" min="1" max="12" data-world-setting="partySize" value="' + Number(state.settings.partySize) + '" /></label>',
-        '<label class="input-group"><span>Arena Leader Min Level</span><input type="number" min="1" max="999" data-world-setting="arenaLeaderMinLevel" value="' + Number(state.settings.arenaLeaderMinLevel || 1) + '" /></label>',
-        '<label class="input-group"><span>Arena Leader Max Level</span><input type="number" min="1" max="999" data-world-setting="arenaLeaderMaxLevel" value="' + Number(state.settings.arenaLeaderMaxLevel || 100) + '" /></label>',
-        '<label class="input-group"><span>Arena Leader Party Size</span><input type="number" min="1" max="12" data-world-setting="arenaLeaderPartySize" value="' + Number(state.settings.arenaLeaderPartySize || 6) + '" /></label>',
-        '<label class="input-group"><span>Share Experience</span><select data-world-setting="shareExperience"><option value="true"' + (state.settings.shareExperience ? " selected" : "") + '>Yes</option><option value="false"' + (!state.settings.shareExperience ? " selected" : "") + '>No</option></select></label>',
-        '<label class="input-group"><span>Show Map Details</span><select data-world-setting="mapDetails"><option value="true"' + (state.settings.mapDetails ? " selected" : "") + '>Yes</option><option value="false"' + (!state.settings.mapDetails ? " selected" : "") + '>No</option></select></label>',
-        '<label class="input-group"><span>Encounter Preview</span><select data-world-setting="encounterPreview"><option value="true"' + (state.settings.encounterPreview ? " selected" : "") + '>Yes</option><option value="false"' + (!state.settings.encounterPreview ? " selected" : "") + '>No</option></select></label>',
-        '<label class="input-group"><span>Encounter Preview Mode</span><select data-world-setting="encounterPreviewMode"><option value="available"' + (state.settings.encounterPreviewMode === "available" || !state.settings.encounterPreviewMode ? " selected" : "") + '>Show Available</option><option value="current"' + (state.settings.encounterPreviewMode === "current" ? " selected" : "") + '>Show Current Encounters</option><option value="available-current"' + (state.settings.encounterPreviewMode === "available-current" ? " selected" : "") + '>Show Available And Current</option></select></label>',
-        '</div>',
+        '<section class="panel-block"><div class="section-heading"><h3>Player Settings</h3></div><div class="form-grid">' +
+        '<label class="input-group"><span>Theme</span><select data-world-setting="theme">' + themeOptions + "</select></label>" +
+        '<label class="input-group"><span>Sprite Avatar</span><select data-world-player-field="avatarId">' + avatarOptions + "</select></label>" +
+        '</div></section>',
+        '<section class="panel-block"><div class="section-heading"><h3>Map Settings</h3></div><div class="form-grid">' +
+        '<label class="input-group"><span>Encounter Preview</span><select data-world-setting="encounterPreview"><option value="true"' + (state.settings.encounterPreview ? " selected" : "") + '>Yes</option><option value="false"' + (!state.settings.encounterPreview ? " selected" : "") + '>No</option></select></label>' +
+        '<label class="input-group"><span>Encounter Preview Mode</span><select data-world-setting="encounterPreviewMode"><option value="available"' + (state.settings.encounterPreviewMode === "available" || !state.settings.encounterPreviewMode ? " selected" : "") + '>Show Available</option><option value="current"' + (state.settings.encounterPreviewMode === "current" ? " selected" : "") + '>Show Current Encounters</option><option value="available-current"' + (state.settings.encounterPreviewMode === "available-current" ? " selected" : "") + '>Show Available And Current</option></select></label>' +
+        '<label class="input-group"><span>Map Zoom</span><select data-world-setting="zoom">' + zoomOptions + "</select></label>" +
+        '<label class="input-group"><span>Walk Speed</span><select data-world-setting="walkSpeed">' + walkSpeedOptions + "</select></label>" +
+        '</div></section>',
+        '<section class="panel-block"><div class="section-heading"><h3>Party Settings</h3></div><div class="form-grid">' +
+        '<label class="input-group"><span>Party Size</span><input type="number" min="1" max="12" data-world-setting="partySize" value="' + Number(state.settings.partySize) + '" /></label>' +
+        '<label class="input-group"><span>Share Experience</span><select data-world-setting="shareExperience"><option value="true"' + (state.settings.shareExperience ? " selected" : "") + '>Yes</option><option value="false"' + (!state.settings.shareExperience ? " selected" : "") + '>No</option></select></label>' +
+        '</div></section>',
+        '<section class="panel-block"><div class="section-heading"><h3>Arena Settings</h3></div><div class="form-grid">' +
+        '<label class="input-group"><span>Arena Leader Min Level</span><input type="number" min="1" max="999" data-world-setting="arenaLeaderMinLevel" value="' + Number(state.settings.arenaLeaderMinLevel || 1) + '" /></label>' +
+        '<label class="input-group"><span>Arena Leader Max Level</span><input type="number" min="1" max="999" data-world-setting="arenaLeaderMaxLevel" value="' + Number(state.settings.arenaLeaderMaxLevel || 100) + '" /></label>' +
+        '<label class="input-group"><span>Arena Leader Party Size</span><input type="number" min="1" max="12" data-world-setting="arenaLeaderPartySize" value="' + Number(state.settings.arenaLeaderPartySize || 6) + '" /></label>' +
+        '</div></section>',
         '<div class="title-actions"><button class="secondary-button" type="button" data-action="save">Save Game</button><button class="secondary-button" type="button" data-action="title">Return To Title</button></div>',
       ].join("");
     }
@@ -5424,9 +5431,13 @@
             return '<option value="' + escapeHtml(sheet.id) + '"' + selected + '>' + escapeHtml(sheet.label) + "</option>";
           })
         ).join("");
+        const showsWalkSettings = displayMode === "walk";
+        const showsPortraitWidth = displayMode === "portrait";
+        const variantPreview = renderMonsterVariantVisualMarkup(selectedSpecies.id, variant.id || "default", "monster-variant-preview-image", "default");
         return [
           '<div class="dev-subcard">',
           '<div class="section-heading"><h3>Variant ' + (index + 1) + '</h3><div class="topbar-stats"><button class="secondary-button" type="button" data-action="duplicate-variant" data-variant-index="' + index + '">Duplicate</button><button class="secondary-button" type="button" data-action="delete-variant" data-variant-index="' + index + '">Delete</button></div></div>',
+          '<div class="monster-variant-preview-card">' + variantPreview + '<div><p><strong>' + escapeHtml(formatMonsterVariantLabel(variant.id || "default")) + '</strong></p><p>Overworld Mode: ' + escapeHtml(displayMode) + '</p></div></div>',
           '<div class="form-grid">',
           '<label class="input-group"><span>Variant ID</span><input data-dev-variant-field="id" data-variant-index="' + index + '" value="' + escapeHtml(variant.id || "") + '" /></label>',
           '<label class="input-group"><span>Portrait Image</span><select data-dev-variant-field="portrait.imagePath" data-variant-index="' + index + '">' + portraitImageOptions + '</select></label>',
@@ -5434,14 +5445,19 @@
           '<label class="input-group"><span>Portrait Row (0-based)</span><input type="number" min="0" step="1" data-dev-variant-field="portrait.row" data-variant-index="' + index + '" value="' + Number(portraitConfig.row || 0) + '" /></label>',
           '<label class="input-group"><span>Portrait Frame (0-based)</span><input type="number" min="0" step="1" data-dev-variant-field="portrait.frame" data-variant-index="' + index + '" value="' + Number(portraitConfig.frame || 0) + '" /></label>',
           '<label class="input-group"><span>Overworld Mode Override</span><select data-dev-variant-field="overworld.displayMode" data-variant-index="' + index + '"><option value=""' + (!overworldConfig.displayMode ? " selected" : "") + '>Use Species Default</option><option value="walk"' + (overworldConfig.displayMode === "walk" ? " selected" : "") + '>Walk Animation</option><option value="portrait"' + (overworldConfig.displayMode === "portrait" ? " selected" : "") + '>Default Sprite</option></select></label>',
-          '<label class="input-group"><span>Overworld Sheet</span><select data-dev-variant-field="overworld.sheetId" data-variant-index="' + index + '">' + monsterOverworldSheetOptions + '</select></label>',
-          '<label class="input-group"><span>Down Row (0-based)</span><input type="number" min="0" step="1" data-dev-variant-field="overworld.rows.down" data-variant-index="' + index + '" value="' + Number(overworldConfig.rows?.down || 0) + '" /></label>',
-          '<label class="input-group"><span>Left Row (0-based)</span><input type="number" min="0" step="1" data-dev-variant-field="overworld.rows.left" data-variant-index="' + index + '" value="' + Number(overworldConfig.rows?.left || 0) + '" /></label>',
-          '<label class="input-group"><span>Right Row (0-based)</span><input type="number" min="0" step="1" data-dev-variant-field="overworld.rows.right" data-variant-index="' + index + '" value="' + Number(overworldConfig.rows?.right || 0) + '" /></label>',
-          '<label class="input-group"><span>Up Row (0-based)</span><input type="number" min="0" step="1" data-dev-variant-field="overworld.rows.up" data-variant-index="' + index + '" value="' + Number(overworldConfig.rows?.up || 0) + '" /></label>',
-          '<label class="input-group"><span>Idle Frame (0-based)</span><input type="number" min="0" step="1" data-dev-variant-field="overworld.idleFrame" data-variant-index="' + index + '" value="' + Number(overworldConfig.idleFrame || 0) + '" /></label>',
-          '<label class="input-group"><span>Walk Frames</span><input data-dev-variant-field="overworld.walkFrames" data-variant-index="' + index + '" value="' + escapeHtml((overworldConfig.walkFrames || []).join(", ")) + '" /></label>',
-          '<label class="input-group"><span>Frame Duration Ms</span><input type="number" min="60" step="10" data-dev-variant-field="overworld.frameDurationMs" data-variant-index="' + index + '" value="' + Number(overworldConfig.frameDurationMs || 180) + '" /></label>',
+          (showsPortraitWidth
+            ? '<label class="input-group"><span>Default Sprite Width</span><input type="number" min="' + MIN_MONSTER_RENDER_WIDTH + '" max="384" step="1" data-dev-variant-field="overworld.renderWidth" data-variant-index="' + index + '" value="' + escapeHtml(overworldConfig.renderWidth ?? "") + '" placeholder="' + MONSTER_RENDER_WIDTH + '" /></label>'
+            : "") +
+          (showsWalkSettings
+            ? '<label class="input-group"><span>Overworld Sheet</span><select data-dev-variant-field="overworld.sheetId" data-variant-index="' + index + '">' + monsterOverworldSheetOptions + '</select></label>'
+              + '<label class="input-group"><span>Down Row (0-based)</span><input type="number" min="0" step="1" data-dev-variant-field="overworld.rows.down" data-variant-index="' + index + '" value="' + Number(overworldConfig.rows?.down || 0) + '" /></label>'
+              + '<label class="input-group"><span>Left Row (0-based)</span><input type="number" min="0" step="1" data-dev-variant-field="overworld.rows.left" data-variant-index="' + index + '" value="' + Number(overworldConfig.rows?.left || 0) + '" /></label>'
+              + '<label class="input-group"><span>Right Row (0-based)</span><input type="number" min="0" step="1" data-dev-variant-field="overworld.rows.right" data-variant-index="' + index + '" value="' + Number(overworldConfig.rows?.right || 0) + '" /></label>'
+              + '<label class="input-group"><span>Up Row (0-based)</span><input type="number" min="0" step="1" data-dev-variant-field="overworld.rows.up" data-variant-index="' + index + '" value="' + Number(overworldConfig.rows?.up || 0) + '" /></label>'
+              + '<label class="input-group"><span>Idle Frame (0-based)</span><input type="number" min="0" step="1" data-dev-variant-field="overworld.idleFrame" data-variant-index="' + index + '" value="' + Number(overworldConfig.idleFrame || 0) + '" /></label>'
+              + '<label class="input-group"><span>Walk Frames</span><input data-dev-variant-field="overworld.walkFrames" data-variant-index="' + index + '" value="' + escapeHtml((overworldConfig.walkFrames || []).join(", ")) + '" /></label>'
+              + '<label class="input-group"><span>Frame Duration Ms</span><input type="number" min="60" step="10" data-dev-variant-field="overworld.frameDurationMs" data-variant-index="' + index + '" value="' + Number(overworldConfig.frameDurationMs || 180) + '" /></label>'
+            : ""),
           '</div>',
           '<p class="dev-helper-text">Portrait controls the static UI image used in saves, registry, party, bank, and battle. This variant currently resolves to <strong>' + escapeHtml(displayMode) + '</strong> on the overworld. Leave the override blank to inherit the species default.</p>',
           '</div>',
@@ -6813,7 +6829,7 @@
       }
     });
     root.querySelectorAll("[data-dev-spawn-field]").forEach(function (field) {
-      const useDeferredRender = isDeferredDevTextField(field);
+      const useDeferredRender = field.tagName !== "SELECT";
       const eventName = field.tagName === "SELECT" ? "change" : "input";
       field.addEventListener(eventName, function () {
         app.updateSpawnField(field.getAttribute("data-dev-spawn-field"), field.value, !useDeferredRender);
@@ -6828,17 +6844,20 @@
       }
     });
     root.querySelectorAll("[data-dev-spawn-option-field]").forEach(function (field) {
-      const isWeightField = field.getAttribute("data-dev-spawn-option-field") === "weight";
+      const useDeferredRender = field.tagName !== "SELECT";
       const eventName = field.tagName === "SELECT" ? "change" : "input";
       field.addEventListener(eventName, function () {
         app.updateSpawnOptionField(
           Number(field.getAttribute("data-option-index")),
           field.getAttribute("data-dev-spawn-option-field"),
           field.value,
-          !isWeightField
+          !useDeferredRender
         );
+        if (useDeferredRender) {
+          app.clearDeferredRender();
+        }
       });
-      if (isWeightField) {
+      if (useDeferredRender) {
         field.addEventListener("change", function () {
           app.updateSpawnOptionField(
             Number(field.getAttribute("data-option-index")),
@@ -6909,7 +6928,7 @@
       }
     });
     root.querySelectorAll("[data-dev-variant-field]").forEach(function (field) {
-      const useDeferredRender = isDeferredDevTextField(field);
+      const useDeferredRender = field.tagName !== "SELECT";
       const eventName = field.tagName === "SELECT" ? "change" : "input";
       field.addEventListener(eventName, function () {
         app.updateVariantField(Number(field.getAttribute("data-variant-index")), field.getAttribute("data-dev-variant-field"), field.value, !useDeferredRender);
@@ -7422,7 +7441,7 @@
 
         if (key === "zoom" || key === "walkSpeed" || key === "partySize" || key === "arenaLeaderMinLevel" || key === "arenaLeaderMaxLevel" || key === "arenaLeaderPartySize") {
           this.state.settings[key] = Number(rawValue || 0);
-        } else if (key === "shareExperience" || key === "mapDetails" || key === "encounterPreview") {
+        } else if (key === "shareExperience" || key === "encounterPreview") {
           this.state.settings[key] = rawValue === "true";
         } else {
           this.state.settings[key] = rawValue;
@@ -8495,6 +8514,10 @@
           const leaf = parts[parts.length - 1];
           if (["row", "frame", "idleFrame", "frameDurationMs", "down", "left", "right", "up"].includes(leaf)) {
             current[leaf] = Number(rawValue || 0);
+          } else if (leaf === "renderWidth") {
+            current[leaf] = rawValue === ""
+              ? null
+              : clampRenderWidth(rawValue, "monster", MONSTER_RENDER_WIDTH);
           } else if (leaf === "walkFrames") {
             current[leaf] = normalizeFrameList(rawValue, current.idleFrame || 0);
           } else {

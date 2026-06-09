@@ -38,7 +38,8 @@
               2,
               3
             ],
-            "frameDurationMs": 190
+            "frameDurationMs": 190,
+            "displayMode": "portrait"
           }
         },
         {
@@ -66,6 +67,47 @@
               3
             ],
             "frameDurationMs": 190
+          }
+        }
+      ]
+    },
+    {
+      "id": "equira",
+      "name": "Equira",
+      "baseStats": {
+        "hp": 10,
+        "attack": 5,
+        "defense": 5,
+        "speed": 5
+      },
+      "growth": "medium",
+      "overworldDisplayMode": "portrait",
+      "skills": [
+        "basic-attack"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Pawlit/equira.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180,
+            "renderWidth": 142
           }
         }
       ]
