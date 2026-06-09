@@ -19,7 +19,7 @@
           "id": "Equira-default",
           "sprite": "assets/monsters/new-monster.png",
           "portrait": {
-            "imagePath": "assets/Monsters/Overworld/equira-default.png",
+            "imagePath": "assets/Monsters/Equira/equira-default.png",
             "sheetId": "",
             "row": 0,
             "frame": 0
@@ -43,7 +43,7 @@
         {
           "id": "Equira-snow",
           "portrait": {
-            "imagePath": "assets/Monsters/Overworld/equira-snow.png",
+            "imagePath": "assets/Monsters/Equira/equira-snow.png",
             "sheetId": "",
             "row": 0,
             "frame": 0
@@ -67,7 +67,7 @@
         {
           "id": "Equira-grass",
           "portrait": {
-            "imagePath": "assets/Monsters/Overworld/equira-grass.png",
+            "imagePath": "assets/Monsters/Equira/equira-grass.png",
             "sheetId": "",
             "row": 0,
             "frame": 0
@@ -91,7 +91,7 @@
         {
           "id": "Equira-Electric",
           "portrait": {
-            "imagePath": "assets/Monsters/Overworld/equira-electric.png",
+            "imagePath": "assets/Monsters/Equira/equira-electric.png",
             "sheetId": "",
             "row": 0,
             "frame": 0
@@ -115,7 +115,7 @@
         {
           "id": "Equira-Fire",
           "portrait": {
-            "imagePath": "assets/Monsters/Overworld/equira-fire.png",
+            "imagePath": "assets/Monsters/Equira/equira-fire.png",
             "sheetId": "",
             "row": 0,
             "frame": 0
@@ -139,7 +139,7 @@
         {
           "id": "Equira-Pink",
           "portrait": {
-            "imagePath": "assets/Monsters/Overworld/equira-pink.png",
+            "imagePath": "assets/Monsters/Equira/equira-pink.png",
             "sheetId": "",
             "row": 0,
             "frame": 0
@@ -163,7 +163,7 @@
         {
           "id": "Equira-water",
           "portrait": {
-            "imagePath": "assets/Monsters/Overworld/equira-water.png",
+            "imagePath": "assets/Monsters/Equira/equira-water.png",
             "sheetId": "",
             "row": 0,
             "frame": 0
@@ -187,7 +187,7 @@
         {
           "id": "Equira-Galaxy",
           "portrait": {
-            "imagePath": "assets/Monsters/Overworld/equira-galaxy.png",
+            "imagePath": "assets/Monsters/Equira/equira-galaxy.png",
             "sheetId": "",
             "row": 0,
             "frame": 0
@@ -211,7 +211,7 @@
         {
           "id": "Equira-dark",
           "portrait": {
-            "imagePath": "assets/Monsters/Overworld/equira-dark.png",
+            "imagePath": "assets/Monsters/Equira/equira-dark.png",
             "sheetId": "",
             "row": 0,
             "frame": 0
@@ -235,7 +235,7 @@
         {
           "id": "Equira-Lavender",
           "portrait": {
-            "imagePath": "assets/Monsters/Overworld/equira-lavender.png",
+            "imagePath": "assets/Monsters/Equira/equira-lavender.png",
             "sheetId": "",
             "row": 0,
             "frame": 0
@@ -722,6 +722,72 @@
             "frameDurationMs": 180
           },
           "label": "Dark"
+        }
+      ]
+    },
+    {
+      "id": "pawlit",
+      "name": "Pawlit",
+      "baseStats": {
+        "hp": 10,
+        "attack": 5,
+        "defense": 5,
+        "speed": 5
+      },
+      "growth": "medium",
+      "overworldDisplayMode": "walk",
+      "skills": [
+        "basic-attack"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Pawlit/pawlit_default.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "portrait",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180,
+            "renderWidth": 100
+          }
+        },
+        {
+          "id": "default-snow",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Pawlit/pawlit_snow.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "portrait",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180,
+            "renderWidth": 100
+          },
+          "label": "Snow"
         }
       ]
     }

@@ -87,7 +87,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "id": "Equira-default",
             "sprite": "assets/monsters/new-monster.png",
             "portrait": {
-              "imagePath": "assets/Monsters/Overworld/equira-default.png",
+              "imagePath": "assets/Monsters/Equira/equira-default.png",
               "sheetId": "",
               "row": 0,
               "frame": 0
@@ -111,7 +111,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           {
             "id": "Equira-snow",
             "portrait": {
-              "imagePath": "assets/Monsters/Overworld/equira-snow.png",
+              "imagePath": "assets/Monsters/Equira/equira-snow.png",
               "sheetId": "",
               "row": 0,
               "frame": 0
@@ -135,7 +135,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           {
             "id": "Equira-grass",
             "portrait": {
-              "imagePath": "assets/Monsters/Overworld/equira-grass.png",
+              "imagePath": "assets/Monsters/Equira/equira-grass.png",
               "sheetId": "",
               "row": 0,
               "frame": 0
@@ -159,7 +159,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           {
             "id": "Equira-Electric",
             "portrait": {
-              "imagePath": "assets/Monsters/Overworld/equira-electric.png",
+              "imagePath": "assets/Monsters/Equira/equira-electric.png",
               "sheetId": "",
               "row": 0,
               "frame": 0
@@ -183,7 +183,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           {
             "id": "Equira-Fire",
             "portrait": {
-              "imagePath": "assets/Monsters/Overworld/equira-fire.png",
+              "imagePath": "assets/Monsters/Equira/equira-fire.png",
               "sheetId": "",
               "row": 0,
               "frame": 0
@@ -207,7 +207,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           {
             "id": "Equira-Pink",
             "portrait": {
-              "imagePath": "assets/Monsters/Overworld/equira-pink.png",
+              "imagePath": "assets/Monsters/Equira/equira-pink.png",
               "sheetId": "",
               "row": 0,
               "frame": 0
@@ -231,7 +231,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           {
             "id": "Equira-water",
             "portrait": {
-              "imagePath": "assets/Monsters/Overworld/equira-water.png",
+              "imagePath": "assets/Monsters/Equira/equira-water.png",
               "sheetId": "",
               "row": 0,
               "frame": 0
@@ -255,7 +255,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           {
             "id": "Equira-Galaxy",
             "portrait": {
-              "imagePath": "assets/Monsters/Overworld/equira-galaxy.png",
+              "imagePath": "assets/Monsters/Equira/equira-galaxy.png",
               "sheetId": "",
               "row": 0,
               "frame": 0
@@ -279,7 +279,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           {
             "id": "Equira-dark",
             "portrait": {
-              "imagePath": "assets/Monsters/Overworld/equira-dark.png",
+              "imagePath": "assets/Monsters/Equira/equira-dark.png",
               "sheetId": "",
               "row": 0,
               "frame": 0
@@ -303,7 +303,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           {
             "id": "Equira-Lavender",
             "portrait": {
-              "imagePath": "assets/Monsters/Overworld/equira-lavender.png",
+              "imagePath": "assets/Monsters/Equira/equira-lavender.png",
               "sheetId": "",
               "row": 0,
               "frame": 0
@@ -718,6 +718,144 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               "frameDurationMs": 180
             },
             "label": "Water"
+          },
+          {
+            "id": "fluffram-fire",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Fluffram/fluffram_fire.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180
+            },
+            "label": "Fire"
+          },
+          {
+            "id": "fluffram-pink",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Fluffram/fluffram_pink.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180
+            },
+            "label": "Pink"
+          },
+          {
+            "id": "fluffram-dark",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Fluffram/fluffram_dark.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180
+            },
+            "label": "Dark"
+          }
+        ]
+      },
+      {
+        "id": "pawlit",
+        "name": "Pawlit",
+        "baseStats": {
+          "hp": 10,
+          "attack": 5,
+          "defense": 5,
+          "speed": 5
+        },
+        "growth": "medium",
+        "overworldDisplayMode": "walk",
+        "skills": [
+          "basic-attack"
+        ],
+        "variants": [
+          {
+            "id": "default",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Pawlit/pawlit_default.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "portrait",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 100
+            }
+          },
+          {
+            "id": "default-snow",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Pawlit/pawlit_snow.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "portrait",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 100
+            },
+            "label": "Snow"
           }
         ]
       }
@@ -3075,594 +3213,107 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         ]
       },
       {
-        "id": "assets-monsters-pawlit-pawlit-tide-walksheet",
+        "id": "assets-monsters-pawlit-old-pawlit-tide-walksheet",
         "label": "Pawlit Tide Walksheet",
         "playerLabel": "Pawlit Tide Walksheet",
         "playerSelectable": false,
         "kind": "monster",
-        "group": "Monsters / Pawlit",
-        "path": "assets/Monsters/Pawlit/Pawlit_Tide_walksheet.png",
-        "columns": 4,
-        "rows": 4,
-        "frameHeight": 313,
-        "offsetX": 0,
-        "offsetY": 0,
-        "renderWidth": 100,
-        "rowOffsets": [
-          {
-            "x": 0,
-            "y": 19
-          },
-          {
-            "x": 0,
-            "y": 18
-          },
-          {
-            "x": 0,
-            "y": 38
-          },
-          {
-            "x": 0,
-            "y": 96
-          }
-        ],
-        "frameOffsets": [
-          [
-            {
-              "x": 22,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": -31,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": -70,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": -106,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            }
-          ],
-          [
-            {
-              "x": 43,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": -41,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": -53,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            }
-          ],
-          [
-            {
-              "x": 15,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": -20,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": -10,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": -5,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            }
-          ],
-          [
-            {
-              "x": 22,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": -21,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": -46,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": -86,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            }
-          ]
-        ]
-      },
-      {
-        "id": "assets-monsters-pawlit-pawlit-blue-walksheet",
-        "label": "Pawlit Blue Walksheet",
-        "playerLabel": "Pawlit Blue Walksheet",
-        "playerSelectable": false,
-        "kind": "monster",
-        "group": "Monsters / Pawlit",
-        "path": "assets/Monsters/Pawlit/pawlit-blue-walksheet.png",
-        "columns": 4,
-        "rows": 4,
-        "frameHeight": 313,
-        "offsetX": 1,
-        "offsetY": 0,
-        "renderWidth": 100,
-        "rowOffsets": [
-          {
-            "x": 0,
-            "y": 21
-          },
-          {
-            "x": 0,
-            "y": 12
-          },
-          {
-            "x": 0,
-            "y": -9
-          },
-          {
-            "x": 0,
-            "y": -27
-          }
-        ],
-        "frameOffsets": [
-          [
-            {
-              "x": 33,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": -18,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": -37,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": -62,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            }
-          ],
-          [
-            {
-              "x": 21,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": -34,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": -60,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            }
-          ],
-          [
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            }
-          ],
-          [
-            {
-              "x": 14,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": -15,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": -28,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": -55,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            }
-          ]
-        ]
-      },
-      {
-        "id": "assets-monsters-pawlit-pawlit-classic-walksheet",
-        "label": "Pawlit Classic Walksheet",
-        "playerLabel": "Pawlit Classic Walksheet",
-        "playerSelectable": false,
-        "kind": "monster",
-        "group": "Monsters / Pawlit",
-        "path": "assets/Monsters/Pawlit/pawlit-classic-walksheet.png",
-        "columns": 4,
-        "rows": 4,
-        "frameHeight": 313,
-        "offsetX": 0,
-        "offsetY": 0,
-        "renderWidth": 100,
-        "rowOffsets": [
-          {
-            "x": 0,
-            "y": 14
-          },
-          {
-            "x": 0,
-            "y": 9
-          },
-          {
-            "x": 0,
-            "y": 2
-          },
-          {
-            "x": 0,
-            "y": 69
-          }
-        ],
-        "frameOffsets": [
-          [
-            {
-              "x": 37,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": -12,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": -58,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": -101,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            }
-          ],
-          [
-            {
-              "x": 32,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 18,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 5,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": -18,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            }
-          ],
-          [
-            {
-              "x": 16,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": -20,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": -10,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": -53,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            }
-          ],
-          [
-            {
-              "x": 50,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": -5,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": -37,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": -84,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            }
-          ]
-        ]
-      },
-      {
-        "id": "assets-monsters-pawlit-pawlit-pink-walksheet",
-        "label": "Pawlit Pink Walksheet",
-        "playerLabel": "Pawlit Pink Walksheet",
-        "playerSelectable": false,
-        "kind": "monster",
-        "group": "Monsters / Pawlit",
-        "path": "assets/Monsters/Pawlit/pawlit-pink-walksheet.png",
+        "group": "Monsters / Pawlit / old",
+        "path": "assets/Monsters/Pawlit/old/Pawlit_Tide_walksheet.png",
         "columns": 4,
         "rows": 4,
         "frameHeight": 313,
         "offsetX": 0,
         "offsetY": 0,
         "renderWidth": null,
-        "rowOffsets": [
-          {
-            "x": 0,
-            "y": 0
-          },
-          {
-            "x": 0,
-            "y": 0
-          },
-          {
-            "x": 0,
-            "y": 0
-          },
-          {
-            "x": 0,
-            "y": 0
-          }
-        ],
-        "frameOffsets": [
-          [
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            }
-          ],
-          [
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            }
-          ],
-          [
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            }
-          ],
-          [
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 0,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            }
-          ]
-        ]
+        "rowOffsets": [],
+        "frameOffsets": []
+      },
+      {
+        "id": "assets-monsters-pawlit-old-pawlit-blue-walksheet",
+        "label": "Pawlit Blue Walksheet",
+        "playerLabel": "Pawlit Blue Walksheet",
+        "playerSelectable": false,
+        "kind": "monster",
+        "group": "Monsters / Pawlit / old",
+        "path": "assets/Monsters/Pawlit/old/pawlit-blue-walksheet.png",
+        "columns": 4,
+        "rows": 4,
+        "frameHeight": 313,
+        "offsetX": 0,
+        "offsetY": 0,
+        "renderWidth": null,
+        "rowOffsets": [],
+        "frameOffsets": []
+      },
+      {
+        "id": "assets-monsters-pawlit-old-pawlit-classic-walksheet",
+        "label": "Pawlit Classic Walksheet",
+        "playerLabel": "Pawlit Classic Walksheet",
+        "playerSelectable": false,
+        "kind": "monster",
+        "group": "Monsters / Pawlit / old",
+        "path": "assets/Monsters/Pawlit/old/pawlit-classic-walksheet.png",
+        "columns": 4,
+        "rows": 4,
+        "frameHeight": 313,
+        "offsetX": 0,
+        "offsetY": 0,
+        "renderWidth": null,
+        "rowOffsets": [],
+        "frameOffsets": []
+      },
+      {
+        "id": "assets-monsters-pawlit-old-pawlit-pink-walksheet",
+        "label": "Pawlit Pink Walksheet",
+        "playerLabel": "Pawlit Pink Walksheet",
+        "playerSelectable": false,
+        "kind": "monster",
+        "group": "Monsters / Pawlit / old",
+        "path": "assets/Monsters/Pawlit/old/pawlit-pink-walksheet.png",
+        "columns": 4,
+        "rows": 4,
+        "frameHeight": 313,
+        "offsetX": 0,
+        "offsetY": 0,
+        "renderWidth": null,
+        "rowOffsets": [],
+        "frameOffsets": []
       }
     ]
   },
   "monsterAssets": {
     "images": [
+      "assets/Monsters/Equira/equira-dark.png",
+      "assets/Monsters/Equira/equira-default.png",
+      "assets/Monsters/Equira/equira-electric.png",
+      "assets/Monsters/Equira/equira-fire.png",
+      "assets/Monsters/Equira/equira-galaxy.png",
+      "assets/Monsters/Equira/equira-grass.png",
+      "assets/Monsters/Equira/equira-lavender.png",
+      "assets/Monsters/Equira/equira-pink.png",
+      "assets/Monsters/Equira/equira-snow.png",
+      "assets/Monsters/Equira/equira-water.png",
       "assets/Monsters/Fluffram/fluffram_dark.png",
       "assets/Monsters/Fluffram/fluffram_default.png",
       "assets/Monsters/Fluffram/fluffram_electric.png",
       "assets/Monsters/Fluffram/fluffram_fire.png",
+      "assets/Monsters/Fluffram/fluffram_galaxy.png",
       "assets/Monsters/Fluffram/fluffram_grass.png",
+      "assets/Monsters/Fluffram/fluffram_lavender.png",
       "assets/Monsters/Fluffram/fluffram_pink.png",
       "assets/Monsters/Fluffram/fluffram_snow.png",
       "assets/Monsters/Fluffram/fluffram_water.png",
-      "assets/Monsters/Overworld/equira-dark.png",
-      "assets/Monsters/Overworld/equira-default.png",
-      "assets/Monsters/Overworld/equira-electric.png",
-      "assets/Monsters/Overworld/equira-fire.png",
-      "assets/Monsters/Overworld/equira-galaxy.png",
-      "assets/Monsters/Overworld/equira-grass.png",
-      "assets/Monsters/Overworld/equira-lavender.png",
-      "assets/Monsters/Overworld/equira-pink.png",
-      "assets/Monsters/Overworld/equira-snow.png",
-      "assets/Monsters/Overworld/equira-water.png",
-      "assets/Monsters/Pawlit/Pawlit_Tide_walksheet.png",
-      "assets/Monsters/Pawlit/equira.png",
-      "assets/Monsters/Pawlit/fluffram.png",
-      "assets/Monsters/Pawlit/pawlit-blue-ready-hires.png",
-      "assets/Monsters/Pawlit/pawlit-blue-walksheet.png",
-      "assets/Monsters/Pawlit/pawlit-classic-ready-transparent.png",
-      "assets/Monsters/Pawlit/pawlit-classic-walksheet.png",
-      "assets/Monsters/Pawlit/pawlit-pink-ready-hires.png",
-      "assets/Monsters/Pawlit/pawlit-pink-walksheet.png",
-      "assets/Monsters/Pawlit/pawlit_black.png",
-      "assets/Monsters/Pawlit/ruffin.png",
+      "assets/Monsters/Pawlit/old/Pawlit_Tide_walksheet.png",
+      "assets/Monsters/Pawlit/old/pawlit-blue-ready-hires.png",
+      "assets/Monsters/Pawlit/old/pawlit-blue-walksheet.png",
+      "assets/Monsters/Pawlit/old/pawlit-classic-ready-transparent.png",
+      "assets/Monsters/Pawlit/old/pawlit-classic-walksheet.png",
+      "assets/Monsters/Pawlit/old/pawlit-pink-ready-hires.png",
+      "assets/Monsters/Pawlit/old/pawlit-pink-walksheet.png",
+      "assets/Monsters/Pawlit/pawlit_default.png",
+      "assets/Monsters/Pawlit/pawlit_grass.png",
+      "assets/Monsters/Pawlit/pawlit_snow.png",
       "assets/Monsters/Ruffin/ruffin-default.png",
       "assets/Monsters/Ruffin/ruffin-electric.png",
       "assets/Monsters/Ruffin/ruffin-galaxy.png",
