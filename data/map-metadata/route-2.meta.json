@@ -56,25 +56,25 @@
       "visibleSpawns": [
         {
           "id": "spawn-1",
-          "speciesId": "Pawlit",
+          "speciesId": "Ruffin",
           "spawnChance": 100,
-          "x": 1216,
-          "y": 1216,
+          "x": 832,
+          "y": 1344,
           "levelMin": 2,
           "levelMax": 4,
           "respawnSeconds": 120,
           "monsterOptions": [
             {
-              "speciesId": "Pawlit",
+              "speciesId": "Ruffin",
               "weight": 50,
-              "variantId": "default"
+              "variantId": "Ruffin-Grass"
             }
           ],
-          "walkRange": 291
+          "walkRange": 300
         },
         {
           "id": "spawn-2",
-          "speciesId": "Pawlit",
+          "speciesId": "Ruffin",
           "spawnChance": 100,
           "x": 2368,
           "y": 704,
@@ -83,12 +83,12 @@
           "respawnSeconds": 120,
           "monsterOptions": [
             {
-              "speciesId": "Pawlit",
+              "speciesId": "Ruffin",
               "weight": 50,
-              "variantId": "Tide"
+              "variantId": "Ruffin-Snow"
             }
           ],
-          "walkRange": 531
+          "walkRange": 550
         }
       ],
       "spawnTable": []

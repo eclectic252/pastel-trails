@@ -936,8 +936,18 @@
     return '<canvas class="' + escapeHtml(className) + '" data-monster-visual-species="' + escapeHtml(speciesId || "") + '" data-monster-visual-variant="' + escapeHtml(variantId || "default") + '" data-monster-visual-mode="' + escapeHtml(mode || "default") + '"></canvas>';
   }
 
-  function formatMonsterVariantLabel(variantId) {
-    const raw = String(variantId || "default").trim() || "default";
+  function formatMonsterVariantLabel(variantOrId, fallbackVariantId) {
+    const explicitLabel = typeof variantOrId === "object" && variantOrId !== null
+      ? String(variantOrId.label || variantOrId.displayLabel || "").trim()
+      : "";
+    if (explicitLabel) {
+      return explicitLabel;
+    }
+
+    const rawSource = typeof variantOrId === "object" && variantOrId !== null
+      ? (variantOrId.id || fallbackVariantId || "default")
+      : (variantOrId || fallbackVariantId || "default");
+    const raw = String(rawSource).trim() || "default";
     return raw
       .split(/[-_\s]+/)
       .filter(Boolean)
@@ -3146,7 +3156,7 @@
     const spriteSize = overworldWidth * zoomScale;
     const drawX = Math.round(screenX - spriteSize / 2);
     const drawY = Math.round(screenY - spriteSize / 2);
-    const label = "Lv " + Number(monster.level || 1) + " " + (species?.name || monster.speciesId) + " (" + formatMonsterVariantLabel(variant?.id || monster.variantId || "default") + ")";
+    const label = "Lv " + Number(monster.level || 1) + " " + (species?.name || monster.speciesId) + " (" + formatMonsterVariantLabel(variant, monster.variantId || "default") + ")";
 
     const drawWildMonsterLabel = function () {
       drawOverworldLabel(ctx, {
@@ -3517,7 +3527,7 @@
   function renderBattleMonsterHud(content, monster, options) {
     const species = getSpecies(content, monster.speciesId);
     const variant = getSpeciesVariant(species, monster.variantId || "default");
-    const variantLabel = formatMonsterVariantLabel(variant?.id || monster.variantId || "default");
+    const variantLabel = formatMonsterVariantLabel(variant, monster.variantId || "default");
     const maxHp = Number(options.maxHp || monster.maxHp || monster.stats?.hp || 1);
     const currentHp = Number(options.currentHp || monster.currentHp || 0);
     const hpPercent = Math.max(0, Math.min(100, (currentHp / Math.max(1, maxHp)) * 100));
@@ -3611,7 +3621,7 @@
             const partyMarkup = (slot.party || []).map(function (monster) {
               const species = getSpecies(content, monster.speciesId);
               const variant = getSpeciesVariant(species, monster.variantId || "default");
-              const label = (species?.name || monster.speciesId || "Unknown") + " (" + formatMonsterVariantLabel(variant?.id || monster.variantId || "default") + ")";
+              const label = (species?.name || monster.speciesId || "Unknown") + " (" + formatMonsterVariantLabel(variant, monster.variantId || "default") + ")";
               const sprite = variant?.sprite || "";
               const visual = sprite
                 ? '<img class="save-party-icon" src="' + escapeHtml(sprite) + '" alt="' + escapeHtml(label) + '" />'
@@ -3621,7 +3631,7 @@
                 visual +
                 '<span class="save-party-label">Lv ' + Number(monster.level || 1) + "</span>" +
                 '<span class="save-party-label">' + escapeHtml(species?.name || monster.speciesId || "Unknown") + "</span>" +
-                '<span class="save-party-label">' + escapeHtml(formatMonsterVariantLabel(variant?.id || monster.variantId || "default")) + "</span>" +
+                '<span class="save-party-label">' + escapeHtml(formatMonsterVariantLabel(variant, monster.variantId || "default")) + "</span>" +
                 "</div>";
             }).join("");
             return '<li class="' + selected.trim() + '">' +
@@ -3825,7 +3835,7 @@
       return [
         '<button class="battle-party-chip' + (index === state.battle.playerIndex ? " battle-party-chip-active" : "") + '" type="button" data-battle-swap-to="' + index + '"' + (disabled ? " disabled" : "") + '>',
         '<strong>' + escapeHtml(species?.name || monster.speciesId) + "</strong>",
-        '<span>Lv ' + Number(monster.level || 1) + " · " + escapeHtml(formatMonsterVariantLabel(variant?.id || monster.variantId || "default")) + "</span>",
+        '<span>Lv ' + Number(monster.level || 1) + " · " + escapeHtml(formatMonsterVariantLabel(variant, monster.variantId || "default")) + "</span>",
         '<span>HP ' + Number(monster.currentHp || 0) + "/" + Number(monster.stats?.hp || 0) + "</span>",
         "</button>",
       ].join("");
@@ -4100,7 +4110,7 @@
         const stats = entry.species.baseStats || {};
         const locationText = entry.locations.length ? entry.locations.join(", ") : "No spawn locations assigned yet";
         const variantMarkup = entry.variants.map(function (variantEntry) {
-          const variantLabel = formatMonsterVariantLabel(variantEntry.variant.id || "default");
+          const variantLabel = formatMonsterVariantLabel(variantEntry.variant, "default");
           const variantLocationText = variantEntry.locations.length ? variantEntry.locations.join(", ") : "No available spawn locations assigned yet";
           const spriteMarkup = renderMonsterVariantVisualMarkup(entry.species.id, variantEntry.variant.id || "default", "registry-variant-sprite", "default");
 
@@ -4285,7 +4295,7 @@
               }).join("");
               const rowVariantOptions = ['<option value="">Default / First Variant</option>'].concat((optionSpecies?.variants || []).map(function (variant) {
                 const selected = getSpawnOptionVariantId(optionSpecies, option) === variant.id ? " selected" : "";
-                return '<option value="' + variant.id + '"' + selected + ">" + escapeHtml(variant.id) + "</option>";
+                return '<option value="' + variant.id + '"' + selected + ">" + escapeHtml(formatMonsterVariantLabel(variant, variant.id)) + "</option>";
               })).join("");
 
               return [
@@ -5437,9 +5447,10 @@
         return [
           '<div class="dev-subcard">',
           '<div class="section-heading"><h3>Variant ' + (index + 1) + '</h3><div class="topbar-stats"><button class="secondary-button" type="button" data-action="duplicate-variant" data-variant-index="' + index + '">Duplicate</button><button class="secondary-button" type="button" data-action="delete-variant" data-variant-index="' + index + '">Delete</button></div></div>',
-          '<div class="monster-variant-preview-card">' + variantPreview + '<div><p><strong>' + escapeHtml(formatMonsterVariantLabel(variant.id || "default")) + '</strong></p><p>Overworld Mode: ' + escapeHtml(displayMode) + '</p></div></div>',
+          '<div class="monster-variant-preview-card">' + variantPreview + '<div><p><strong>' + escapeHtml(formatMonsterVariantLabel(variant, variant.id || "default")) + '</strong></p><p>Overworld Mode: ' + escapeHtml(displayMode) + '</p></div></div>',
           '<div class="form-grid">',
           '<label class="input-group"><span>Variant ID</span><input data-dev-variant-field="id" data-variant-index="' + index + '" value="' + escapeHtml(variant.id || "") + '" /></label>',
+          '<label class="input-group"><span>Variant Label</span><input data-dev-variant-field="label" data-variant-index="' + index + '" value="' + escapeHtml(variant.label || "") + '" placeholder="' + escapeHtml(formatMonsterVariantLabel(variant.id || "default")) + '" /></label>',
           '<label class="input-group"><span>Portrait Image</span><select data-dev-variant-field="portrait.imagePath" data-variant-index="' + index + '">' + portraitImageOptions + '</select></label>',
           '<label class="input-group"><span>Portrait Sheet</span><select data-dev-variant-field="portrait.sheetId" data-variant-index="' + index + '">' + monsterSheetOptions + '</select></label>',
           '<label class="input-group"><span>Portrait Row (0-based)</span><input type="number" min="0" step="1" data-dev-variant-field="portrait.row" data-variant-index="' + index + '" value="' + Number(portraitConfig.row || 0) + '" /></label>',
@@ -5475,7 +5486,7 @@
       const previewVariant = getSpeciesVariant(selectedSpecies, devToolsState.selectedPreviewVariantId);
       const previewVariantOptions = (selectedSpecies.variants || []).map(function (variant) {
         const selected = previewVariant?.id === variant.id ? " selected" : "";
-        return '<option value="' + escapeHtml(variant.id) + '"' + selected + ">" + escapeHtml(variant.id) + "</option>";
+        return '<option value="' + escapeHtml(variant.id) + '"' + selected + ">" + escapeHtml(formatMonsterVariantLabel(variant, variant.id)) + "</option>";
       }).join("");
       const previewImage = previewVariant
         ? renderMonsterVariantVisualMarkup(selectedSpecies.id, previewVariant.id || "default", "monster-preview-image", "default")
@@ -5610,7 +5621,7 @@
           }).join("");
           const variantOptions = (memberSpecies?.variants || []).map(function (variant) {
             const selected = (member.variantId || "default") === variant.id ? " selected" : "";
-            return '<option value="' + escapeHtml(variant.id) + '"' + selected + ">" + escapeHtml(variant.id) + "</option>";
+            return '<option value="' + escapeHtml(variant.id) + '"' + selected + ">" + escapeHtml(formatMonsterVariantLabel(variant, variant.id)) + "</option>";
           }).join("");
 
           return [
@@ -5633,7 +5644,7 @@
           }).join("");
           const variantOptions = (memberSpecies?.variants || []).map(function (variant) {
             const selected = (member.variantId || "default") === variant.id ? " selected" : "";
-            return '<option value="' + escapeHtml(variant.id) + '"' + selected + ">" + escapeHtml(variant.id) + "</option>";
+            return '<option value="' + escapeHtml(variant.id) + '"' + selected + ">" + escapeHtml(formatMonsterVariantLabel(variant, variant.id)) + "</option>";
           }).join("");
 
           return [
@@ -5652,7 +5663,7 @@
       ? (selectedArena.team || []).map(function (member) {
           const species = getSpecies(content, member.speciesId);
           const variant = getSpeciesVariant(species, member.variantId || "default");
-          return "<li><span>" + escapeHtml(species?.name || member.speciesId || "Unassigned") + " - " + escapeHtml(variant?.id || member.variantId || "default") + "</span><strong>Lv " + Number(member.level || 1) + "</strong></li>";
+          return "<li><span>" + escapeHtml(species?.name || member.speciesId || "Unassigned") + " - " + escapeHtml(formatMonsterVariantLabel(variant, member.variantId || "default")) + "</span><strong>Lv " + Number(member.level || 1) + "</strong></li>";
         }).join("")
       : "";
 

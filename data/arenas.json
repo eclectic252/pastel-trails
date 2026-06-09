@@ -31,6 +31,38 @@
           "variantId": "Lilac"
         }
       ]
+    },
+    {
+      "id": "Camelia-Ranch-Arena",
+      "name": "Camelia Ranch Arena",
+      "leaderName": "Cassie",
+      "leaderTitle": "Leader",
+      "crestId": "crest2",
+      "crestName": "Camelia Ranch Crest",
+      "recommendedLevel": 5,
+      "partySize": 2,
+      "rewardMoney": 50,
+      "rewardText": "",
+      "description": "",
+      "mapId": "camelia-ranch",
+      "team": [
+        {
+          "speciesId": "equira",
+          "variantId": "Equira-Pink",
+          "level": 3
+        },
+        {
+          "speciesId": "equira",
+          "variantId": "Equira-Lavender",
+          "level": 5
+        }
+      ],
+      "pool": [
+        {
+          "speciesId": "equira",
+          "variantId": "Equira-Pink"
+        }
+      ]
     }
   ]
 }

@@ -176,7 +176,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               ],
               "frameDurationMs": 180,
               "renderWidth": 142
-            }
+            },
+            "label": "Default"
           },
           {
             "id": "Equira-snow",
@@ -199,7 +200,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               ],
               "frameDurationMs": 180,
               "renderWidth": 142
-            }
+            },
+            "label": "Snow"
           },
           {
             "id": "Equira-grass",
@@ -222,7 +224,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               ],
               "frameDurationMs": 180,
               "renderWidth": 142
-            }
+            },
+            "label": "Grass"
           },
           {
             "id": "Equira-Electric",
@@ -245,7 +248,475 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               ],
               "frameDurationMs": 180,
               "renderWidth": 142
-            }
+            },
+            "label": "Electric"
+          },
+          {
+            "id": "Equira-Fire",
+            "portrait": {
+              "imagePath": "assets/Monsters/Overworld/equira-fire.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 146
+            },
+            "label": "Fire"
+          },
+          {
+            "id": "Equira-Pink",
+            "portrait": {
+              "imagePath": "assets/Monsters/Overworld/equira-pink.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 146
+            },
+            "label": "Pink"
+          },
+          {
+            "id": "Equira-water",
+            "portrait": {
+              "imagePath": "assets/Monsters/Overworld/equira-water.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 142
+            },
+            "label": "Water"
+          },
+          {
+            "id": "Equira-Galaxy",
+            "portrait": {
+              "imagePath": "assets/Monsters/Overworld/equira-galaxy.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 142
+            },
+            "label": "Galaxy"
+          },
+          {
+            "id": "Equira-dark",
+            "portrait": {
+              "imagePath": "assets/Monsters/Overworld/equira-dark.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 142
+            },
+            "label": "Dark"
+          },
+          {
+            "id": "Equira-Lavender",
+            "portrait": {
+              "imagePath": "assets/Monsters/Overworld/equira-lavender.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 142
+            },
+            "label": "Lavender"
+          }
+        ]
+      },
+      {
+        "id": "Ruffin",
+        "name": "Ruffin",
+        "baseStats": {
+          "hp": 10,
+          "attack": 5,
+          "defense": 5,
+          "speed": 5
+        },
+        "growth": "medium",
+        "overworldDisplayMode": "portrait",
+        "skills": [
+          "basic-attack"
+        ],
+        "variants": [
+          {
+            "id": "default",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Ruffin/ruffin-default.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 90
+            },
+            "label": "Default"
+          },
+          {
+            "id": "Ruffin-Snow",
+            "portrait": {
+              "imagePath": "assets/Monsters/Ruffin/ruffin-snow.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 90
+            },
+            "label": "Snow"
+          },
+          {
+            "id": "Ruffin-Grass",
+            "portrait": {
+              "imagePath": "assets/Monsters/Ruffin/ruffin-grass.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 90
+            },
+            "label": "Grass"
+          },
+          {
+            "id": "Ruffin-Electric",
+            "portrait": {
+              "imagePath": "assets/Monsters/Ruffin/ruffin-electric.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 90
+            },
+            "label": "Electric"
+          },
+          {
+            "id": "Ruffin-Water",
+            "portrait": {
+              "imagePath": "assets/Monsters/Ruffin/ruffin-water.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 90
+            },
+            "label": "Water"
+          },
+          {
+            "id": "Ruffin-Fire",
+            "portrait": {
+              "imagePath": "assets/Monsters/Ruffin/ruffin_fire.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 90
+            },
+            "label": "Fire"
+          },
+          {
+            "id": "Ruffin-Pink",
+            "portrait": {
+              "imagePath": "assets/Monsters/Ruffin/ruffin_pink.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 90
+            },
+            "label": "Pink"
+          },
+          {
+            "id": "Ruffin-Dark",
+            "portrait": {
+              "imagePath": "assets/Monsters/Ruffin/ruffin_dark.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 90
+            },
+            "label": "Dark"
+          },
+          {
+            "id": "Ruffin-Galaxy",
+            "portrait": {
+              "imagePath": "assets/Monsters/Ruffin/ruffin-galaxy.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 90
+            },
+            "label": "Galaxy"
+          },
+          {
+            "id": "Ruffin-Lavender",
+            "portrait": {
+              "imagePath": "assets/Monsters/Ruffin/ruffin-lavender.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 90
+            },
+            "label": "Lavender"
+          }
+        ]
+      },
+      {
+        "id": "Fluffram",
+        "name": "Fluffram",
+        "baseStats": {
+          "hp": 10,
+          "attack": 5,
+          "defense": 5,
+          "speed": 5
+        },
+        "growth": "medium",
+        "overworldDisplayMode": "portrait",
+        "skills": [
+          "basic-attack"
+        ],
+        "variants": [
+          {
+            "id": "default",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Fluffram/fluffram_default.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180
+            },
+            "label": "Default"
+          },
+          {
+            "id": "fluffram-snow",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Fluffram/fluffram_snow.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180
+            },
+            "label": "Snow"
           }
         ]
       }
@@ -336,6 +807,38 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           {
             "speciesId": "Pawlit",
             "variantId": "Lilac"
+          }
+        ]
+      },
+      {
+        "id": "Camelia-Ranch-Arena",
+        "name": "Camelia Ranch Arena",
+        "leaderName": "Cassie",
+        "leaderTitle": "Leader",
+        "crestId": "crest2",
+        "crestName": "Camelia Ranch Crest",
+        "recommendedLevel": 5,
+        "partySize": 2,
+        "rewardMoney": 50,
+        "rewardText": "",
+        "description": "",
+        "mapId": "camelia-ranch",
+        "team": [
+          {
+            "speciesId": "equira",
+            "variantId": "Equira-Pink",
+            "level": 3
+          },
+          {
+            "speciesId": "equira",
+            "variantId": "Equira-Lavender",
+            "level": 5
+          }
+        ],
+        "pool": [
+          {
+            "speciesId": "equira",
+            "variantId": "Equira-Pink"
           }
         ]
       }
@@ -3825,10 +4328,15 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
   },
   "monsterAssets": {
     "images": [
+      "assets/Monsters/Fluffram/fluffram_default.png",
+      "assets/Monsters/Fluffram/fluffram_snow.png",
+      "assets/Monsters/Overworld/equira-dark.png",
       "assets/Monsters/Overworld/equira-default.png",
       "assets/Monsters/Overworld/equira-electric.png",
       "assets/Monsters/Overworld/equira-fire.png",
+      "assets/Monsters/Overworld/equira-galaxy.png",
       "assets/Monsters/Overworld/equira-grass.png",
+      "assets/Monsters/Overworld/equira-lavender.png",
       "assets/Monsters/Overworld/equira-pink.png",
       "assets/Monsters/Overworld/equira-snow.png",
       "assets/Monsters/Overworld/equira-water.png",
@@ -3842,7 +4350,17 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       "assets/Monsters/Pawlit/pawlit-pink-ready-hires.png",
       "assets/Monsters/Pawlit/pawlit-pink-walksheet.png",
       "assets/Monsters/Pawlit/pawlit_black.png",
-      "assets/Monsters/Pawlit/ruffin.png"
+      "assets/Monsters/Pawlit/ruffin.png",
+      "assets/Monsters/Ruffin/ruffin-default.png",
+      "assets/Monsters/Ruffin/ruffin-electric.png",
+      "assets/Monsters/Ruffin/ruffin-galaxy.png",
+      "assets/Monsters/Ruffin/ruffin-grass.png",
+      "assets/Monsters/Ruffin/ruffin-lavender.png",
+      "assets/Monsters/Ruffin/ruffin-snow.png",
+      "assets/Monsters/Ruffin/ruffin-water.png",
+      "assets/Monsters/Ruffin/ruffin_dark.png",
+      "assets/Monsters/Ruffin/ruffin_fire.png",
+      "assets/Monsters/Ruffin/ruffin_pink.png"
     ]
   },
   "maps": {
@@ -38965,7 +39483,23 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           }
         }
       ],
-      "interactions": [],
+      "interactions": [
+        {
+          "id": "Camelia-Ranch-Arena",
+          "type": "arena",
+          "x": 768,
+          "y": 896,
+          "width": 256,
+          "height": 128,
+          "label": "New Interaction",
+          "text": "Add interaction text here.",
+          "data": {
+            "shopId": "",
+            "arenaId": "Camelia-Ranch-Arena",
+            "crestId": ""
+          }
+        }
+      ],
       "spawnZones": [
         {
           "id": "default-zone",
@@ -39304,25 +39838,25 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "visibleSpawns": [
             {
               "id": "spawn-1",
-              "speciesId": "Pawlit",
+              "speciesId": "Ruffin",
               "spawnChance": 100,
-              "x": 1216,
-              "y": 1216,
+              "x": 832,
+              "y": 1344,
               "levelMin": 2,
               "levelMax": 4,
               "respawnSeconds": 120,
               "monsterOptions": [
                 {
-                  "speciesId": "Pawlit",
+                  "speciesId": "Ruffin",
                   "weight": 50,
-                  "variantId": "default"
+                  "variantId": "Ruffin-Grass"
                 }
               ],
-              "walkRange": 291
+              "walkRange": 300
             },
             {
               "id": "spawn-2",
-              "speciesId": "Pawlit",
+              "speciesId": "Ruffin",
               "spawnChance": 100,
               "x": 2368,
               "y": 704,
@@ -39331,12 +39865,12 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               "respawnSeconds": 120,
               "monsterOptions": [
                 {
-                  "speciesId": "Pawlit",
+                  "speciesId": "Ruffin",
                   "weight": 50,
-                  "variantId": "Tide"
+                  "variantId": "Ruffin-Snow"
                 }
               ],
-              "walkRange": 531
+              "walkRange": 550
             }
           ],
           "spawnTable": []
@@ -39441,7 +39975,12 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               "monsterOptions": [
                 {
                   "speciesId": "equira",
-                  "weight": 60,
+                  "weight": 30,
+                  "variantId": "default"
+                },
+                {
+                  "speciesId": "Fluffram",
+                  "weight": 70,
                   "variantId": "default"
                 }
               ],
@@ -39452,7 +39991,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               "speciesId": "equira",
               "spawnChance": 100,
               "x": 2112,
-              "y": 3520,
+              "y": 3136,
               "levelMin": 2,
               "levelMax": 4,
               "respawnSeconds": 120,
@@ -39471,6 +40010,25 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
                   "speciesId": "equira",
                   "weight": 30,
                   "variantId": "Equira-grass"
+                }
+              ],
+              "walkRange": 300
+            },
+            {
+              "id": "spawn-3",
+              "speciesId": "equira",
+              "spawnChance": 100,
+              "x": 1856,
+              "y": 6976,
+              "levelMin": 2,
+              "levelMax": 4,
+              "walkRange": 300,
+              "respawnSeconds": 120,
+              "monsterOptions": [
+                {
+                  "speciesId": "equira",
+                  "weight": 100,
+                  "variantId": "Equira-water"
                 }
               ]
             }

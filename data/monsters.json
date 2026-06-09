@@ -108,7 +108,8 @@
             ],
             "frameDurationMs": 180,
             "renderWidth": 142
-          }
+          },
+          "label": "Default"
         },
         {
           "id": "Equira-snow",
@@ -131,7 +132,8 @@
             ],
             "frameDurationMs": 180,
             "renderWidth": 142
-          }
+          },
+          "label": "Snow"
         },
         {
           "id": "Equira-grass",
@@ -154,7 +156,8 @@
             ],
             "frameDurationMs": 180,
             "renderWidth": 142
-          }
+          },
+          "label": "Grass"
         },
         {
           "id": "Equira-Electric",
@@ -177,7 +180,8 @@
             ],
             "frameDurationMs": 180,
             "renderWidth": 142
-          }
+          },
+          "label": "Electric"
         },
         {
           "id": "Equira-Fire",
@@ -200,7 +204,8 @@
             ],
             "frameDurationMs": 180,
             "renderWidth": 146
-          }
+          },
+          "label": "Fire"
         },
         {
           "id": "Equira-Pink",
@@ -223,7 +228,427 @@
             ],
             "frameDurationMs": 180,
             "renderWidth": 146
-          }
+          },
+          "label": "Pink"
+        },
+        {
+          "id": "Equira-water",
+          "portrait": {
+            "imagePath": "assets/Monsters/Overworld/equira-water.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180,
+            "renderWidth": 142
+          },
+          "label": "Water"
+        },
+        {
+          "id": "Equira-Galaxy",
+          "portrait": {
+            "imagePath": "assets/Monsters/Overworld/equira-galaxy.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180,
+            "renderWidth": 142
+          },
+          "label": "Galaxy"
+        },
+        {
+          "id": "Equira-dark",
+          "portrait": {
+            "imagePath": "assets/Monsters/Overworld/equira-dark.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180,
+            "renderWidth": 142
+          },
+          "label": "Dark"
+        },
+        {
+          "id": "Equira-Lavender",
+          "portrait": {
+            "imagePath": "assets/Monsters/Overworld/equira-lavender.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180,
+            "renderWidth": 142
+          },
+          "label": "Lavender"
+        }
+      ]
+    },
+    {
+      "id": "Ruffin",
+      "name": "Ruffin",
+      "baseStats": {
+        "hp": 10,
+        "attack": 5,
+        "defense": 5,
+        "speed": 5
+      },
+      "growth": "medium",
+      "overworldDisplayMode": "portrait",
+      "skills": [
+        "basic-attack"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Ruffin/ruffin-default.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180,
+            "renderWidth": 90
+          },
+          "label": "Default"
+        },
+        {
+          "id": "Ruffin-Snow",
+          "portrait": {
+            "imagePath": "assets/Monsters/Ruffin/ruffin-snow.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180,
+            "renderWidth": 90
+          },
+          "label": "Snow"
+        },
+        {
+          "id": "Ruffin-Grass",
+          "portrait": {
+            "imagePath": "assets/Monsters/Ruffin/ruffin-grass.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180,
+            "renderWidth": 90
+          },
+          "label": "Grass"
+        },
+        {
+          "id": "Ruffin-Electric",
+          "portrait": {
+            "imagePath": "assets/Monsters/Ruffin/ruffin-electric.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180,
+            "renderWidth": 90
+          },
+          "label": "Electric"
+        },
+        {
+          "id": "Ruffin-Water",
+          "portrait": {
+            "imagePath": "assets/Monsters/Ruffin/ruffin-water.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180,
+            "renderWidth": 90
+          },
+          "label": "Water"
+        },
+        {
+          "id": "Ruffin-Fire",
+          "portrait": {
+            "imagePath": "assets/Monsters/Ruffin/ruffin_fire.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180,
+            "renderWidth": 90
+          },
+          "label": "Fire"
+        },
+        {
+          "id": "Ruffin-Pink",
+          "portrait": {
+            "imagePath": "assets/Monsters/Ruffin/ruffin_pink.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180,
+            "renderWidth": 90
+          },
+          "label": "Pink"
+        },
+        {
+          "id": "Ruffin-Dark",
+          "portrait": {
+            "imagePath": "assets/Monsters/Ruffin/ruffin_dark.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180,
+            "renderWidth": 90
+          },
+          "label": "Dark"
+        },
+        {
+          "id": "Ruffin-Galaxy",
+          "portrait": {
+            "imagePath": "assets/Monsters/Ruffin/ruffin-galaxy.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180,
+            "renderWidth": 90
+          },
+          "label": "Galaxy"
+        },
+        {
+          "id": "Ruffin-Lavender",
+          "portrait": {
+            "imagePath": "assets/Monsters/Ruffin/ruffin-lavender.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180,
+            "renderWidth": 90
+          },
+          "label": "Lavender"
+        }
+      ]
+    },
+    {
+      "id": "Fluffram",
+      "name": "Fluffram",
+      "baseStats": {
+        "hp": 10,
+        "attack": 5,
+        "defense": 5,
+        "speed": 5
+      },
+      "growth": "medium",
+      "overworldDisplayMode": "portrait",
+      "skills": [
+        "basic-attack"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Fluffram/fluffram_default.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "Default"
+        },
+        {
+          "id": "fluffram-snow",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Fluffram/fluffram_snow.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "Snow"
         }
       ]
     }
