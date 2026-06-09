@@ -87,10 +87,10 @@
       ],
       "variants": [
         {
-          "id": "default",
+          "id": "Equira-default",
           "sprite": "assets/monsters/new-monster.png",
           "portrait": {
-            "imagePath": "assets/Monsters/Pawlit/equira.png",
+            "imagePath": "assets/Monsters/Overworld/equira-default.png",
             "sheetId": "",
             "row": 0,
             "frame": 0
@@ -108,6 +108,121 @@
             ],
             "frameDurationMs": 180,
             "renderWidth": 142
+          }
+        },
+        {
+          "id": "Equira-snow",
+          "portrait": {
+            "imagePath": "assets/Monsters/Overworld/equira-snow.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180,
+            "renderWidth": 142
+          }
+        },
+        {
+          "id": "Equira-grass",
+          "portrait": {
+            "imagePath": "assets/Monsters/Overworld/equira-grass.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180,
+            "renderWidth": 142
+          }
+        },
+        {
+          "id": "Equira-Electric",
+          "portrait": {
+            "imagePath": "assets/Monsters/Overworld/equira-electric.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180,
+            "renderWidth": 142
+          }
+        },
+        {
+          "id": "Equira-Fire",
+          "portrait": {
+            "imagePath": "assets/Monsters/Overworld/equira-fire.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180,
+            "renderWidth": 146
+          }
+        },
+        {
+          "id": "Equira-Pink",
+          "portrait": {
+            "imagePath": "assets/Monsters/Overworld/equira-pink.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180,
+            "renderWidth": 146
           }
         }
       ]

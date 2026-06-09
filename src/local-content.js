@@ -155,10 +155,79 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         ],
         "variants": [
           {
-            "id": "default",
+            "id": "Equira-default",
             "sprite": "assets/monsters/new-monster.png",
             "portrait": {
-              "imagePath": "assets/Monsters/Pawlit/equira.png",
+              "imagePath": "assets/Monsters/Overworld/equira-default.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 142
+            }
+          },
+          {
+            "id": "Equira-snow",
+            "portrait": {
+              "imagePath": "assets/Monsters/Overworld/equira-snow.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 142
+            }
+          },
+          {
+            "id": "Equira-grass",
+            "portrait": {
+              "imagePath": "assets/Monsters/Overworld/equira-grass.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 142
+            }
+          },
+          {
+            "id": "Equira-Electric",
+            "portrait": {
+              "imagePath": "assets/Monsters/Overworld/equira-electric.png",
               "sheetId": "",
               "row": 0,
               "frame": 0
@@ -3756,6 +3825,13 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
   },
   "monsterAssets": {
     "images": [
+      "assets/Monsters/Overworld/equira-default.png",
+      "assets/Monsters/Overworld/equira-electric.png",
+      "assets/Monsters/Overworld/equira-fire.png",
+      "assets/Monsters/Overworld/equira-grass.png",
+      "assets/Monsters/Overworld/equira-pink.png",
+      "assets/Monsters/Overworld/equira-snow.png",
+      "assets/Monsters/Overworld/equira-water.png",
       "assets/Monsters/Pawlit/Pawlit_Tide_walksheet.png",
       "assets/Monsters/Pawlit/equira.png",
       "assets/Monsters/Pawlit/fluffram.png",
@@ -39367,13 +39443,9 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
                   "speciesId": "equira",
                   "weight": 60,
                   "variantId": "default"
-                },
-                {
-                  "speciesId": "equira",
-                  "weight": 40,
-                  "variantId": "snow"
                 }
-              ]
+              ],
+              "walkRange": 400
             },
             {
               "id": "spawn-2",
@@ -39391,14 +39463,14 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
                   "variantId": "Glam"
                 },
                 {
-                  "speciesId": "fluffram",
+                  "speciesId": "equira",
                   "weight": 30,
-                  "variantId": "glam"
+                  "variantId": "Equira-Electric"
                 },
                 {
-                  "speciesId": "fluffram",
+                  "speciesId": "equira",
                   "weight": 30,
-                  "variantId": "default"
+                  "variantId": "Equira-grass"
                 }
               ]
             }

@@ -80,13 +80,9 @@
               "speciesId": "equira",
               "weight": 60,
               "variantId": "default"
-            },
-            {
-              "speciesId": "equira",
-              "weight": 40,
-              "variantId": "snow"
             }
-          ]
+          ],
+          "walkRange": 400
         },
         {
           "id": "spawn-2",
@@ -104,14 +100,14 @@
               "variantId": "Glam"
             },
             {
-              "speciesId": "fluffram",
+              "speciesId": "equira",
               "weight": 30,
-              "variantId": "glam"
+              "variantId": "Equira-Electric"
             },
             {
-              "speciesId": "fluffram",
+              "speciesId": "equira",
               "weight": 30,
-              "variantId": "default"
+              "variantId": "Equira-grass"
             }
           ]
         }
