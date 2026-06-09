@@ -2815,8 +2815,9 @@
     const worldWidth = map.mapWidth * map.tileSize;
     const worldHeight = map.mapHeight * map.tileSize;
     const zoomScale = Math.max(0.1, Number(state.settings.zoom || 100) / 100);
-    const visibleWorldWidth = VIEWPORT.width / zoomScale;
-    const visibleWorldHeight = VIEWPORT.height / zoomScale;
+    const viewport = state.world?.viewport || VIEWPORT;
+    const visibleWorldWidth = viewport.width / zoomScale;
+    const visibleWorldHeight = viewport.height / zoomScale;
 
     const x = Math.max(0, Math.min(worldWidth - visibleWorldWidth, state.world.position.x - visibleWorldWidth / 2));
     const y = Math.max(0, Math.min(worldHeight - visibleWorldHeight, state.world.position.y - visibleWorldHeight / 2));
@@ -2871,6 +2872,24 @@
       x: Math.round(camera.x),
       y: Math.round(camera.y),
     };
+  }
+
+  function syncWorldViewport(state, canvas) {
+    const cssWidth = Math.max(1, Math.round(canvas?.clientWidth || Number(canvas?.width) || VIEWPORT.width));
+    const cssHeight = Math.max(1, Math.round(canvas?.clientHeight || Number(canvas?.height) || VIEWPORT.height));
+    const dpr = typeof window !== "undefined" ? Math.max(1, window.devicePixelRatio || 1) : 1;
+    const nextWidth = Math.max(1, Math.round(cssWidth * dpr));
+    const nextHeight = Math.max(1, Math.round(cssHeight * dpr));
+
+    if (canvas) {
+      if (canvas.width !== nextWidth || canvas.height !== nextHeight) {
+        canvas.width = nextWidth;
+        canvas.height = nextHeight;
+      }
+    }
+
+    state.world.viewport = { width: nextWidth, height: nextHeight };
+    return state.world.viewport;
   }
 
   function isFrontOfPlayerLayer(layerName) {
@@ -2961,7 +2980,7 @@
     return map[cacheKey];
   }
 
-  function drawMap(ctx, map, camera, phase) {
+  function drawMap(ctx, map, camera, phase, viewport) {
     const zoomScale = Math.max(0.1, Number(ACTIVE_APP?.state?.settings?.zoom || 100) / 100);
     const useSmoothSampling = Math.abs(zoomScale - 1) > 0.001;
     ctx.imageSmoothingEnabled = useSmoothSampling;
@@ -2971,14 +2990,14 @@
 
     if (phase === "base") {
       ctx.fillStyle = "#9fd6da";
-      ctx.fillRect(0, 0, VIEWPORT.width, VIEWPORT.height);
+      ctx.fillRect(0, 0, viewport.width, viewport.height);
     }
 
     const layerCache = getCachedWorldLayerChunks(map, phase);
     const worldWidth = map.mapWidth * map.tileSize;
     const worldHeight = map.mapHeight * map.tileSize;
-    const visibleWorldWidth = Math.min(worldWidth, VIEWPORT.width / zoomScale);
-    const visibleWorldHeight = Math.min(worldHeight, VIEWPORT.height / zoomScale);
+    const visibleWorldWidth = Math.min(worldWidth, viewport.width / zoomScale);
+    const visibleWorldHeight = Math.min(worldHeight, viewport.height / zoomScale);
     const sourceX = Math.max(0, Math.min(worldWidth - visibleWorldWidth, camera.x));
     const sourceY = Math.max(0, Math.min(worldHeight - visibleWorldHeight, camera.y));
 
@@ -3001,8 +3020,8 @@
         }
 
         const chunkSourceY = overlapTop - chunkTop;
-        const destY = ((overlapTop - sourceY) / visibleWorldHeight) * VIEWPORT.height;
-        const destHeight = (overlapHeight / visibleWorldHeight) * VIEWPORT.height;
+        const destY = ((overlapTop - sourceY) / visibleWorldHeight) * viewport.height;
+        const destHeight = (overlapHeight / visibleWorldHeight) * viewport.height;
 
         ctx.drawImage(
           chunk.canvas,
@@ -3012,7 +3031,7 @@
           overlapHeight,
           0,
           destY,
-          VIEWPORT.width,
+          viewport.width,
           destHeight
         );
       });
@@ -3026,7 +3045,7 @@
     }
   }
 
-  function drawTransitionOverlay(ctx, state, content, camera, devToolsState) {
+  function drawTransitionOverlay(ctx, state, content, camera, devToolsState, viewport) {
     if (!devToolsState?.open) {
       return;
     }
@@ -3099,6 +3118,7 @@
         screenX,
         topY: drawY - 8,
         zoomScale,
+        textOffsetY: 1,
       });
     };
 
@@ -3188,6 +3208,7 @@
     const screenX = Number(options?.screenX || 0);
     const topY = Number(options?.topY || 0);
     const zoomScale = Math.max(0.1, Number(options?.zoomScale || 1));
+    const textOffsetY = Number(options?.textOffsetY || 0);
     const radius = Math.max(8, Math.round(10 * zoomScale));
     const fontSize = Math.max(13, Math.round(15 * zoomScale));
     const paddingX = Math.max(10, Math.round(11 * zoomScale));
@@ -3207,7 +3228,7 @@
     const pillHeight = Math.max(fontSize + paddingY * 2, textHeight + paddingY * 2);
     const pillX = Math.round(screenX - pillWidth / 2);
     const pillY = Math.round(topY - pillHeight);
-    const textY = Math.round(pillY + ((pillHeight - textHeight) / 2) + textAscent);
+    const textY = Math.round(pillY + ((pillHeight - textHeight) / 2) + textAscent + textOffsetY);
 
     ctx.fillStyle = OVERWORLD_LABEL_STYLE.background;
     ctx.strokeStyle = OVERWORLD_LABEL_STYLE.border;
@@ -3358,10 +3379,11 @@
   function drawWorld(canvas, state, content, devToolsState) {
     const ctx = canvas.getContext("2d");
     const map = content.maps[state.world.currentMapId];
+    const viewport = syncWorldViewport(state, canvas);
     const camera = ensureWorldCameraState(state, content);
 
-    drawMap(ctx, map, camera, "base");
-    drawTransitionOverlay(ctx, state, content, camera, devToolsState);
+    drawMap(ctx, map, camera, "base", viewport);
+    drawTransitionOverlay(ctx, state, content, camera, devToolsState, viewport);
 
     state.world.wildMonsters.forEach(function (monster) {
       if (!monster.active) {
@@ -3377,7 +3399,7 @@
 
     drawPlayerSprite(ctx, state, content, camera);
 
-    drawMap(ctx, map, camera, "foreground");
+    drawMap(ctx, map, camera, "foreground", viewport);
   }
 
   function formatTimeUntil(timestamp) {
@@ -4074,6 +4096,9 @@
     } else if (panel === "quests") {
       panelBody = "<p>Quest tracking is still planned work. This panel is ready for that system when you want it.</p>";
     } else if (panel === "settings") {
+      const activeMonster = state.party[0] || null;
+      const activeSpecies = activeMonster ? getSpecies(content, activeMonster.speciesId) : null;
+      const saveSlots = ACTIVE_APP?.saveManager?.listSaves?.() || [];
       const avatarOptions = getPlayerAvatarOptions(content).map(function (sheet) {
         const selected = state.player.avatarId === sheet.id ? " selected" : "";
         return '<option value="' + escapeHtml(sheet.id) + '"' + selected + '>' + escapeHtml(sheet.playerLabel || sheet.label || sheet.id) + "</option>";
@@ -4095,6 +4120,7 @@
         return '<option value="' + option.value + '"' + selected + ">" + option.label + "</option>";
       }).join("");
       panelBody = [
+        '<section class="panel-block"><div class="section-heading"><h3>Now Playing</h3></div><p>' + escapeHtml(state.message || "Exploring the world.") + '</p><p><strong>Location:</strong> ' + escapeHtml(content.mapMetadata[state.world.currentMapId]?.displayName || state.world.currentMapId || "Unknown") + '</p><p><strong>Money:</strong> $' + Number(state.player.money || 0) + '</p><p><strong>Party Lead:</strong> ' + escapeHtml(activeSpecies?.name || activeMonster?.speciesId || "Unknown") + (activeMonster ? (" Lv " + Number(activeMonster.level || 1) + " · HP " + Number(activeMonster.currentHp || 0) + "/" + Number(activeMonster.stats?.hp || 0)) : "") + '</p><p><strong>Save Slots:</strong> ' + saveSlots.length + " stored locally in this browser.</p></section>",
         '<div class="form-grid">',
         '<label class="input-group"><span>Theme</span><select data-world-setting="theme">' + themeOptions + "</select></label>",
         '<label class="input-group"><span>Sprite Avatar</span><select data-world-player-field="avatarId">' + avatarOptions + "</select></label>",
@@ -6341,9 +6367,6 @@
   function renderWorld(root, state, content, saveManager, devToolsState) {
     ensureWorldUiState(state);
     const mapName = content.mapMetadata[state.world.currentMapId].displayName;
-    const saveSlots = saveManager.listSaves();
-    const activeMonster = state.party[0];
-    const activeSpecies = getSpecies(content, activeMonster.speciesId);
     const promptTarget = getInteractionPromptTarget(state, content);
     const currentTime = new Intl.DateTimeFormat([], { hour: "numeric", minute: "2-digit" }).format(new Date());
     const encounterPreviewIcons = renderEncounterPreviewIcons(state, content);
@@ -6361,14 +6384,6 @@
       "</header>",
       '<section class="play-area">',
       '<div class="map-panel"><div class="world-stage"><canvas class="world-canvas" width="' + VIEWPORT.width + '" height="' + VIEWPORT.height + '"></canvas><section class="mobile-controls" aria-label="Gameplay controls"><section class="touch-controls touch-controls-mobile"><button data-touch="ArrowUp" aria-label="Move up">\u25b2</button><div><button data-touch="ArrowLeft" aria-label="Move left">\u25c0</button><button data-touch="ArrowDown" aria-label="Move down">\u25bc</button><button data-touch="ArrowRight" aria-label="Move right">\u25b6</button></div></section></section>' + promptMarkup + '</div>' + renderWorldInfoBar(state) + '</div>',
-      '<aside class="status-panel">',
-      '<section class="panel-block"><h2>Now Playing</h2><p>' + state.message + "</p></section>",
-      '<section class="panel-block"><h2>Party Lead</h2><p>' + activeSpecies.name + " Lv " + activeMonster.level + "</p><p>HP " + activeMonster.currentHp + "/" + activeMonster.stats.hp + "</p></section>",
-      '<section class="panel-block"><h2>Inventory</h2><ul class="compact-list">' + state.inventory.map(function (item) {
-        return "<li><span>" + item.itemId + "</span><strong>x" + item.quantity + "</strong></li>";
-      }).join("") + "</ul></section>",
-      '<section class="panel-block"><h2>Save Slots</h2><p>' + saveSlots.length + " stored locally in this browser.</p></section>",
-      "</aside>",
       "</section>",
       '<nav class="world-menu-bar"><button class="secondary-button" type="button" data-open-panel="map">Map</button><button class="secondary-button" type="button" data-open-panel="character">Character</button><button class="secondary-button" type="button" data-open-panel="inventory">Inventory</button><button class="secondary-button" type="button" data-open-panel="monsters">Monsters</button><button class="secondary-button" type="button" data-open-panel="registry">Registry</button><button class="secondary-button" type="button" data-open-panel="quests">Quests</button></nav>',
       renderWorldPanelModal(state, content),
@@ -6482,17 +6497,28 @@
       };
       const press = function (event) {
         event.preventDefault();
+        if (typeof button.setPointerCapture === "function" && event.pointerId != null) {
+          try {
+            button.setPointerCapture(event.pointerId);
+          } catch {}
+        }
         keysDown.add(key);
       };
       const release = function (event) {
         event.preventDefault();
         keysDown.delete(key);
+        if (typeof button.releasePointerCapture === "function" && event.pointerId != null) {
+          try {
+            button.releasePointerCapture(event.pointerId);
+          } catch {}
+        }
       };
 
       button.addEventListener("pointerdown", press);
       button.addEventListener("pointerup", release);
       button.addEventListener("pointerleave", release);
       button.addEventListener("pointercancel", release);
+      button.addEventListener("lostpointercapture", release);
       button.addEventListener("contextmenu", preventContextMenu);
     });
   }

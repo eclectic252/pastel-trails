@@ -22,6 +22,11 @@
   box-sizing: border-box;
 }
 
+html,
+body {
+  min-height: 100%;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
@@ -525,7 +530,7 @@ button {
 
 .play-area {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: 1fr;
   gap: 1rem;
   margin-top: 0;
   align-items: start;
@@ -619,6 +624,7 @@ button {
   max-width: 100%;
   display: block;
   margin: 0 auto;
+  height: auto;
   border-radius: 0;
   background: #8ecbd2;
 }
@@ -663,12 +669,20 @@ button {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 0.75rem;
-  margin-top: 1rem;
+  margin-top: 0;
+  align-items: stretch;
+  padding: 1rem 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(10px);
+  border-radius: 0;
 }
 
 .world-menu-bar .secondary-button {
   width: 100%;
   padding: 0.95rem 0.6rem;
+  white-space: nowrap;
 }
 
 .map-info-bar {
@@ -783,6 +797,7 @@ button {
 .battle-overlay {
   position: fixed;
   inset: 0;
+  z-index: 100;
   display: grid;
   place-items: center;
   padding: 1rem;
@@ -1703,10 +1718,6 @@ button {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .world-menu-bar {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
   .dev-screen-layout,
   .dev-tools-layout {
     grid-template-columns: 1fr;
@@ -1718,6 +1729,67 @@ button {
 
   .dev-sidebar {
     position: static;
+  }
+}
+
+@media (min-width: 761px) {
+  .game-shell {
+    height: 100dvh;
+    min-height: 100dvh;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    padding-bottom: 0;
+  }
+
+  .play-area {
+    min-height: 0;
+  }
+
+  .map-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .world-stage {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .map-info-bar {
+    flex: 0 0 auto;
+    margin-top: 0;
+  }
+
+  .world-canvas {
+    width: 100%;
+    height: 100%;
+    min-width: 420px;
+    min-height: 360px;
+  }
+}
+
+@media (min-width: 761px) and (min-height: 760px) {
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+  }
+}
+
+@media (min-width: 761px) and (max-height: 759px) {
+  html,
+  body {
+    height: auto;
+    overflow-y: auto;
+  }
+
+  .game-shell {
+    height: auto;
+    min-height: 100vh;
+    padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -1754,10 +1826,6 @@ button {
 
   .status-panel {
     grid-template-columns: 1fr;
-  }
-
-  .world-menu-bar {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .world-location-line {
@@ -1902,22 +1970,22 @@ button {
   }
 
   .world-menu-bar {
-    position: sticky;
-    bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
-    z-index: 6;
-    gap: 0.55rem;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0;
     margin-top: 0.75rem;
-    padding: 0.65rem;
-    border-radius: 22px;
+    padding: 0.65rem 0.3rem;
+    border-radius: 0;
     background: rgba(255, 250, 242, 0.94);
     border: 1px solid rgba(57, 79, 91, 0.12);
-    box-shadow: 0 16px 32px rgba(38, 52, 65, 0.14);
+    box-shadow: none;
     backdrop-filter: blur(12px);
   }
 
   .world-menu-bar .secondary-button {
-    min-height: 52px;
-    padding: 0.85rem 0.5rem;
+    min-height: 46px;
+    padding: 0.58rem 0.2rem;
+    border-radius: 14px;
+    font-size: 0.82rem;
   }
   .battle-modal,
   .world-panel-modal,
