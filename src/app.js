@@ -138,6 +138,26 @@
           mapId: "lily-harbor",
           spawn: { x: 512, y: 384 },
           includeInStarterSelection: true,
+          cardBackgrounds: {
+            desktop: {
+              imagePath: "",
+              fit: "cover",
+              zoom: 100,
+              positionX: 50,
+              positionY: 50,
+              repeat: "no-repeat",
+              overlayOpacity: 0.28,
+            },
+            mobile: {
+              imagePath: "",
+              fit: "cover",
+              zoom: 100,
+              positionX: 50,
+              positionY: 50,
+              repeat: "no-repeat",
+              overlayOpacity: 0.32,
+            },
+          },
         },
       ],
     },
@@ -169,6 +189,9 @@
       }),
     },
     monsterAssets: {
+      images: [],
+    },
+    townAssets: {
       images: [],
     },
     arenas: { arenas: [] },
@@ -229,6 +252,56 @@
 
   function slugify(value) {
     return String(value).trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  }
+
+  function normalizeTownCardBackgroundEntry(entry, defaults) {
+    const source = entry || {};
+    const fit = ["cover", "contain", "custom"].includes(String(source.fit || "").toLowerCase())
+      ? String(source.fit).toLowerCase()
+      : defaults.fit;
+    const repeat = ["no-repeat", "repeat", "repeat-x", "repeat-y"].includes(String(source.repeat || "").toLowerCase())
+      ? String(source.repeat).toLowerCase()
+      : defaults.repeat;
+    const zoom = Math.max(25, Math.min(300, Number(source.zoom ?? defaults.zoom)));
+    const positionX = Math.max(0, Math.min(100, Number(source.positionX ?? defaults.positionX)));
+    const positionY = Math.max(0, Math.min(100, Number(source.positionY ?? defaults.positionY)));
+    const overlayOpacity = Math.max(0, Math.min(0.85, Number(source.overlayOpacity ?? defaults.overlayOpacity)));
+
+    return {
+      imagePath: String(source.imagePath || ""),
+      fit,
+      zoom: Number.isFinite(zoom) ? zoom : defaults.zoom,
+      positionX: Number.isFinite(positionX) ? positionX : defaults.positionX,
+      positionY: Number.isFinite(positionY) ? positionY : defaults.positionY,
+      repeat,
+      overlayOpacity: Number.isFinite(overlayOpacity) ? overlayOpacity : defaults.overlayOpacity,
+    };
+  }
+
+  function normalizeTownCardBackgrounds(backgrounds) {
+    const desktopDefaults = {
+      imagePath: "",
+      fit: "cover",
+      zoom: 100,
+      positionX: 50,
+      positionY: 50,
+      repeat: "no-repeat",
+      overlayOpacity: 0.28,
+    };
+    const mobileDefaults = {
+      imagePath: "",
+      fit: "cover",
+      zoom: 100,
+      positionX: 50,
+      positionY: 50,
+      repeat: "no-repeat",
+      overlayOpacity: 0.32,
+    };
+
+    return {
+      desktop: normalizeTownCardBackgroundEntry(backgrounds?.desktop, desktopDefaults),
+      mobile: normalizeTownCardBackgroundEntry(backgrounds?.mobile, mobileDefaults),
+    };
   }
 
   function getCollisionProfile(layerName, tileSize) {
@@ -386,6 +459,11 @@
         ? rawContent.monsterAssets.images.slice().sort()
         : [],
     };
+    const townAssets = {
+      images: Array.isArray(rawContent.townAssets?.images)
+        ? rawContent.townAssets.images.slice().sort()
+        : [],
+    };
 
     return {
       settings: rawContent.settings,
@@ -401,11 +479,13 @@
             mapId: slugify(town.mapId || town.name),
             spawn: town.spawn,
             includeInStarterSelection: town.includeInStarterSelection ?? true,
+            cardBackgrounds: normalizeTownCardBackgrounds(town.cardBackgrounds),
           };
         }),
       },
       characterSheets,
       monsterAssets,
+      townAssets,
       arenas: rawContent.arenas || JSON.parse(JSON.stringify(fallbackContent.arenas)),
       trainers: rawContent.trainers,
       maps,
@@ -533,9 +613,18 @@
     };
   }
 
+  function buildTownAssetCatalog(files) {
+    return {
+      images: files.map(function (file) {
+        return file.pathParts.join("/");
+      }).sort(),
+    };
+  }
+
   async function loadCharacterSheetsFromDirectory(rootHandle) {
     const discoveredSheets = [];
     let monsterAssets = { images: [] };
+    let townAssets = { images: [] };
 
     try {
       const assetsHandle = await rootHandle.getDirectoryHandle("assets");
@@ -555,16 +644,29 @@
           discoveredSheets.push(buildDiscoveredSheetEntry(file, "monster"));
         });
       } catch {}
+
+      try {
+        const allAssetFiles = await collectImageFilesRecursive(assetsHandle, ["assets"]);
+        const townCardFiles = allAssetFiles.filter(function (file) {
+          const path = file.pathParts.join("/");
+          return !path.startsWith("assets/Maps/")
+            && !path.startsWith("assets/Characters/")
+            && !path.startsWith("assets/Monsters/");
+        });
+        townAssets = buildTownAssetCatalog(townCardFiles);
+      } catch {}
     } catch {
       return {
         sheets: JSON.parse(JSON.stringify(fallbackContent.characterSheets.sheets)),
         monsterAssets: JSON.parse(JSON.stringify(fallbackContent.monsterAssets || { images: [] })),
+        townAssets: JSON.parse(JSON.stringify(fallbackContent.townAssets || { images: [] })),
       };
     }
 
     return {
       sheets: discoveredSheets.length ? discoveredSheets : JSON.parse(JSON.stringify(fallbackContent.characterSheets.sheets)),
       monsterAssets,
+      townAssets,
     };
   }
 
@@ -624,6 +726,7 @@
       }),
     };
     const monsterAssets = discoveredCharacterSheets.monsterAssets || { images: [] };
+    const townAssets = discoveredCharacterSheets.townAssets || { images: [] };
 
     const maps = await loadAuthoredMapsFromAssets(rootHandle);
     const mapMetadata = {};
@@ -631,7 +734,7 @@
       mapMetadata[mapId] = await tryReadJsonFromHandle(rootHandle, ["data", "map-metadata", mapId + ".meta.json"]) || {};
     }
 
-    return normalizeContent({ settings, themes, items, skills, monsters, towns, arenas, trainers, characterSheets, monsterAssets, maps, mapMetadata }, "directory");
+    return normalizeContent({ settings, themes, items, skills, monsters, towns, arenas, trainers, characterSheets, monsterAssets, townAssets, maps, mapMetadata }, "directory");
   }
 
   function loadEmbeddedContent() {
@@ -845,6 +948,11 @@
 
   function getMonsterImageOptions(content) {
     const images = Array.isArray(content?.monsterAssets?.images) ? content.monsterAssets.images.slice() : [];
+    return images.sort();
+  }
+
+  function getTownCardImageOptions(content) {
+    const images = Array.isArray(content?.townAssets?.images) ? content.townAssets.images.slice() : [];
     return images.sort();
   }
 
@@ -3711,13 +3819,7 @@
     }).join("");
 
     const townCards = starterTowns.map(function (town) {
-      const selected = setup.townId === town.id ? " option-card-selected" : "";
-      return (
-        '<button class="option-card' + selected + '" type="button" data-select-town="' + town.id + '">' +
-        "<strong>" + town.name + "</strong>" +
-        "<span>Starter map: " + town.mapId + "</span>" +
-        "</button>"
-      );
+      return renderTownOptionCard(town, setup.townId === town.id);
     }).join("");
 
     const avatars = getPlayerAvatarOptions(content);
@@ -4915,6 +5017,59 @@
     return playerName + " starts in " + townName + " with " + starterName + ".";
   }
 
+  function getTownCardBackgroundConfig(town, viewport) {
+    const backgrounds = normalizeTownCardBackgrounds(town?.cardBackgrounds);
+    return viewport === "mobile" ? backgrounds.mobile : backgrounds.desktop;
+  }
+
+  function getTownCardBackgroundSizeValue(config) {
+    if (config.fit === "contain") {
+      return "contain";
+    }
+    if (config.fit === "custom") {
+      return Math.max(25, Math.min(300, Number(config.zoom || 100))) + "% auto";
+    }
+    return "cover";
+  }
+
+  function buildTownCardStyle(town) {
+    const desktop = getTownCardBackgroundConfig(town, "desktop");
+    const mobile = getTownCardBackgroundConfig(town, "mobile");
+    const desktopImage = desktop.imagePath ? 'url("' + desktop.imagePath.replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '")' : "none";
+    const mobileImage = mobile.imagePath ? 'url("' + mobile.imagePath.replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '")' : "none";
+
+    return [
+      "--town-card-desktop-image:" + desktopImage,
+      "--town-card-mobile-image:" + mobileImage,
+      "--town-card-desktop-size:" + getTownCardBackgroundSizeValue(desktop),
+      "--town-card-mobile-size:" + getTownCardBackgroundSizeValue(mobile),
+      "--town-card-desktop-position:" + Math.round(desktop.positionX) + "% " + Math.round(desktop.positionY) + "%",
+      "--town-card-mobile-position:" + Math.round(mobile.positionX) + "% " + Math.round(mobile.positionY) + "%",
+      "--town-card-desktop-repeat:" + desktop.repeat,
+      "--town-card-mobile-repeat:" + mobile.repeat,
+      "--town-card-desktop-overlay:" + Number(desktop.overlayOpacity || 0),
+      "--town-card-mobile-overlay:" + Number(mobile.overlayOpacity || 0),
+    ].join(";");
+  }
+
+  function renderTownOptionCard(town, selected) {
+    const selectedClass = selected ? " option-card-selected" : "";
+    const style = buildTownCardStyle(town);
+    return (
+      '<button class="option-card option-card-town' + selectedClass + '" type="button" data-select-town="' + town.id + '" style="' + escapeHtml(style) + '">' +
+      '<strong>' + escapeHtml(town.name) + "</strong>" +
+      '<span>Starter map: ' + escapeHtml(town.mapId) + "</span>" +
+      "</button>"
+    );
+  }
+
+  function buildTownCardImageOptionsMarkup(imagePaths, selectedPath) {
+    return ['<option value="">None</option>'].concat(imagePaths.map(function (imagePath) {
+      const selected = imagePath === (selectedPath || "") ? " selected" : "";
+      return '<option value="' + escapeHtml(imagePath) + '"' + selected + ">" + escapeHtml(imagePath.replace(/^assets\//, "")) + "</option>";
+    })).join("");
+  }
+
   function getStarterTownOptions(content) {
     const enabledTowns = content.towns.towns.filter(function (town) {
       return town.includeInStarterSelection !== false;
@@ -4941,6 +5096,7 @@
       mapId,
       spawn: { x: 128, y: 128 },
       includeInStarterSelection: true,
+      cardBackgrounds: normalizeTownCardBackgrounds(),
     };
     content.towns.towns.push(town);
     return town;
@@ -5823,6 +5979,11 @@
     const previewZoom = devToolsState.previewZoom || 100;
     const previewSize = map ? getDevPreviewCanvasSize(map, previewZoom) : { width: 960, height: 640 };
     const town = selectedTownMapId ? ensureTownEntryForMap(content, selectedTownMapId) : null;
+    const townCardImages = getTownCardImageOptions(content);
+    const desktopCard = town ? getTownCardBackgroundConfig(town, "desktop") : normalizeTownCardBackgrounds().desktop;
+    const mobileCard = town ? getTownCardBackgroundConfig(town, "mobile") : normalizeTownCardBackgrounds().mobile;
+    const desktopImageOptions = buildTownCardImageOptionsMarkup(townCardImages, desktopCard.imagePath);
+    const mobileImageOptions = buildTownCardImageOptionsMarkup(townCardImages, mobileCard.imagePath);
 
     const townList = townMapIds.map(function (mapId) {
       const selected = mapId === selectedTownMapId ? " dev-map-item-selected" : "";
@@ -5850,7 +6011,23 @@
         '<label class="input-group"><span>Include In Starter Options</span><select data-dev-town-field="includeInStarterSelection"><option value="true"' + ((town?.includeInStarterSelection ?? true) ? " selected" : "") + '>Yes</option><option value="false"' + ((town?.includeInStarterSelection ?? true) ? "" : " selected") + '>No</option></select></label>' +
         '<label class="input-group"><span>Spawn X</span><input type="number" step="1" data-dev-town-field="spawn.x" value="' + Number(town?.spawn?.x || 128) + '" /></label>' +
         '<label class="input-group"><span>Spawn Y</span><input type="number" step="1" data-dev-town-field="spawn.y" value="' + Number(town?.spawn?.y || 128) + '" /></label>' +
-      '</div><p class="dev-helper-text">Set whether this town appears in New Game starter zone choices. If every town is disabled, the game falls back to showing all towns so setup never breaks.</p><div class="title-actions"><button class="secondary-button" type="button" data-action="export-towns-json">Export towns.json</button></div></section>',
+      '</div><section class="dev-subcard"><div class="section-heading"><h3>Town Card Backgrounds</h3></div><p class="dev-helper-text">Poster images bundled by the local content builder appear here after you rebuild local content.</p><div class="dev-town-card-preview-grid"><div><p class="dev-helper-text">Desktop Preview</p>' + renderTownOptionCard(town || { id: "", name: "Town Name", mapId: "map-id" }, false) + '</div><div><p class="dev-helper-text">Mobile Preview</p><div class="dev-town-card-mobile-preview">' + renderTownOptionCard(town || { id: "", name: "Town Name", mapId: "map-id" }, false) + '</div></div></div><div class="dev-town-card-settings-grid"><section class="dev-subcard"><h3>Desktop Card</h3><div class="form-grid">' +
+        '<label class="input-group dev-input-group-wide"><span>Background Image</span><select data-dev-town-field="cardBackgrounds.desktop.imagePath">' + desktopImageOptions + '</select></label>' +
+        '<label class="input-group"><span>Fit</span><select data-dev-town-field="cardBackgrounds.desktop.fit"><option value="cover"' + (desktopCard.fit === "cover" ? " selected" : "") + '>Cover</option><option value="contain"' + (desktopCard.fit === "contain" ? " selected" : "") + '>Contain</option><option value="custom"' + (desktopCard.fit === "custom" ? " selected" : "") + '>Custom Zoom</option></select></label>' +
+        '<label class="input-group"><span>Zoom %</span><input type="number" min="25" max="300" step="1" data-dev-town-field="cardBackgrounds.desktop.zoom" value="' + Number(desktopCard.zoom || 100) + '" /></label>' +
+        '<label class="input-group"><span>Position X %</span><input type="number" min="0" max="100" step="1" data-dev-town-field="cardBackgrounds.desktop.positionX" value="' + Number(desktopCard.positionX || 50) + '" /></label>' +
+        '<label class="input-group"><span>Position Y %</span><input type="number" min="0" max="100" step="1" data-dev-town-field="cardBackgrounds.desktop.positionY" value="' + Number(desktopCard.positionY || 50) + '" /></label>' +
+        '<label class="input-group"><span>Repeat</span><select data-dev-town-field="cardBackgrounds.desktop.repeat"><option value="no-repeat"' + (desktopCard.repeat === "no-repeat" ? " selected" : "") + '>No Repeat</option><option value="repeat"' + (desktopCard.repeat === "repeat" ? " selected" : "") + '>Repeat</option><option value="repeat-x"' + (desktopCard.repeat === "repeat-x" ? " selected" : "") + '>Repeat X</option><option value="repeat-y"' + (desktopCard.repeat === "repeat-y" ? " selected" : "") + '>Repeat Y</option></select></label>' +
+        '<label class="input-group"><span>Overlay</span><input type="number" min="0" max="0.85" step="0.01" data-dev-town-field="cardBackgrounds.desktop.overlayOpacity" value="' + Number(desktopCard.overlayOpacity || 0) + '" /></label>' +
+      '</div></section><section class="dev-subcard"><h3>Mobile Card</h3><div class="form-grid">' +
+        '<label class="input-group dev-input-group-wide"><span>Background Image</span><select data-dev-town-field="cardBackgrounds.mobile.imagePath">' + mobileImageOptions + '</select></label>' +
+        '<label class="input-group"><span>Fit</span><select data-dev-town-field="cardBackgrounds.mobile.fit"><option value="cover"' + (mobileCard.fit === "cover" ? " selected" : "") + '>Cover</option><option value="contain"' + (mobileCard.fit === "contain" ? " selected" : "") + '>Contain</option><option value="custom"' + (mobileCard.fit === "custom" ? " selected" : "") + '>Custom Zoom</option></select></label>' +
+        '<label class="input-group"><span>Zoom %</span><input type="number" min="25" max="300" step="1" data-dev-town-field="cardBackgrounds.mobile.zoom" value="' + Number(mobileCard.zoom || 100) + '" /></label>' +
+        '<label class="input-group"><span>Position X %</span><input type="number" min="0" max="100" step="1" data-dev-town-field="cardBackgrounds.mobile.positionX" value="' + Number(mobileCard.positionX || 50) + '" /></label>' +
+        '<label class="input-group"><span>Position Y %</span><input type="number" min="0" max="100" step="1" data-dev-town-field="cardBackgrounds.mobile.positionY" value="' + Number(mobileCard.positionY || 50) + '" /></label>' +
+        '<label class="input-group"><span>Repeat</span><select data-dev-town-field="cardBackgrounds.mobile.repeat"><option value="no-repeat"' + (mobileCard.repeat === "no-repeat" ? " selected" : "") + '>No Repeat</option><option value="repeat"' + (mobileCard.repeat === "repeat" ? " selected" : "") + '>Repeat</option><option value="repeat-x"' + (mobileCard.repeat === "repeat-x" ? " selected" : "") + '>Repeat X</option><option value="repeat-y"' + (mobileCard.repeat === "repeat-y" ? " selected" : "") + '>Repeat Y</option></select></label>' +
+        '<label class="input-group"><span>Overlay</span><input type="number" min="0" max="0.85" step="0.01" data-dev-town-field="cardBackgrounds.mobile.overlayOpacity" value="' + Number(mobileCard.overlayOpacity || 0) + '" /></label>' +
+      '</div></section></div></section><p class="dev-helper-text">Set whether this town appears in New Game starter zone choices. If every town is disabled, the game falls back to showing all towns so setup never breaks.</p><div class="title-actions"><button class="secondary-button" type="button" data-action="export-towns-json">Export towns.json</button></div></section>',
       '</section>',
       '</section>',
       '</main>',
@@ -7800,6 +7977,7 @@
             }),
           };
           this.content.monsterAssets = discoveredCharacterSheets.monsterAssets || { images: [] };
+          this.content.townAssets = discoveredCharacterSheets.townAssets || { images: [] };
           const selectedStillExists = ensureCharacterSheetCatalog(this.content).some((entry) => entry.id === this.devTools.selectedCharacterSheetId);
           applyCharacterSheetToDevTools(this.content, this.devTools, selectedStillExists ? this.devTools.selectedCharacterSheetId : ensureCharacterSheetCatalog(this.content)[0]?.id || "");
           this.state.message = "Character sheets resynced from the project folder.";
@@ -8502,8 +8680,20 @@
       updateTownField: function (path, rawValue, shouldRender) {
         const mapId = this.devTools.selectedTownMapId || this.devTools.selectedMapId;
         const town = ensureTownEntryForMap(this.content, mapId);
+        const numericFields = new Set([
+          "spawn.x",
+          "spawn.y",
+          "cardBackgrounds.desktop.zoom",
+          "cardBackgrounds.desktop.positionX",
+          "cardBackgrounds.desktop.positionY",
+          "cardBackgrounds.desktop.overlayOpacity",
+          "cardBackgrounds.mobile.zoom",
+          "cardBackgrounds.mobile.positionX",
+          "cardBackgrounds.mobile.positionY",
+          "cardBackgrounds.mobile.overlayOpacity",
+        ]);
 
-        const value = path.startsWith("spawn.")
+        const value = numericFields.has(path)
           ? Number(rawValue || 0)
           : path === "includeInStarterSelection"
             ? rawValue === "true"
@@ -8513,6 +8703,9 @@
           const parts = path.split(".");
           let current = town;
           for (let index = 0; index < parts.length - 1; index += 1) {
+            if (!current[parts[index]] || typeof current[parts[index]] !== "object") {
+              current[parts[index]] = {};
+            }
             current = current[parts[index]];
           }
           current[parts[parts.length - 1]] = value;
@@ -8521,6 +8714,7 @@
         }
 
         town.mapId = mapId;
+        town.cardBackgrounds = normalizeTownCardBackgrounds(town.cardBackgrounds);
         if (shouldRender !== false) {
           this.render();
         }

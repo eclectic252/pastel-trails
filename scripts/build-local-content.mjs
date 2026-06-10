@@ -115,6 +115,19 @@ async function loadMonsterAssets() {
   }
 }
 
+async function loadTownAssets() {
+  const postersRoot = path.join(projectRoot, "assets", "posters");
+
+  try {
+    const pngFiles = await collectPngFiles(postersRoot);
+    return {
+      images: pngFiles.map((absolutePath) => path.relative(projectRoot, absolutePath).split(path.sep).join("/")).sort(),
+    };
+  } catch {
+    return { images: [] };
+  }
+}
+
 async function loadCharacterSheets() {
   const saved = await readOptionalJson("data/character-sheets.json", { sheets: [] });
   const spriteRoots = [
@@ -287,7 +300,7 @@ async function loadMapMetadata(mapIds, maps) {
 }
 
 async function buildLocalContent() {
-  const [settings, themes, items, skills, monsters, towns, arenas, trainers, characterSheets, monsterAssets, maps] = await Promise.all([
+  const [settings, themes, items, skills, monsters, towns, arenas, trainers, characterSheets, monsterAssets, townAssets, maps] = await Promise.all([
     readJson("data/settings.json"),
     readJson("data/themes.json"),
     readJson("data/items.json"),
@@ -308,6 +321,7 @@ async function buildLocalContent() {
     readJson("data/trainers.json"),
     loadCharacterSheets(),
     loadMonsterAssets(),
+    loadTownAssets(),
     loadMaps(),
   ]);
 
@@ -324,6 +338,7 @@ async function buildLocalContent() {
     trainers,
     characterSheets,
     monsterAssets,
+    townAssets,
     maps,
     mapMetadata,
   };

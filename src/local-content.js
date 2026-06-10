@@ -3813,6 +3813,12 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       "assets/Monsters/Ruffin/ruffin_pink.png"
     ]
   },
+  "townAssets": {
+    "images": [
+      "assets/posters/Camelia_ranch_poster.png",
+      "assets/posters/Lily_harbor_poster.png"
+    ]
+  },
   "maps": {
     "bougainvillea-town": {
       "id": "bougainvillea-town",
