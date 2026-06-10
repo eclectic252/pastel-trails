@@ -1370,6 +1370,70 @@
           "label": "Electric"
         }
       ]
+    },
+    {
+      "id": "Kelpar",
+      "name": "Kelpar",
+      "baseStats": {
+        "hp": 10,
+        "attack": 5,
+        "defense": 5,
+        "speed": 5
+      },
+      "growth": "medium",
+      "overworldDisplayMode": "walk",
+      "skills": [
+        "basic-attack"
+      ],
+      "variants": [
+        {
+          "id": "kelpar-default",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Kelpar/kelpar_default.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "portrait",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          }
+        },
+        {
+          "id": "kelpar-snow",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Kelpar/kelpar_snow.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "portrait",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "Snow"
+        }
+      ]
     }
   ]
 }

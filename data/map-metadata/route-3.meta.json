@@ -7,7 +7,7 @@
   "transitions": [
     {
       "id": "route3-to-camelia",
-      "x": 896,
+      "x": 512,
       "y": 256,
       "width": 128,
       "height": 384,
@@ -19,9 +19,9 @@
     },
     {
       "id": "route3-to-roue1",
-      "x": 1536,
-      "y": 8320,
-      "width": 640,
+      "x": 1280,
+      "y": 8192,
+      "width": 512,
       "height": 128,
       "targetMapId": "route-1",
       "targetSpawn": {
@@ -31,7 +31,7 @@
     },
     {
       "id": "route3-to-jasminebay",
-      "x": 896,
+      "x": 256,
       "y": 8320,
       "width": 512,
       "height": 128,
@@ -43,14 +43,38 @@
     },
     {
       "id": "route3-route2",
-      "x": 2432,
+      "x": 2176,
       "y": 4992,
       "width": 128,
-      "height": 384,
+      "height": 512,
       "targetMapId": "route-2",
       "targetSpawn": {
         "x": 192,
         "y": 960
+      }
+    },
+    {
+      "id": "route3-to-bougainvillea",
+      "x": 2176,
+      "y": 3456,
+      "width": 128,
+      "height": 512,
+      "targetMapId": "bougainvillea-town",
+      "targetSpawn": {
+        "x": 192,
+        "y": 704
+      }
+    },
+    {
+      "id": "route3-to-rosetown",
+      "x": 0,
+      "y": 4224,
+      "width": 128,
+      "height": 256,
+      "targetMapId": "rose-town",
+      "targetSpawn": {
+        "x": 2112,
+        "y": 1344
       }
     }
   ],

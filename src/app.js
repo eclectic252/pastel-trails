@@ -1859,7 +1859,7 @@
 
   function createWildMonstersForMap(content, mapId, position) {
     const mapMeta = content.mapMetadata[mapId];
-    if (mapMeta?.safezone) {
+    if (mapMeta?.safezone || mapMeta?.isTown) {
       return [];
     }
 
@@ -2980,7 +2980,7 @@
     const map = content.maps[state.world.currentMapId];
     const worldWidth = map.mapWidth * map.tileSize;
     const worldHeight = map.mapHeight * map.tileSize;
-    const zoomScale = Math.max(0.1, Number(state.settings.zoom || 100) / 100);
+    const zoomScale = getEffectiveWorldZoomScale(state);
     const viewport = state.world?.viewport || VIEWPORT;
     const visibleWorldWidth = viewport.width / zoomScale;
     const visibleWorldHeight = viewport.height / zoomScale;
@@ -3147,7 +3147,7 @@
   }
 
   function drawMap(ctx, map, camera, phase, viewport) {
-    const zoomScale = Math.max(0.1, Number(ACTIVE_APP?.state?.settings?.zoom || 100) / 100);
+    const zoomScale = getEffectiveWorldZoomScale(ACTIVE_APP?.state);
     const useSmoothSampling = Math.abs(zoomScale - 1) > 0.001;
     ctx.imageSmoothingEnabled = useSmoothSampling;
     if (useSmoothSampling) {
@@ -3218,7 +3218,7 @@
 
     const transitions = content.mapMetadata[state.world.currentMapId]?.transitions || [];
     const selectedId = devToolsState.selectedTransitionId;
-    const zoomScale = Math.max(0.1, Number(state.settings.zoom || 100) / 100);
+    const zoomScale = getEffectiveWorldZoomScale(state);
 
     transitions.forEach(function (transition) {
       const x = Math.round((transition.x - camera.x) * zoomScale);
@@ -3266,7 +3266,7 @@
     const overworldSheet = getVariantOverworldSheet(content, variant);
     const overworldConfig = getVariantOverworldConfig(variant);
     const displayMode = getMonsterOverworldDisplayMode(species, variant);
-    const zoomScale = Math.max(0.1, Number(ACTIVE_APP?.state?.settings?.zoom || 100) / 100);
+    const zoomScale = getEffectiveWorldZoomScale(ACTIVE_APP?.state);
     const useSmoothSampling = Math.abs(zoomScale - 1) > 0.001;
     const screenX = Math.round((monster.x - camera.x) * zoomScale);
     const screenY = Math.round((monster.y - camera.y) * zoomScale);
@@ -3444,7 +3444,7 @@
       Math.max(0, Math.min((runtimeCharacterConfig.characterSheetRows || 1) - 1, rowIndex)),
       0
     );
-    const zoomScale = Math.max(0.1, Number(ACTIVE_APP?.state?.settings?.zoom || 100) / 100);
+    const zoomScale = getEffectiveWorldZoomScale(ACTIVE_APP?.state);
     const spriteSize = getEffectiveRenderWidthForSheet(content, sheet) * zoomScale;
     const screenX = Math.round((Number(npc.x || 0) - camera.x) * zoomScale);
     const screenY = Math.round((Number(npc.y || 0) - camera.y) * zoomScale);
@@ -3491,7 +3491,7 @@
     ensureCharacterDevSelection(runtimeCharacterConfig, content);
     const selectedSheet = getSelectedCharacterSheet(runtimeCharacterConfig, content);
     const image = getImage(selectedSheet?.path || PLAYER_SPRITE_SHEET);
-    const zoomScale = Math.max(0.1, Number(state.settings.zoom || 100) / 100);
+    const zoomScale = getEffectiveWorldZoomScale(state);
     const globalPlayerSpriteSettings = ensureGlobalPlayerSpriteSettings(content);
     const playerX = (state.world.position.x - camera.x) * zoomScale;
     const playerY = (state.world.position.y - camera.y) * zoomScale;
@@ -3626,6 +3626,15 @@
     return typeof window !== "undefined"
       && typeof window.matchMedia === "function"
       && window.matchMedia("(pointer: coarse)").matches;
+  }
+
+  function getEffectiveWorldZoomPercent(state) {
+    const baseZoom = Number(state?.settings?.zoom || 100);
+    return prefersTouchUi() ? (baseZoom + 50) : baseZoom;
+  }
+
+  function getEffectiveWorldZoomScale(state) {
+    return Math.max(0.1, getEffectiveWorldZoomPercent(state) / 100);
   }
 
   function getWorldPromptVerb() {
