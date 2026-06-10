@@ -1333,52 +1333,157 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       {
         "id": "lily-harbor",
         "name": "Lily Harbor",
+        "cardSubtitle": "Coastal boardwalk town. ",
         "mapId": "lily-harbor",
         "spawn": {
           "x": 1856,
           "y": 1344
         },
-        "includeInStarterSelection": true
+        "includeInStarterSelection": true,
+        "cardBackgrounds": {
+          "desktop": {
+            "imagePath": "assets/posters/Lily_harbor_poster.png",
+            "fit": "cover",
+            "zoom": 100,
+            "positionX": 50,
+            "positionY": 50,
+            "repeat": "no-repeat",
+            "overlayOpacity": 0.28
+          },
+          "mobile": {
+            "imagePath": "assets/posters/Lily_harbor_poster.png",
+            "fit": "cover",
+            "zoom": 100,
+            "positionX": 50,
+            "positionY": 50,
+            "repeat": "no-repeat",
+            "overlayOpacity": 0.32
+          }
+        }
       },
       {
         "id": "bougainvillea-town",
         "name": "Bougainvillea Town",
+        "cardSubtitle": "Historic Town. ",
         "mapId": "bougainvillea-town",
         "spawn": {
           "x": 1856,
           "y": 960
         },
-        "includeInStarterSelection": true
+        "includeInStarterSelection": true,
+        "cardBackgrounds": {
+          "desktop": {
+            "imagePath": "assets/posters/bougainvillea_poster.png",
+            "fit": "cover",
+            "zoom": 100,
+            "positionX": 50,
+            "positionY": 50,
+            "repeat": "no-repeat",
+            "overlayOpacity": 0.28
+          },
+          "mobile": {
+            "imagePath": "assets/posters/bougainvillea_poster.png",
+            "fit": "cover",
+            "zoom": 100,
+            "positionX": 50,
+            "positionY": 50,
+            "repeat": "no-repeat",
+            "overlayOpacity": 0.32
+          }
+        }
       },
       {
         "id": "camelia-ranch",
         "name": "Camelia Ranch",
+        "cardSubtitle": "",
         "mapId": "camelia-ranch",
         "spawn": {
           "x": 960,
           "y": 1344
         },
-        "includeInStarterSelection": true
+        "includeInStarterSelection": true,
+        "cardBackgrounds": {
+          "desktop": {
+            "imagePath": "assets/posters/Camelia_ranch_poster.png",
+            "fit": "cover",
+            "zoom": 100,
+            "positionX": 50,
+            "positionY": 50,
+            "repeat": "no-repeat",
+            "overlayOpacity": 0.28
+          },
+          "mobile": {
+            "imagePath": "assets/posters/Camelia_ranch_poster.png",
+            "fit": "cover",
+            "zoom": 100,
+            "positionX": 50,
+            "positionY": 50,
+            "repeat": "no-repeat",
+            "overlayOpacity": 0.32
+          }
+        }
       },
       {
         "id": "plumeria-shores",
         "name": "Plumeria Shores",
+        "cardSubtitle": "",
         "mapId": "plumeria-shores",
         "spawn": {
           "x": 1728,
           "y": 832
         },
-        "includeInStarterSelection": true
+        "includeInStarterSelection": true,
+        "cardBackgrounds": {
+          "desktop": {
+            "imagePath": "",
+            "fit": "cover",
+            "zoom": 100,
+            "positionX": 50,
+            "positionY": 50,
+            "repeat": "no-repeat",
+            "overlayOpacity": 0.28
+          },
+          "mobile": {
+            "imagePath": "",
+            "fit": "cover",
+            "zoom": 100,
+            "positionX": 50,
+            "positionY": 50,
+            "repeat": "no-repeat",
+            "overlayOpacity": 0.32
+          }
+        }
       },
       {
         "id": "jasmine-bay",
         "name": "Jasmine Bay",
+        "cardSubtitle": "Mysterious Remote Island.",
         "mapId": "jasmine-bay",
         "spawn": {
           "x": 1472,
           "y": 960
         },
-        "includeInStarterSelection": true
+        "includeInStarterSelection": true,
+        "cardBackgrounds": {
+          "desktop": {
+            "imagePath": "assets/posters/JasmineBay.png",
+            "fit": "cover",
+            "zoom": 100,
+            "positionX": 50,
+            "positionY": 50,
+            "repeat": "no-repeat",
+            "overlayOpacity": 0.28
+          },
+          "mobile": {
+            "imagePath": "assets/posters/JasmineBay.png",
+            "fit": "cover",
+            "zoom": 100,
+            "positionX": 50,
+            "positionY": 50,
+            "repeat": "no-repeat",
+            "overlayOpacity": 0.32
+          }
+        }
       }
     ]
   },
@@ -3816,7 +3921,9 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
   "townAssets": {
     "images": [
       "assets/posters/Camelia_ranch_poster.png",
-      "assets/posters/Lily_harbor_poster.png"
+      "assets/posters/JasmineBay.png",
+      "assets/posters/Lily_harbor_poster.png",
+      "assets/posters/bougainvillea_poster.png"
     ]
   },
   "maps": {

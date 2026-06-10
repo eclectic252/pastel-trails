@@ -135,6 +135,7 @@
         {
           id: "lily-harbor",
           name: "Lily Harbor",
+          cardSubtitle: "",
           mapId: "lily-harbor",
           spawn: { x: 512, y: 384 },
           includeInStarterSelection: true,
@@ -476,6 +477,7 @@
           return {
             id: slugify(town.id || town.name),
             name: town.name,
+            cardSubtitle: String(town.cardSubtitle || ""),
             mapId: slugify(town.mapId || town.name),
             spawn: town.spawn,
             includeInStarterSelection: town.includeInStarterSelection ?? true,
@@ -3819,7 +3821,7 @@
     }).join("");
 
     const townCards = starterTowns.map(function (town) {
-      return renderTownOptionCard(town, setup.townId === town.id);
+      return renderTownOptionCard(town, setup.townId === town.id, "desktop");
     }).join("");
 
     const avatars = getPlayerAvatarOptions(content);
@@ -3849,7 +3851,7 @@
       "</div>",
       "</section>",
       '<section class="setup-section"><div class="section-heading"><h2>Starter Monster</h2><button class="secondary-button" type="button" data-action="random-starter">Random</button></div><div class="option-grid">' + speciesCards + "</div></section>",
-      '<section class="setup-section"><div class="section-heading"><h2>Starting Town</h2><button class="secondary-button" type="button" data-action="random-town">Random</button></div><div class="option-grid">' + townCards + "</div><p class=\"dev-helper-text\">Only towns marked for starter selection appear here.</p></section>",
+      '<section class="setup-section"><div class="section-heading"><h2>Starting Town</h2><button class="secondary-button" type="button" data-action="random-town">Random</button></div><div class="option-grid town-option-grid">' + townCards + "</div><p class=\"dev-helper-text\">Only towns marked for starter selection appear here.</p></section>",
       '<section class="setup-section"><h2>Avatar</h2><div class="avatar-grid">' + avatarCards + "</div></section>",
       '<section class="setup-summary"><p data-setup-preview><strong>Preview:</strong> ' + buildNewGamePreviewText(content, setup) + "</p></section>",
       '<div class="title-actions">',
@@ -5032,7 +5034,7 @@
     return "cover";
   }
 
-  function buildTownCardStyle(town) {
+  function buildTownCardCssVariables(town) {
     const desktop = getTownCardBackgroundConfig(town, "desktop");
     const mobile = getTownCardBackgroundConfig(town, "mobile");
     const desktopImage = desktop.imagePath ? 'url("' + desktop.imagePath.replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '")' : "none";
@@ -5052,13 +5054,36 @@
     ].join(";");
   }
 
-  function renderTownOptionCard(town, selected) {
+  function buildTownCardViewportStyle(town, viewport) {
+    const config = getTownCardBackgroundConfig(town, viewport === "mobile" ? "mobile" : "desktop");
+    const imageValue = config.imagePath ? 'url("' + config.imagePath.replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '")' : "none";
+    return [
+      "background-image:linear-gradient(rgba(23, 30, 36, " + Number(config.overlayOpacity || 0) + "), rgba(23, 30, 36, " + Number(config.overlayOpacity || 0) + ")), " + imageValue,
+      "background-size:" + getTownCardBackgroundSizeValue(config),
+      "background-position:" + Math.round(config.positionX) + "% " + Math.round(config.positionY) + "%",
+      "background-repeat:" + config.repeat,
+    ].join(";");
+  }
+
+  function buildTownCardStyle(town, viewport) {
+    const responsiveViewport = viewport === "mobile" ? "mobile" : "desktop";
+    return [
+      buildTownCardCssVariables(town),
+      buildTownCardViewportStyle(town, responsiveViewport),
+    ].join(";");
+  }
+
+  function renderTownOptionCard(town, selected, viewport) {
     const selectedClass = selected ? " option-card-selected" : "";
-    const style = buildTownCardStyle(town);
+    const artStyle = buildTownCardStyle(town, viewport);
+    const subtitle = String(town.cardSubtitle || "").trim() || ("Starter map: " + town.mapId);
     return (
-      '<button class="option-card option-card-town' + selectedClass + '" type="button" data-select-town="' + town.id + '" style="' + escapeHtml(style) + '">' +
+      '<button class="option-card option-card-town' + selectedClass + '" type="button" data-select-town="' + town.id + '">' +
+      '<div class="town-card-art" style="' + escapeHtml(artStyle) + '"></div>' +
+      '<div class="town-card-copy">' +
       '<strong>' + escapeHtml(town.name) + "</strong>" +
-      '<span>Starter map: ' + escapeHtml(town.mapId) + "</span>" +
+      '<span>' + escapeHtml(subtitle) + "</span>" +
+      "</div>" +
       "</button>"
     );
   }
@@ -5093,6 +5118,7 @@
     town = {
       id: slugify(content.mapMetadata[mapId]?.displayName || mapId),
       name: content.mapMetadata[mapId]?.displayName || mapId,
+      cardSubtitle: "",
       mapId,
       spawn: { x: 128, y: 128 },
       includeInStarterSelection: true,
@@ -6007,11 +6033,12 @@
       '<section class="panel-block dev-editor-panel"><div class="section-heading"><h2>Town Settings</h2></div><div class="form-grid">' +
         '<label class="input-group"><span>Town ID</span><input data-dev-town-field="id" value="' + escapeHtml(town?.id || slugify(mapMeta?.displayName || selectedTownMapId)) + '" /></label>' +
         '<label class="input-group"><span>Town Name</span><input data-dev-town-field="name" value="' + escapeHtml(town?.name || mapMeta?.displayName || selectedTownMapId) + '" /></label>' +
+        '<label class="input-group"><span>Card Subtitle</span><input data-dev-town-field="cardSubtitle" value="' + escapeHtml(town?.cardSubtitle || "") + '" placeholder="Coastal starter town" /></label>' +
         '<label class="input-group"><span>Map ID</span><input value="' + escapeHtml(selectedTownMapId) + '" disabled /></label>' +
         '<label class="input-group"><span>Include In Starter Options</span><select data-dev-town-field="includeInStarterSelection"><option value="true"' + ((town?.includeInStarterSelection ?? true) ? " selected" : "") + '>Yes</option><option value="false"' + ((town?.includeInStarterSelection ?? true) ? "" : " selected") + '>No</option></select></label>' +
         '<label class="input-group"><span>Spawn X</span><input type="number" step="1" data-dev-town-field="spawn.x" value="' + Number(town?.spawn?.x || 128) + '" /></label>' +
         '<label class="input-group"><span>Spawn Y</span><input type="number" step="1" data-dev-town-field="spawn.y" value="' + Number(town?.spawn?.y || 128) + '" /></label>' +
-      '</div><section class="dev-subcard"><div class="section-heading"><h3>Town Card Backgrounds</h3></div><p class="dev-helper-text">Poster images bundled by the local content builder appear here after you rebuild local content.</p><div class="dev-town-card-preview-grid"><div><p class="dev-helper-text">Desktop Preview</p>' + renderTownOptionCard(town || { id: "", name: "Town Name", mapId: "map-id" }, false) + '</div><div><p class="dev-helper-text">Mobile Preview</p><div class="dev-town-card-mobile-preview">' + renderTownOptionCard(town || { id: "", name: "Town Name", mapId: "map-id" }, false) + '</div></div></div><div class="dev-town-card-settings-grid"><section class="dev-subcard"><h3>Desktop Card</h3><div class="form-grid">' +
+      '</div><section class="dev-subcard"><div class="section-heading"><h3>Town Card Backgrounds</h3></div><p class="dev-helper-text">Poster images bundled by the local content builder appear here after you rebuild local content.</p><div class="dev-town-card-preview-grid"><div><p class="dev-helper-text">Desktop Preview</p>' + renderTownOptionCard(town || { id: "", name: "Town Name", mapId: "map-id" }, false, "desktop") + '</div><div><p class="dev-helper-text">Mobile Preview</p><div class="dev-town-card-mobile-preview">' + renderTownOptionCard(town || { id: "", name: "Town Name", mapId: "map-id" }, false, "mobile") + '</div></div></div><div class="dev-town-card-settings-grid"><section class="dev-subcard"><h3>Desktop Card</h3><div class="form-grid">' +
         '<label class="input-group dev-input-group-wide"><span>Background Image</span><select data-dev-town-field="cardBackgrounds.desktop.imagePath">' + desktopImageOptions + '</select></label>' +
         '<label class="input-group"><span>Fit</span><select data-dev-town-field="cardBackgrounds.desktop.fit"><option value="cover"' + (desktopCard.fit === "cover" ? " selected" : "") + '>Cover</option><option value="contain"' + (desktopCard.fit === "contain" ? " selected" : "") + '>Contain</option><option value="custom"' + (desktopCard.fit === "custom" ? " selected" : "") + '>Custom Zoom</option></select></label>' +
         '<label class="input-group"><span>Zoom %</span><input type="number" min="25" max="300" step="1" data-dev-town-field="cardBackgrounds.desktop.zoom" value="' + Number(desktopCard.zoom || 100) + '" /></label>' +
