@@ -89,6 +89,29 @@
             }
           ],
           "walkRange": 550
+        },
+        {
+          "id": "spawn-3",
+          "speciesId": "Owlet",
+          "spawnChance": 80,
+          "x": 448,
+          "y": 448,
+          "levelMin": 2,
+          "levelMax": 4,
+          "walkRange": 250,
+          "respawnSeconds": 120,
+          "monsterOptions": [
+            {
+              "speciesId": "Owlet",
+              "weight": 50,
+              "variantId": "owlet-grass"
+            },
+            {
+              "speciesId": "Owlet",
+              "weight": 50,
+              "variantId": "owlet-default"
+            }
+          ]
         }
       ],
       "spawnTable": []

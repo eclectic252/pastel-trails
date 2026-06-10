@@ -856,6 +856,473 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               "renderWidth": 100
             },
             "label": "Snow"
+          },
+          {
+            "id": "default-grass",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Pawlit/pawlit_grass.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "portrait",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 100
+            },
+            "label": "Grass"
+          },
+          {
+            "id": "default-electric",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Pawlit/pawlit_electric.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "portrait",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 100
+            },
+            "label": "Electric"
+          },
+          {
+            "id": "default-water",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Pawlit/pawlit_water.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "portrait",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 100
+            },
+            "label": "Water"
+          },
+          {
+            "id": "default-fire",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Pawlit/pawlit_fire.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "portrait",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 100
+            },
+            "label": "Fire"
+          },
+          {
+            "id": "default-pink",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Pawlit/pawlit_pink.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "portrait",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 100
+            },
+            "label": "Pink"
+          },
+          {
+            "id": "default-dark",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Pawlit/pawlit_dark.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "portrait",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 100
+            },
+            "label": "Dark"
+          },
+          {
+            "id": "default-galaxy",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Pawlit/pawlit_galaxy.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "portrait",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 100
+            },
+            "label": "Galaxy"
+          },
+          {
+            "id": "default-lavvender",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Pawlit/pawlit_lavender.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "portrait",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 100
+            },
+            "label": "Lavender"
+          }
+        ]
+      },
+      {
+        "id": "Owlet",
+        "name": "Owlet",
+        "baseStats": {
+          "hp": 10,
+          "attack": 5,
+          "defense": 5,
+          "speed": 5
+        },
+        "growth": "medium",
+        "overworldDisplayMode": "portrait",
+        "skills": [
+          "basic-attack"
+        ],
+        "variants": [
+          {
+            "id": "owlet-default",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Owlet/owlet_default.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 100
+            },
+            "label": "Default"
+          },
+          {
+            "id": "owlet-snow",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Owlet/owlet_snow.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 100
+            },
+            "label": "Snow"
+          },
+          {
+            "id": "owlet-grass",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Owlet/owlet_grass.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 100
+            },
+            "label": "Grass"
+          },
+          {
+            "id": "owlet-electric",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Owlet/owlet_electric.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 100
+            },
+            "label": "Electric"
+          },
+          {
+            "id": "owlet-Water",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Owlet/owlet_water.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 100
+            },
+            "label": "Water"
+          },
+          {
+            "id": "owlet-fire",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Owlet/owlet_fire.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 100
+            },
+            "label": "Fire"
+          },
+          {
+            "id": "owlet-pink",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Owlet/owlet_pink.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 100
+            },
+            "label": "Pink"
+          },
+          {
+            "id": "owlet-dark",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Owlet/owlet_dark.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 100
+            },
+            "label": "Dark"
+          },
+          {
+            "id": "owlet-galaxy",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Owlet/owlet_galaxy.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 100
+            },
+            "label": "Galaxy"
+          },
+          {
+            "id": "owlet-lavender",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Owlet/owlet_lavender.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180,
+              "renderWidth": 100
+            },
+            "label": "Lavender"
           }
         ]
       }
@@ -3284,6 +3751,9 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
   },
   "monsterAssets": {
     "images": [
+      "assets/Monsters/Bunlet/bunlet_default.png",
+      "assets/Monsters/Bunlet/bunlet_grass.png",
+      "assets/Monsters/Bunlet/bunlet_snow.png",
       "assets/Monsters/Equira/equira-dark.png",
       "assets/Monsters/Equira/equira-default.png",
       "assets/Monsters/Equira/equira-electric.png",
@@ -3304,6 +3774,16 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       "assets/Monsters/Fluffram/fluffram_pink.png",
       "assets/Monsters/Fluffram/fluffram_snow.png",
       "assets/Monsters/Fluffram/fluffram_water.png",
+      "assets/Monsters/Owlet/owlet_dark.png",
+      "assets/Monsters/Owlet/owlet_default.png",
+      "assets/Monsters/Owlet/owlet_electric.png",
+      "assets/Monsters/Owlet/owlet_fire.png",
+      "assets/Monsters/Owlet/owlet_galaxy.png",
+      "assets/Monsters/Owlet/owlet_grass.png",
+      "assets/Monsters/Owlet/owlet_lavender.png",
+      "assets/Monsters/Owlet/owlet_pink.png",
+      "assets/Monsters/Owlet/owlet_snow.png",
+      "assets/Monsters/Owlet/owlet_water.png",
       "assets/Monsters/Pawlit/old/Pawlit_Tide_walksheet.png",
       "assets/Monsters/Pawlit/old/pawlit-blue-ready-hires.png",
       "assets/Monsters/Pawlit/old/pawlit-blue-walksheet.png",
@@ -3311,9 +3791,16 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       "assets/Monsters/Pawlit/old/pawlit-classic-walksheet.png",
       "assets/Monsters/Pawlit/old/pawlit-pink-ready-hires.png",
       "assets/Monsters/Pawlit/old/pawlit-pink-walksheet.png",
+      "assets/Monsters/Pawlit/pawlit_dark.png",
       "assets/Monsters/Pawlit/pawlit_default.png",
+      "assets/Monsters/Pawlit/pawlit_electric.png",
+      "assets/Monsters/Pawlit/pawlit_fire.png",
+      "assets/Monsters/Pawlit/pawlit_galaxy.png",
       "assets/Monsters/Pawlit/pawlit_grass.png",
+      "assets/Monsters/Pawlit/pawlit_lavender.png",
+      "assets/Monsters/Pawlit/pawlit_pink.png",
       "assets/Monsters/Pawlit/pawlit_snow.png",
+      "assets/Monsters/Pawlit/pawlit_water.png",
       "assets/Monsters/Ruffin/ruffin-default.png",
       "assets/Monsters/Ruffin/ruffin-electric.png",
       "assets/Monsters/Ruffin/ruffin-galaxy.png",
@@ -38834,6 +39321,29 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
                 }
               ],
               "walkRange": 550
+            },
+            {
+              "id": "spawn-3",
+              "speciesId": "Owlet",
+              "spawnChance": 80,
+              "x": 448,
+              "y": 448,
+              "levelMin": 2,
+              "levelMax": 4,
+              "walkRange": 250,
+              "respawnSeconds": 120,
+              "monsterOptions": [
+                {
+                  "speciesId": "Owlet",
+                  "weight": 50,
+                  "variantId": "owlet-grass"
+                },
+                {
+                  "speciesId": "Owlet",
+                  "weight": 50,
+                  "variantId": "owlet-default"
+                }
+              ]
             }
           ],
           "spawnTable": []

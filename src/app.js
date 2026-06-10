@@ -7614,14 +7614,16 @@
           return;
         } else if (action === "random-starter") {
           const pool = this.content.monsters.species;
+          const randomizedSelections = Object.fromEntries(pool.map(function (entry) {
+            const variants = entry?.variants || [];
+            const variant = variants[Math.floor(Math.random() * Math.max(1, variants.length))] || getSpeciesVariant(entry, "");
+            return [entry.id, variant?.id || "default"];
+          }));
           const species = pool[Math.floor(Math.random() * pool.length)];
-          const variants = species?.variants || [];
-          const variant = variants[Math.floor(Math.random() * Math.max(1, variants.length))] || getSpeciesVariant(species, "");
+          const selectedVariantId = randomizedSelections[species.id] || getSpeciesVariant(species, "")?.id || "default";
+          this.state.starterVariantSelections = randomizedSelections;
           this.state.starterSpeciesId = species.id;
-          this.state.starterVariantId = variant?.id || "default";
-          this.state.starterVariantSelections = Object.assign({}, this.state.starterVariantSelections, {
-            [species.id]: variant?.id || "default",
-          });
+          this.state.starterVariantId = selectedVariantId;
         } else if (action === "random-town") {
           const pool = getStarterTownOptions(this.content);
           this.state.townId = pool[Math.floor(Math.random() * pool.length)].id;
