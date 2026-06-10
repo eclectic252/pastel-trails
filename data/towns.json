@@ -24,7 +24,7 @@
           "imagePath": "assets/posters/Lily_harbor_poster.png",
           "fit": "cover",
           "zoom": 100,
-          "positionX": 50,
+          "positionX": 86,
           "positionY": 50,
           "repeat": "no-repeat",
           "overlayOpacity": 0.32
@@ -55,7 +55,7 @@
           "imagePath": "assets/posters/bougainvillea_poster.png",
           "fit": "cover",
           "zoom": 100,
-          "positionX": 100,
+          "positionX": 82,
           "positionY": 50,
           "repeat": "no-repeat",
           "overlayOpacity": 0.28
@@ -86,7 +86,7 @@
           "imagePath": "assets/posters/Camelia_ranch_poster.png",
           "fit": "cover",
           "zoom": 100,
-          "positionX": 50,
+          "positionX": 91,
           "positionY": 50,
           "repeat": "no-repeat",
           "overlayOpacity": 0.32
@@ -117,7 +117,7 @@
           "imagePath": "assets/posters/plumeria_shores.png",
           "fit": "cover",
           "zoom": 100,
-          "positionX": 50,
+          "positionX": 85,
           "positionY": 50,
           "repeat": "no-repeat",
           "overlayOpacity": 0.32
@@ -148,10 +148,40 @@
           "imagePath": "assets/posters/JasmineBay.png",
           "fit": "cover",
           "zoom": 100,
-          "positionX": 50,
+          "positionX": 94,
           "positionY": 50,
           "repeat": "no-repeat",
           "overlayOpacity": 0.32
+        }
+      }
+    },
+    {
+      "id": "rose-town",
+      "name": "Rose Town",
+      "cardSubtitle": "",
+      "mapId": "rose-town",
+      "spawn": {
+        "x": 128,
+        "y": 128
+      },
+      "includeInStarterSelection": true,
+      "cardBackgrounds": {
+        "desktop": {
+          "imagePath": "",
+          "fit": "cover",
+          "zoom": 100,
+          "positionX": 50,
+          "positionY": 50,
+          "repeat": "no-repeat"
+        },
+        "mobile": {
+          "imagePath": "",
+          "fit": "cover",
+          "zoom": 100,
+          "positionX": 50,
+          "positionY": 50,
+          "repeat": "no-repeat",
+          "overlayOpacity": 0.18
         }
       }
     }

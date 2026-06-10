@@ -9,7 +9,7 @@
       "crestName": "Lily Crest",
       "recommendedLevel": 5,
       "partySize": 2,
-      "rewardMoney": 50,
+      "rewardMoney": 100,
       "rewardText": "",
       "description": "",
       "mapId": "lily-harbor",
@@ -30,7 +30,8 @@
           "speciesId": "Pawlit",
           "variantId": "Lilac"
         }
-      ]
+      ],
+      "crestImagePath": "assets/Crests/crest1.png"
     },
     {
       "id": "Camelia-Ranch-Arena",
@@ -61,6 +62,35 @@
         {
           "speciesId": "equira",
           "variantId": "Equira-Pink"
+        }
+      ],
+      "crestImagePath": "assets/Crests/crest2.png"
+    },
+    {
+      "id": "Plumeria-Arena",
+      "name": "Plumeria Shores Arena",
+      "leaderName": "Kai",
+      "leaderTitle": "Leader",
+      "crestId": "crest-3",
+      "crestName": "New Crest",
+      "crestImagePath": "assets/Crests/crest5.png",
+      "recommendedLevel": 5,
+      "partySize": 1,
+      "rewardMoney": 50,
+      "rewardText": "",
+      "description": "",
+      "mapId": "",
+      "team": [
+        {
+          "speciesId": "Kelpar",
+          "variantId": "kelpar-default",
+          "level": 5
+        }
+      ],
+      "pool": [
+        {
+          "speciesId": "Caniri",
+          "variantId": "Caniri-grass"
         }
       ]
     }

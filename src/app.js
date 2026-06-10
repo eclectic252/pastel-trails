@@ -195,6 +195,9 @@
     townAssets: {
       images: [],
     },
+    crestAssets: {
+      images: [],
+    },
     arenas: { arenas: [] },
     trainers: { trainers: [] },
     maps: {
@@ -465,6 +468,11 @@
         ? rawContent.townAssets.images.slice().sort()
         : [],
     };
+    const crestAssets = {
+      images: Array.isArray(rawContent.crestAssets?.images)
+        ? rawContent.crestAssets.images.slice().sort()
+        : [],
+    };
 
     return {
       settings: rawContent.settings,
@@ -488,6 +496,7 @@
       characterSheets,
       monsterAssets,
       townAssets,
+      crestAssets,
       arenas: rawContent.arenas || JSON.parse(JSON.stringify(fallbackContent.arenas)),
       trainers: rawContent.trainers,
       maps,
@@ -623,10 +632,19 @@
     };
   }
 
+  function buildCrestAssetCatalog(files) {
+    return {
+      images: files.map(function (file) {
+        return file.pathParts.join("/");
+      }).sort(),
+    };
+  }
+
   async function loadCharacterSheetsFromDirectory(rootHandle) {
     const discoveredSheets = [];
     let monsterAssets = { images: [] };
     let townAssets = { images: [] };
+    let crestAssets = { images: [] };
 
     try {
       const assetsHandle = await rootHandle.getDirectoryHandle("assets");
@@ -657,11 +675,18 @@
         });
         townAssets = buildTownAssetCatalog(townCardFiles);
       } catch {}
+
+      try {
+        const crestsHandle = await assetsHandle.getDirectoryHandle("Crests");
+        const crestFiles = await collectImageFilesRecursive(crestsHandle, ["assets", "Crests"]);
+        crestAssets = buildCrestAssetCatalog(crestFiles);
+      } catch {}
     } catch {
       return {
         sheets: JSON.parse(JSON.stringify(fallbackContent.characterSheets.sheets)),
         monsterAssets: JSON.parse(JSON.stringify(fallbackContent.monsterAssets || { images: [] })),
         townAssets: JSON.parse(JSON.stringify(fallbackContent.townAssets || { images: [] })),
+        crestAssets: JSON.parse(JSON.stringify(fallbackContent.crestAssets || { images: [] })),
       };
     }
 
@@ -669,6 +694,7 @@
       sheets: discoveredSheets.length ? discoveredSheets : JSON.parse(JSON.stringify(fallbackContent.characterSheets.sheets)),
       monsterAssets,
       townAssets,
+      crestAssets,
     };
   }
 
@@ -729,6 +755,7 @@
     };
     const monsterAssets = discoveredCharacterSheets.monsterAssets || { images: [] };
     const townAssets = discoveredCharacterSheets.townAssets || { images: [] };
+    const crestAssets = discoveredCharacterSheets.crestAssets || { images: [] };
 
     const maps = await loadAuthoredMapsFromAssets(rootHandle);
     const mapMetadata = {};
@@ -736,7 +763,7 @@
       mapMetadata[mapId] = await tryReadJsonFromHandle(rootHandle, ["data", "map-metadata", mapId + ".meta.json"]) || {};
     }
 
-    return normalizeContent({ settings, themes, items, skills, monsters, towns, arenas, trainers, characterSheets, monsterAssets, townAssets, maps, mapMetadata }, "directory");
+    return normalizeContent({ settings, themes, items, skills, monsters, towns, arenas, trainers, characterSheets, monsterAssets, townAssets, crestAssets, maps, mapMetadata }, "directory");
   }
 
   function loadEmbeddedContent() {
@@ -956,6 +983,51 @@
   function getTownCardImageOptions(content) {
     const images = Array.isArray(content?.townAssets?.images) ? content.townAssets.images.slice() : [];
     return images.sort();
+  }
+
+  function getCrestImageOptions(content) {
+    const images = Array.isArray(content?.crestAssets?.images) ? content.crestAssets.images.slice() : [];
+    return images.sort();
+  }
+
+  function normalizeAssetLookupKey(value) {
+    return String(value || "")
+      .toLowerCase()
+      .replace(/\.[^.]+$/, "")
+      .replace(/^assets\//, "")
+      .replace(/[^a-z0-9]+/g, "");
+  }
+
+  function getArenaCrestImagePath(content, arena) {
+    if (!arena) {
+      return "";
+    }
+
+    if (arena.crestImagePath) {
+      return arena.crestImagePath;
+    }
+
+    const crestImages = getCrestImageOptions(content);
+    if (!crestImages.length) {
+      return "";
+    }
+
+    const crestIdKey = normalizeAssetLookupKey(arena.crestId);
+    const crestNameKey = normalizeAssetLookupKey(arena.crestName);
+    return crestImages.find(function (imagePath) {
+      const key = normalizeAssetLookupKey(imagePath.split("/").pop() || imagePath);
+      return key === crestIdKey || key === crestNameKey;
+    }) || "";
+  }
+
+  function renderArenaCrestMarkup(content, arena, className) {
+    const crestPath = getArenaCrestImagePath(content, arena);
+    const crestLabel = arena?.crestName || arena?.crestId || "Arena Crest";
+    if (crestPath) {
+      return '<img class="' + escapeHtml(className || "arena-crest-image") + '" src="' + escapeHtml(crestPath) + '" alt="' + escapeHtml(crestLabel) + '" />';
+    }
+
+    return '<div class="' + escapeHtml((className || "arena-crest-image") + " arena-crest-fallback") + '">' + escapeHtml((crestLabel || "?").slice(0, 1)) + "</div>";
   }
 
   function normalizeFrameList(value, fallbackFrame) {
@@ -1598,6 +1670,7 @@
       leaderTitle: "Leader",
       crestId: "crest-" + index,
       crestName: "New Crest",
+      crestImagePath: "",
       recommendedLevel: 5,
       partySize: 1,
       rewardMoney: 50,
@@ -3674,9 +3747,29 @@
       '<h3 class="battle-hud-name">' + escapeHtml(species?.name || monster.speciesId) + " (" + escapeHtml(variantLabel) + ")" + "</h3>",
       '<div class="battle-hp-bar battle-hp-bar-hud"><span style="width:' + hpPercent + '%"></span></div>',
       '<div class="battle-hp-row"><span>' + currentHp + "/" + maxHp + ' HP</span></div>',
+      (options.partyPips || ""),
       "</div>",
       "</article>",
     ].join("");
+  }
+
+  function renderBattlePartyPips(monsters, activeIndex, className) {
+    const entries = (monsters || []).map(function (monster, index) {
+      const isActive = index === activeIndex;
+      const currentHp = Number(monster?.currentHp || 0);
+      const available = currentHp > 0;
+      const classes = [
+        "battle-party-pip",
+        isActive ? " battle-party-pip-active" : "",
+        available ? " battle-party-pip-ready" : " battle-party-pip-fainted",
+      ].join("");
+      const label = isActive
+        ? (available ? "Active and ready" : "Active but fainted")
+        : (available ? "Available" : "Fainted");
+      return '<span class="' + classes + '" title="' + escapeHtml(label) + '"></span>';
+    }).join("");
+
+    return '<div class="battle-party-pips ' + escapeHtml(className || "") + '">' + entries + "</div>";
   }
 
   function renderBattlePartySlot(content, monster, options) {
@@ -3810,6 +3903,7 @@
   }
 
   function renderNewGameScreen(root, content, setup, onAction) {
+    const townCardViewport = prefersTouchUi() ? "mobile" : "desktop";
     const starterTowns = getStarterTownOptions(content);
     const speciesCards = content.monsters.species.map(function (species) {
       const selected = setup.starterSpeciesId === species.id ? " option-card-selected" : "";
@@ -3830,7 +3924,7 @@
     }).join("");
 
     const townCards = starterTowns.map(function (town) {
-      return renderTownOptionCard(town, setup.townId === town.id, "desktop");
+      return renderTownOptionCard(town, setup.townId === town.id, townCardViewport);
     }).join("");
 
     const avatars = getPlayerAvatarOptions(content);
@@ -3954,22 +4048,8 @@
         return entry.id === skillId;
       });
     }).filter(Boolean);
-    const enemyPartySlots = enemyRoster.map(function (monster, index) {
-      return renderBattlePartySlot(content, monster, {
-        active: index === enemyActiveIndex,
-        currentHp: monster.currentHp,
-        maxHp: monster.maxHp || monster.stats?.hp,
-        side: "left",
-      });
-    }).join("");
-    const playerPartySlots = state.party.map(function (monster, index) {
-      return renderBattlePartySlot(content, monster, {
-        active: index === state.battle.playerIndex,
-        currentHp: monster.currentHp,
-        maxHp: monster.stats?.hp,
-        side: "right",
-      });
-    }).join("");
+    const enemyPartyPips = renderBattlePartyPips(enemyRoster, enemyActiveIndex, "battle-party-pips-enemy");
+    const playerPartyPips = renderBattlePartyPips(state.party, state.battle.playerIndex, "battle-party-pips-player");
     const partyRoster = state.party.map(function (monster, index) {
       const species = getSpecies(content, monster.speciesId);
       const variant = getSpeciesVariant(species, monster.variantId || "default");
@@ -4036,21 +4116,21 @@
         currentHp: enemy.currentHp,
         maxHp: enemy.maxHp,
         badgeSide: "left",
+        partyPips: enemyPartyPips,
       }) +
       '<div class="battle-fight-pill"><strong>' + escapeHtml(fightType) + '</strong><span>' + escapeHtml(locationLabel) + '</span></div>' +
       renderBattleMonsterHud(content, activeMonster, {
         currentHp: activeMonster.currentHp,
         maxHp: activeMonster.stats.hp,
         badgeSide: "right",
+        partyPips: playerPartyPips,
       }) +
       '</section>',
       '<section class="battle-stage">' +
-        '<aside class="battle-party-rail battle-party-rail-opponent">' + enemyPartySlots + '</aside>' +
         '<div class="battle-field">' +
           renderBattleBattler(content, enemy, "battle-battler-enemy") +
           renderBattleBattler(content, activeMonster, "battle-battler-player") +
         '</div>' +
-        '<aside class="battle-party-rail battle-party-rail-player">' + playerPartySlots + '</aside>' +
       '</section>',
       '<section class="battle-command-shell">' +
         '<div class="battle-log battle-log-command"><p>' + escapeHtml(commandCopy) + '</p>' + state.battle.log.slice(0, 4).map(function (entry) {
@@ -4066,7 +4146,7 @@
     ].join("");
   }
 
-  function renderInteractionModal(state) {
+  function renderInteractionModal(state, content) {
     if (!state.interaction) {
       return "";
     }
@@ -4097,7 +4177,7 @@
     }
 
     if (state.interaction.type === "arena") {
-      const arena = state.interaction.arena || {
+      const arenaView = state.interaction.arena || {
         leaderName: "Arena Leader",
         leaderTitle: "Leader",
         crestName: "Unassigned Crest",
@@ -4107,8 +4187,9 @@
         introText: "Arena framework ready.",
         arenaStatus: "Arena framework ready.",
       };
-      const hasTeam = Array.isArray(arena.arena?.team) && arena.arena.team.length > 0;
-      const actionRow = arena.isCleared
+      const linkedArena = arenaView.arena || null;
+      const hasTeam = Array.isArray(linkedArena?.team) && linkedArena.team.length > 0;
+      const actionRow = arenaView.isCleared
         ? '<div class="battle-actions"><button class="primary-button" type="button" data-action="close-interaction">Close</button></div>'
         : hasTeam
           ? '<div class="battle-actions"><button class="primary-button" type="button" data-action="start-arena-battle">Start Arena Battle</button><button class="secondary-button" type="button" data-action="close-interaction">Not Now</button></div>'
@@ -4118,18 +4199,18 @@
         '<div class="battle-overlay">',
         '<section class="battle-modal world-panel-modal">',
         '<div class="battle-headings">',
-        '<div><span class="eyebrow">Arena</span><h2>' + escapeHtml(state.interaction.title) + "</h2><p>" + escapeHtml(arena.leaderTitle + " " + arena.leaderName) + "</p></div>",
+        '<div class="arena-modal-headline">' + renderArenaCrestMarkup(content, linkedArena || arenaView, "arena-crest-image arena-crest-image-large") + '<div><span class="eyebrow">Arena</span><h2>' + escapeHtml(state.interaction.title) + "</h2><p>" + escapeHtml(arenaView.leaderTitle + " " + arenaView.leaderName) + "</p></div></div>",
         "</div>",
         '<div class="world-panel-body">' +
-          '<div class="battle-log"><p>' + escapeHtml(arena.introText) + '</p><p>' + escapeHtml(arena.arenaStatus) + "</p></div>" +
+          '<div class="battle-log"><p>' + escapeHtml(arenaView.introText) + '</p><p>' + escapeHtml(arenaView.arenaStatus) + "</p></div>" +
           '<div class="panel-block">' +
-            "<p><strong>Leader:</strong> " + escapeHtml(arena.leaderName) + "</p>" +
-            "<p><strong>Title:</strong> " + escapeHtml(arena.leaderTitle) + "</p>" +
-            "<p><strong>Crest Reward:</strong> " + escapeHtml(arena.crestName) + "</p>" +
-            "<p><strong>Recommended Level:</strong> " + escapeHtml(String(arena.recommendedLevel)) + "</p>" +
-            "<p><strong>Leader Party Size:</strong> " + escapeHtml(String(arena.leaderPartySize)) + "</p>" +
-            "<p><strong>Configured Team:</strong> " + escapeHtml(String(arena.arena?.team?.length || 0)) + "</p>" +
-            "<p><strong>Reward Notes:</strong> " + escapeHtml(arena.rewardText) + "</p>" +
+            "<p><strong>Leader:</strong> " + escapeHtml(arenaView.leaderName) + "</p>" +
+            "<p><strong>Title:</strong> " + escapeHtml(arenaView.leaderTitle) + "</p>" +
+            "<p><strong>Crest Reward:</strong> " + escapeHtml(arenaView.crestName) + "</p>" +
+            "<p><strong>Recommended Level:</strong> " + escapeHtml(String(arenaView.recommendedLevel)) + "</p>" +
+            "<p><strong>Leader Party Size:</strong> " + escapeHtml(String(arenaView.leaderPartySize)) + "</p>" +
+            "<p><strong>Configured Team:</strong> " + escapeHtml(String(linkedArena?.team?.length || 0)) + "</p>" +
+            "<p><strong>Reward Notes:</strong> " + escapeHtml(arenaView.rewardText) + "</p>" +
           "</div>" +
         "</div>" +
         actionRow,
@@ -4207,6 +4288,12 @@
     } else if (panel === "character") {
       const arenaProgress = ensureArenaProgress(state);
       const currentAvatar = getCharacterSheetConfig(content, state.player.avatarId || "");
+      const earnedCrestMarkup = arenaProgress.earnedCrests.map(function (crestId) {
+        const arena = ensureArenaCatalog(content).find(function (entry) {
+          return entry.crestId === crestId;
+        }) || { crestId, crestName: crestId };
+        return '<li class="crest-list-item">' + renderArenaCrestMarkup(content, arena, "arena-crest-image") + '<div><strong>' + escapeHtml(arena.crestName || crestId) + '</strong><span>' + escapeHtml(arena.name || crestId) + "</span></div></li>";
+      }).join("");
       panelBody = [
         "<p>Name: <strong>" + escapeHtml(state.player.name) + "</strong></p>",
         "<p>Avatar: " + escapeHtml(currentAvatar?.playerLabel || currentAvatar?.label || state.player.avatarId || "Unknown") + "</p>",
@@ -4214,6 +4301,8 @@
         "<p>Experience: " + Number(state.player.experience || 0) + "</p>",
         "<p>Last Town: " + escapeHtml(state.player.lastTownId || "Unknown") + "</p>",
         "<p>Crests Earned: " + arenaProgress.earnedCrests.length + "</p>",
+        "<h3>Crests</h3>",
+        '<ul class="compact-list crest-list">' + (earnedCrestMarkup || "<li><span>No crests earned yet.</span></li>") + "</ul>",
         "<p>Support skills are still a placeholder, but this is where they will appear.</p>",
       ].join("");
     } else if (panel === "inventory") {
@@ -4245,7 +4334,7 @@
           return entry.crestId === crestId;
         });
         const label = arena?.crestName || crestId;
-        return "<li><span>" + escapeHtml(label) + "</span><strong>Crest</strong></li>";
+        return '<li class="crest-list-item">' + renderArenaCrestMarkup(content, arena || { crestId, crestName: label }, "arena-crest-image") + "<div><span>" + escapeHtml(label) + "</span><strong>Crest</strong></div></li>";
       }).join("");
       const registryEntries = buildRegistryEntries(content).map(function (entry) {
         const isCaught = state.registry.caught.includes(entry.species.id);
@@ -5834,6 +5923,12 @@
         return '<option value="' + escapeHtml(mapId) + '"' + selected + ">" + escapeHtml(label) + "</option>";
       })
     ).join("");
+    const crestImageOptions = ['<option value="">Auto Match From Crest ID/Name</option>'].concat(
+      getCrestImageOptions(content).map(function (imagePath) {
+        const selected = (selectedArena?.crestImagePath || "") === imagePath ? " selected" : "";
+        return '<option value="' + escapeHtml(imagePath) + '"' + selected + ">" + escapeHtml(imagePath.replace(/^assets\//, "")) + "</option>";
+      })
+    ).join("");
     const poolEditor = selectedArena
       ? (selectedArena.pool || []).map(function (member, poolIndex) {
           const memberSpecies = getSpecies(content, member.speciesId);
@@ -5900,6 +5995,7 @@
           '<label class="input-group"><span>Leader Title</span><input data-dev-arena-field="leaderTitle" value="' + escapeHtml(selectedArena.leaderTitle || "") + '" /></label>',
           '<label class="input-group"><span>Crest ID</span><input data-dev-arena-field="crestId" value="' + escapeHtml(selectedArena.crestId || "") + '" /></label>',
           '<label class="input-group"><span>Crest Name</span><input data-dev-arena-field="crestName" value="' + escapeHtml(selectedArena.crestName || "") + '" /></label>',
+          '<label class="input-group"><span>Crest Image</span><select data-dev-arena-field="crestImagePath">' + crestImageOptions + '</select></label>',
           '<label class="input-group"><span>Recommended Level</span><input type="number" step="1" min="1" data-dev-arena-field="recommendedLevel" value="' + Number(selectedArena.recommendedLevel || 1) + '" /></label>',
           '<label class="input-group"><span>Leader Party Size</span><input type="number" step="1" min="1" data-dev-arena-field="partySize" value="' + Number(selectedArena.partySize || 1) + '" /></label>',
           '<label class="input-group"><span>Reward Money</span><input type="number" step="1" min="0" data-dev-arena-field="rewardMoney" value="' + Number(selectedArena.rewardMoney || 0) + '" /></label>',
@@ -5918,7 +6014,7 @@
               ? '<ul class="compact-list">' + poolEditor + "</ul>"
               : '<p>No fallback pool monsters configured yet.</p>') +
           "</section>",
-          '<section class="panel-block"><div class="section-heading"><h2>Preview</h2></div><p><strong>' + escapeHtml(selectedArena.name || selectedArena.id) + '</strong></p><p>' + escapeHtml((selectedArena.leaderTitle || "Leader") + " " + (selectedArena.leaderName || "TBD")) + '</p><p>Crest: ' + escapeHtml(selectedArena.crestName || selectedArena.crestId || "Unassigned") + '</p><p>Recommended Level: ' + escapeHtml(String(selectedArena.recommendedLevel || "TBD")) + ' · Party Size: ' + escapeHtml(String(selectedArena.partySize || "TBD")) + '</p><p>Reward Money: $' + escapeHtml(String(Number(selectedArena.rewardMoney || 0))) + '</p><p>' + escapeHtml(selectedArena.description || "No arena description yet.") + '</p><h3>Configured Team</h3><ul class="compact-list">' + (teamPreview || "<li><span>No team members configured yet.</span></li>") + "</ul><h3>Fallback Pool</h3><ul class=\"compact-list\">" + ((selectedArena.pool || []).map(function (member) { const species = getSpecies(content, member.speciesId); const variant = getSpeciesVariant(species, member.variantId || "default"); return "<li><span>" + escapeHtml(species?.name || member.speciesId || "Unassigned") + " - " + escapeHtml(variant?.id || member.variantId || "default") + "</span><strong>Pool</strong></li>"; }).join("") || "<li><span>No pool monsters configured yet.</span></li>") + "</ul></section>",
+          '<section class="panel-block"><div class="section-heading"><h2>Preview</h2></div><div class="arena-crest-preview">' + renderArenaCrestMarkup(content, selectedArena, "arena-crest-image arena-crest-image-large") + '<div><p><strong>' + escapeHtml(selectedArena.name || selectedArena.id) + '</strong></p><p>' + escapeHtml((selectedArena.leaderTitle || "Leader") + " " + (selectedArena.leaderName || "TBD")) + '</p><p>Crest: ' + escapeHtml(selectedArena.crestName || selectedArena.crestId || "Unassigned") + '</p></div></div><p>Recommended Level: ' + escapeHtml(String(selectedArena.recommendedLevel || "TBD")) + ' · Party Size: ' + escapeHtml(String(selectedArena.partySize || "TBD")) + '</p><p>Reward Money: $' + escapeHtml(String(Number(selectedArena.rewardMoney || 0))) + '</p><p>' + escapeHtml(selectedArena.description || "No arena description yet.") + '</p><h3>Configured Team</h3><ul class="compact-list">' + (teamPreview || "<li><span>No team members configured yet.</span></li>") + "</ul><h3>Fallback Pool</h3><ul class=\"compact-list\">" + ((selectedArena.pool || []).map(function (member) { const species = getSpecies(content, member.speciesId); const variant = getSpeciesVariant(species, member.variantId || "default"); return "<li><span>" + escapeHtml(species?.name || member.speciesId || "Unassigned") + " - " + escapeHtml(variant?.id || member.variantId || "default") + "</span><strong>Pool</strong></li>"; }).join("") || "<li><span>No pool monsters configured yet.</span></li>") + "</ul></section>",
         ].join("")
       : '<section class="panel-block dev-editor-panel"><h2>No Arena Selected</h2><p>Add a new arena to begin editing.</p></section>';
 
@@ -6698,7 +6794,7 @@
       "</section>",
       '<nav class="world-menu-bar"><button class="secondary-button" type="button" data-open-panel="map">Map</button><button class="secondary-button" type="button" data-open-panel="character">Character</button><button class="secondary-button" type="button" data-open-panel="inventory">Inventory</button><button class="secondary-button" type="button" data-open-panel="monsters">Monsters</button><button class="secondary-button" type="button" data-open-panel="registry">Registry</button><button class="secondary-button" type="button" data-open-panel="quests">Quests</button></nav>',
       renderWorldPanelModal(state, content),
-      renderInteractionModal(state),
+      renderInteractionModal(state, content),
       renderBattleModal(state, content),
       "</main>",
     ].join("");

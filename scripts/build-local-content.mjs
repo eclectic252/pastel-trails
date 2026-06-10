@@ -128,6 +128,19 @@ async function loadTownAssets() {
   }
 }
 
+async function loadCrestAssets() {
+  const crestRoot = path.join(projectRoot, "assets", "Crests");
+
+  try {
+    const pngFiles = await collectPngFiles(crestRoot);
+    return {
+      images: pngFiles.map((absolutePath) => path.relative(projectRoot, absolutePath).split(path.sep).join("/")).sort(),
+    };
+  } catch {
+    return { images: [] };
+  }
+}
+
 async function loadCharacterSheets() {
   const saved = await readOptionalJson("data/character-sheets.json", { sheets: [] });
   const spriteRoots = [
@@ -300,7 +313,7 @@ async function loadMapMetadata(mapIds, maps) {
 }
 
 async function buildLocalContent() {
-  const [settings, themes, items, skills, monsters, towns, arenas, trainers, characterSheets, monsterAssets, townAssets, maps] = await Promise.all([
+  const [settings, themes, items, skills, monsters, towns, arenas, trainers, characterSheets, monsterAssets, townAssets, crestAssets, maps] = await Promise.all([
     readJson("data/settings.json"),
     readJson("data/themes.json"),
     readJson("data/items.json"),
@@ -322,6 +335,7 @@ async function buildLocalContent() {
     loadCharacterSheets(),
     loadMonsterAssets(),
     loadTownAssets(),
+    loadCrestAssets(),
     loadMaps(),
   ]);
 
@@ -339,6 +353,7 @@ async function buildLocalContent() {
     characterSheets,
     monsterAssets,
     townAssets,
+    crestAssets,
     maps,
     mapMetadata,
   };

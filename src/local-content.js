@@ -1531,7 +1531,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "imagePath": "assets/posters/Lily_harbor_poster.png",
             "fit": "cover",
             "zoom": 100,
-            "positionX": 50,
+            "positionX": 86,
             "positionY": 50,
             "repeat": "no-repeat",
             "overlayOpacity": 0.32
@@ -1562,7 +1562,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "imagePath": "assets/posters/bougainvillea_poster.png",
             "fit": "cover",
             "zoom": 100,
-            "positionX": 100,
+            "positionX": 82,
             "positionY": 50,
             "repeat": "no-repeat",
             "overlayOpacity": 0.28
@@ -1593,7 +1593,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "imagePath": "assets/posters/Camelia_ranch_poster.png",
             "fit": "cover",
             "zoom": 100,
-            "positionX": 50,
+            "positionX": 91,
             "positionY": 50,
             "repeat": "no-repeat",
             "overlayOpacity": 0.32
@@ -1624,7 +1624,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "imagePath": "assets/posters/plumeria_shores.png",
             "fit": "cover",
             "zoom": 100,
-            "positionX": 50,
+            "positionX": 85,
             "positionY": 50,
             "repeat": "no-repeat",
             "overlayOpacity": 0.32
@@ -1655,10 +1655,40 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "imagePath": "assets/posters/JasmineBay.png",
             "fit": "cover",
             "zoom": 100,
-            "positionX": 50,
+            "positionX": 94,
             "positionY": 50,
             "repeat": "no-repeat",
             "overlayOpacity": 0.32
+          }
+        }
+      },
+      {
+        "id": "rose-town",
+        "name": "Rose Town",
+        "cardSubtitle": "",
+        "mapId": "rose-town",
+        "spawn": {
+          "x": 128,
+          "y": 128
+        },
+        "includeInStarterSelection": true,
+        "cardBackgrounds": {
+          "desktop": {
+            "imagePath": "",
+            "fit": "cover",
+            "zoom": 100,
+            "positionX": 50,
+            "positionY": 50,
+            "repeat": "no-repeat"
+          },
+          "mobile": {
+            "imagePath": "",
+            "fit": "cover",
+            "zoom": 100,
+            "positionX": 50,
+            "positionY": 50,
+            "repeat": "no-repeat",
+            "overlayOpacity": 0.18
           }
         }
       }
@@ -1675,7 +1705,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "crestName": "Lily Crest",
         "recommendedLevel": 5,
         "partySize": 2,
-        "rewardMoney": 50,
+        "rewardMoney": 100,
         "rewardText": "",
         "description": "",
         "mapId": "lily-harbor",
@@ -1696,7 +1726,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "speciesId": "Pawlit",
             "variantId": "Lilac"
           }
-        ]
+        ],
+        "crestImagePath": "assets/Crests/crest1.png"
       },
       {
         "id": "Camelia-Ranch-Arena",
@@ -1727,6 +1758,35 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           {
             "speciesId": "equira",
             "variantId": "Equira-Pink"
+          }
+        ],
+        "crestImagePath": "assets/Crests/crest2.png"
+      },
+      {
+        "id": "Plumeria-Arena",
+        "name": "Plumeria Shores Arena",
+        "leaderName": "Kai",
+        "leaderTitle": "Leader",
+        "crestId": "crest-3",
+        "crestName": "New Crest",
+        "crestImagePath": "assets/Crests/crest5.png",
+        "recommendedLevel": 5,
+        "partySize": 1,
+        "rewardMoney": 50,
+        "rewardText": "",
+        "description": "",
+        "mapId": "",
+        "team": [
+          {
+            "speciesId": "Kelpar",
+            "variantId": "kelpar-default",
+            "level": 5
+          }
+        ],
+        "pool": [
+          {
+            "speciesId": "Caniri",
+            "variantId": "Caniri-grass"
           }
         ]
       }
@@ -4116,6 +4176,15 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       "assets/posters/Lily_harbor_poster.png",
       "assets/posters/bougainvillea_poster.png",
       "assets/posters/plumeria_shores.png"
+    ]
+  },
+  "crestAssets": {
+    "images": [
+      "assets/Crests/crest1.png",
+      "assets/Crests/crest2.png",
+      "assets/Crests/crest3.png",
+      "assets/Crests/crest4.png",
+      "assets/Crests/crest5.png"
     ]
   },
   "maps": {
@@ -44745,7 +44814,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       "mapId": "rose-town",
       "displayName": "Rose Town",
       "isTown": true,
-      "safezone": false,
+      "safezone": true,
       "collisionGrid": 64,
       "transitions": [
         {
