@@ -1435,7 +1435,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "includeInStarterSelection": true,
         "cardBackgrounds": {
           "desktop": {
-            "imagePath": "",
+            "imagePath": "assets/posters/plumeria_shores.png",
             "fit": "cover",
             "zoom": 100,
             "positionX": 50,
@@ -1444,7 +1444,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "overlayOpacity": 0.28
           },
           "mobile": {
-            "imagePath": "",
+            "imagePath": "assets/posters/plumeria_shores.png",
             "fit": "cover",
             "zoom": 100,
             "positionX": 50,
@@ -3859,6 +3859,16 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       "assets/Monsters/Bunlet/bunlet_default.png",
       "assets/Monsters/Bunlet/bunlet_grass.png",
       "assets/Monsters/Bunlet/bunlet_snow.png",
+      "assets/Monsters/Caniri/caniri_dark.png",
+      "assets/Monsters/Caniri/caniri_default.png",
+      "assets/Monsters/Caniri/caniri_electric.png",
+      "assets/Monsters/Caniri/caniri_fire.png",
+      "assets/Monsters/Caniri/caniri_galaxy.png",
+      "assets/Monsters/Caniri/caniri_grass.png",
+      "assets/Monsters/Caniri/caniri_lavender.png",
+      "assets/Monsters/Caniri/caniri_pink.png",
+      "assets/Monsters/Caniri/caniri_snow.png",
+      "assets/Monsters/Caniri/caniri_water.png",
       "assets/Monsters/Equira/equira-dark.png",
       "assets/Monsters/Equira/equira-default.png",
       "assets/Monsters/Equira/equira-electric.png",
@@ -3879,6 +3889,10 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       "assets/Monsters/Fluffram/fluffram_pink.png",
       "assets/Monsters/Fluffram/fluffram_snow.png",
       "assets/Monsters/Fluffram/fluffram_water.png",
+      "assets/Monsters/Kelpar/kelpar_default.png",
+      "assets/Monsters/Kelpar/kelpar_electric.png",
+      "assets/Monsters/Kelpar/kelpar_grass.png",
+      "assets/Monsters/Kelpar/kelpar_snow.png",
       "assets/Monsters/Owlet/owlet_dark.png",
       "assets/Monsters/Owlet/owlet_default.png",
       "assets/Monsters/Owlet/owlet_electric.png",
@@ -3923,7 +3937,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       "assets/posters/Camelia_ranch_poster.png",
       "assets/posters/JasmineBay.png",
       "assets/posters/Lily_harbor_poster.png",
-      "assets/posters/bougainvillea_poster.png"
+      "assets/posters/bougainvillea_poster.png",
+      "assets/posters/plumeria_shores.png"
     ]
   },
   "maps": {

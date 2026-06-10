@@ -1027,7 +1027,7 @@
               3
             ],
             "frameDurationMs": 180,
-            "renderWidth": 100
+            "renderWidth": 90
           },
           "label": "Default"
         },
@@ -1052,7 +1052,7 @@
               3
             ],
             "frameDurationMs": 180,
-            "renderWidth": 100
+            "renderWidth": 90
           },
           "label": "Snow"
         },
@@ -1077,7 +1077,7 @@
               3
             ],
             "frameDurationMs": 180,
-            "renderWidth": 100
+            "renderWidth": 90
           },
           "label": "Grass"
         },
@@ -1102,7 +1102,7 @@
               3
             ],
             "frameDurationMs": 180,
-            "renderWidth": 100
+            "renderWidth": 90
           },
           "label": "Electric"
         },
@@ -1127,7 +1127,7 @@
               3
             ],
             "frameDurationMs": 180,
-            "renderWidth": 100
+            "renderWidth": 90
           },
           "label": "Water"
         },
@@ -1152,7 +1152,7 @@
               3
             ],
             "frameDurationMs": 180,
-            "renderWidth": 100
+            "renderWidth": 90
           },
           "label": "Fire"
         },
@@ -1177,7 +1177,7 @@
               3
             ],
             "frameDurationMs": 180,
-            "renderWidth": 100
+            "renderWidth": 90
           },
           "label": "Pink"
         },
@@ -1202,7 +1202,7 @@
               3
             ],
             "frameDurationMs": 180,
-            "renderWidth": 100
+            "renderWidth": 90
           },
           "label": "Dark"
         },
@@ -1227,7 +1227,7 @@
               3
             ],
             "frameDurationMs": 180,
-            "renderWidth": 100
+            "renderWidth": 90
           },
           "label": "Galaxy"
         },
@@ -1252,9 +1252,122 @@
               3
             ],
             "frameDurationMs": 180,
-            "renderWidth": 100
+            "renderWidth": 90
           },
           "label": "Lavender"
+        }
+      ]
+    },
+    {
+      "id": "Caniri",
+      "name": "Caniri",
+      "baseStats": {
+        "hp": 10,
+        "attack": 5,
+        "defense": 5,
+        "speed": 5
+      },
+      "growth": "medium",
+      "overworldDisplayMode": "walk",
+      "skills": [
+        "basic-attack"
+      ],
+      "variants": [
+        {
+          "id": "Caniri-default",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Caniri/caniri_default.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "portrait",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "Default"
+        },
+        {
+          "id": "Caniri-snow",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Caniri/caniri_snow.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "portrait",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "snow"
+        },
+        {
+          "id": "Caniri-grass",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Caniri/caniri_grass.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "portrait",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "Grass"
+        },
+        {
+          "id": "Caniri-electric",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Caniri/caniri_electric.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "portrait",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "Electric"
         }
       ]
     }

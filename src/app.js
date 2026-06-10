@@ -147,7 +147,7 @@
               positionX: 50,
               positionY: 50,
               repeat: "no-repeat",
-              overlayOpacity: 0.28,
+              overlayOpacity: 1
             },
             mobile: {
               imagePath: "",
@@ -156,7 +156,7 @@
               positionX: 50,
               positionY: 50,
               repeat: "no-repeat",
-              overlayOpacity: 0.32,
+              overlayOpacity: 0.18,
             },
           },
         },
@@ -287,7 +287,7 @@
       positionX: 50,
       positionY: 50,
       repeat: "no-repeat",
-      overlayOpacity: 0.28,
+      //overlayOpacity: 0.9,
     };
     const mobileDefaults = {
       imagePath: "",
@@ -296,7 +296,7 @@
       positionX: 50,
       positionY: 50,
       repeat: "no-repeat",
-      overlayOpacity: 0.32,
+      overlayOpacity: 0.18,
     };
 
     return {
@@ -5058,7 +5058,7 @@
     const config = getTownCardBackgroundConfig(town, viewport === "mobile" ? "mobile" : "desktop");
     const imageValue = config.imagePath ? 'url("' + config.imagePath.replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '")' : "none";
     return [
-      "background-image:linear-gradient(rgba(23, 30, 36, " + Number(config.overlayOpacity || 0) + "), rgba(23, 30, 36, " + Number(config.overlayOpacity || 0) + ")), " + imageValue,
+      "background-image:" + imageValue,
       "background-size:" + getTownCardBackgroundSizeValue(config),
       "background-position:" + Math.round(config.positionX) + "% " + Math.round(config.positionY) + "%",
       "background-repeat:" + config.repeat,
