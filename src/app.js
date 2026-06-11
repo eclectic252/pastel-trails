@@ -3220,7 +3220,8 @@
   }
 
   function drawMap(ctx, map, camera, phase, viewport) {
-    const zoomScale = getEffectiveWorldZoomScale(ACTIVE_APP?.state);
+    const metrics = getWorldViewportMetrics(map, ACTIVE_APP?.state, camera, viewport);
+    const zoomScale = metrics.zoomScale;
     const useSmoothSampling = Math.abs(zoomScale - 1) > 0.001;
     ctx.imageSmoothingEnabled = useSmoothSampling;
     if (useSmoothSampling) {
@@ -3233,12 +3234,14 @@
     }
 
     const layerCache = getCachedWorldLayerChunks(map, phase);
-    const worldWidth = map.mapWidth * map.tileSize;
-    const worldHeight = map.mapHeight * map.tileSize;
-    const visibleWorldWidth = Math.min(worldWidth, viewport.width / zoomScale);
-    const visibleWorldHeight = Math.min(worldHeight, viewport.height / zoomScale);
-    const sourceX = Math.max(0, Math.min(worldWidth - visibleWorldWidth, camera.x));
-    const sourceY = Math.max(0, Math.min(worldHeight - visibleWorldHeight, camera.y));
+    const visibleWorldWidth = metrics.visibleWorldWidth;
+    const visibleWorldHeight = metrics.visibleWorldHeight;
+    const sourceX = metrics.sourceX;
+    const sourceY = metrics.sourceY;
+    const destOffsetX = metrics.destOffsetX;
+    const destOffsetY = metrics.destOffsetY;
+    const destWidth = metrics.destWidth;
+    const destHeight = metrics.destHeight;
 
     if (layerCache?.chunks?.length) {
       layerCache.chunks.forEach(function (chunk) {
@@ -3259,8 +3262,8 @@
         }
 
         const chunkSourceY = overlapTop - chunkTop;
-        const destY = ((overlapTop - sourceY) / visibleWorldHeight) * viewport.height;
-        const destHeight = (overlapHeight / visibleWorldHeight) * viewport.height;
+        const destY = destOffsetY + ((overlapTop - sourceY) / visibleWorldHeight) * destHeight;
+        const overlapDestHeight = (overlapHeight / visibleWorldHeight) * destHeight;
 
         ctx.drawImage(
           chunk.canvas,
@@ -3268,10 +3271,10 @@
           chunkSourceY,
           visibleWorldWidth,
           overlapHeight,
-          0,
+          destOffsetX,
           destY,
-          viewport.width,
-          destHeight
+          destWidth,
+          overlapDestHeight
         );
       });
       return;
@@ -3284,18 +3287,53 @@
     }
   }
 
-  function drawTransitionOverlay(ctx, state, content, camera, devToolsState, viewport) {
+  function getWorldViewportMetrics(map, state, camera, viewport) {
+    const worldWidth = map.mapWidth * map.tileSize;
+    const worldHeight = map.mapHeight * map.tileSize;
+    const zoomScale = getEffectiveWorldZoomScale(state);
+    const visibleWorldWidth = Math.min(worldWidth, viewport.width / zoomScale);
+    const visibleWorldHeight = Math.min(worldHeight, viewport.height / zoomScale);
+    const sourceX = Math.max(0, Math.min(worldWidth - visibleWorldWidth, camera.x));
+    const sourceY = Math.max(0, Math.min(worldHeight - visibleWorldHeight, camera.y));
+    const destWidth = Math.min(viewport.width, Math.round(visibleWorldWidth * zoomScale));
+    const destHeight = Math.min(viewport.height, Math.round(visibleWorldHeight * zoomScale));
+    const destOffsetX = Math.max(0, Math.round((viewport.width - destWidth) / 2));
+    const destOffsetY = Math.max(0, Math.round((viewport.height - destHeight) / 2));
+
+    return {
+      zoomScale,
+      visibleWorldWidth,
+      visibleWorldHeight,
+      sourceX,
+      sourceY,
+      destWidth,
+      destHeight,
+      destOffsetX,
+      destOffsetY,
+    };
+  }
+
+  function worldToScreenPosition(worldX, worldY, metrics) {
+    return {
+      x: Math.round((worldX - metrics.sourceX) * metrics.zoomScale + metrics.destOffsetX),
+      y: Math.round((worldY - metrics.sourceY) * metrics.zoomScale + metrics.destOffsetY),
+    };
+  }
+
+  function drawTransitionOverlay(ctx, state, content, map, camera, devToolsState, viewport) {
     if (!devToolsState?.open) {
       return;
     }
 
     const transitions = content.mapMetadata[state.world.currentMapId]?.transitions || [];
     const selectedId = devToolsState.selectedTransitionId;
-    const zoomScale = getEffectiveWorldZoomScale(state);
+    const metrics = getWorldViewportMetrics(map, state, camera, viewport);
+    const zoomScale = metrics.zoomScale;
 
     transitions.forEach(function (transition) {
-      const x = Math.round((transition.x - camera.x) * zoomScale);
-      const y = Math.round((transition.y - camera.y) * zoomScale);
+      const point = worldToScreenPosition(transition.x, transition.y, metrics);
+      const x = point.x;
+      const y = point.y;
       const isSelected = transition.id === selectedId;
 
       ctx.save();
@@ -3317,8 +3355,9 @@
       ctx.restore();
     });
 
-    const playerX = Math.round((state.world.position.x - camera.x) * zoomScale);
-    const playerY = Math.round((state.world.position.y - camera.y) * zoomScale);
+    const playerPoint = worldToScreenPosition(state.world.position.x, state.world.position.y, metrics);
+    const playerX = playerPoint.x;
+    const playerY = playerPoint.y;
     const coords = "Player " + Math.round(state.world.position.x) + ", " + Math.round(state.world.position.y);
     ctx.save();
     ctx.fillStyle = "rgba(30, 35, 42, 0.85)";
@@ -3331,7 +3370,7 @@
     ctx.restore();
   }
 
-  function drawWildMonsterSprite(ctx, monster, content, camera) {
+  function drawWildMonsterSprite(ctx, monster, content, camera, viewportMetrics) {
     const species = getSpecies(content, monster.speciesId);
     const variant = getSpeciesVariant(species, monster.variantId);
     const portraitSheet = getVariantPortraitSheet(content, variant);
@@ -3339,10 +3378,11 @@
     const overworldSheet = getVariantOverworldSheet(content, variant);
     const overworldConfig = getVariantOverworldConfig(variant);
     const displayMode = getMonsterOverworldDisplayMode(species, variant);
-    const zoomScale = getEffectiveWorldZoomScale(ACTIVE_APP?.state);
+    const zoomScale = viewportMetrics.zoomScale;
     const useSmoothSampling = Math.abs(zoomScale - 1) > 0.001;
-    const screenX = Math.round((monster.x - camera.x) * zoomScale);
-    const screenY = Math.round((monster.y - camera.y) * zoomScale);
+    const point = worldToScreenPosition(monster.x, monster.y, viewportMetrics);
+    const screenX = point.x;
+    const screenY = point.y;
     const map = content.maps[ACTIVE_APP?.state?.world?.currentMapId || ""];
     const fallbackSheet = overworldSheet || portraitSheet;
     const overworldWidth = displayMode === "portrait" && overworldConfig.renderWidth
@@ -3491,7 +3531,7 @@
     ctx.restore();
   }
 
-  function drawNpcSprite(ctx, npc, content, camera) {
+  function drawNpcSprite(ctx, npc, content, camera, viewportMetrics) {
     const sheet = getCharacterSheetConfig(content, npc?.sheetId || "");
     if (!sheet?.path) {
       return;
@@ -3517,10 +3557,11 @@
       Math.max(0, Math.min((runtimeCharacterConfig.characterSheetRows || 1) - 1, rowIndex)),
       0
     );
-    const zoomScale = getEffectiveWorldZoomScale(ACTIVE_APP?.state);
+    const zoomScale = viewportMetrics.zoomScale;
     const spriteSize = getEffectiveRenderWidthForSheet(content, sheet) * zoomScale;
-    const screenX = Math.round((Number(npc.x || 0) - camera.x) * zoomScale);
-    const screenY = Math.round((Number(npc.y || 0) - camera.y) * zoomScale);
+    const point = worldToScreenPosition(Number(npc.x || 0), Number(npc.y || 0), viewportMetrics);
+    const screenX = point.x;
+    const screenY = point.y;
     const drawX = Math.round(screenX - spriteSize / 2);
     const drawY = Math.round(screenY - spriteSize / 2);
     const useSmoothSampling = Math.abs(zoomScale - 1) > 0.001;
@@ -3541,7 +3582,7 @@
     });
   }
 
-  function drawPlayerSprite(ctx, state, content, camera) {
+  function drawPlayerSprite(ctx, state, content, camera, viewportMetrics) {
     const activeAvatarId = state.player?.avatarId || ACTIVE_APP?.devTools?.selectedCharacterSheetId || CHARACTER_SHEET_OPTIONS[0]?.id || "";
     const persistedSheet = getCharacterSheetConfig(content, activeAvatarId);
     const runtimeCharacterConfig = ACTIVE_APP?.state?.screen === "dev-tools" && ACTIVE_APP?.devTools?.section === "characters"
@@ -3564,10 +3605,11 @@
     ensureCharacterDevSelection(runtimeCharacterConfig, content);
     const selectedSheet = getSelectedCharacterSheet(runtimeCharacterConfig, content);
     const image = getImage(selectedSheet?.path || PLAYER_SPRITE_SHEET);
-    const zoomScale = getEffectiveWorldZoomScale(state);
+    const zoomScale = viewportMetrics.zoomScale;
     const globalPlayerSpriteSettings = ensureGlobalPlayerSpriteSettings(content);
-    const playerX = (state.world.position.x - camera.x) * zoomScale;
-    const playerY = (state.world.position.y - camera.y) * zoomScale;
+    const playerPoint = worldToScreenPosition(state.world.position.x, state.world.position.y, viewportMetrics);
+    const playerX = playerPoint.x;
+    const playerY = playerPoint.y;
     const spriteSize = Math.max(64, Number(globalPlayerSpriteSettings.playerSpriteRenderWidth || PLAYER_RENDER_WIDTH)) * zoomScale;
     const anchorOffsetY = Number(globalPlayerSpriteSettings.playerSpriteAnchorOffsetY || 0) * zoomScale;
     const drawX = Math.round(playerX - spriteSize / 2);
@@ -3622,23 +3664,24 @@
     const map = content.maps[state.world.currentMapId];
     const viewport = syncWorldViewport(state, canvas);
     const camera = ensureWorldCameraState(state, content);
+    const viewportMetrics = getWorldViewportMetrics(map, state, camera, viewport);
 
     drawMap(ctx, map, camera, "base", viewport);
-    drawTransitionOverlay(ctx, state, content, camera, devToolsState, viewport);
+    drawTransitionOverlay(ctx, state, content, map, camera, devToolsState, viewport);
 
     state.world.wildMonsters.forEach(function (monster) {
       if (!monster.active) {
         return;
       }
 
-      drawWildMonsterSprite(ctx, monster, content, camera);
+      drawWildMonsterSprite(ctx, monster, content, camera, viewportMetrics);
     });
 
     getEditableNpcs(content.mapMetadata[state.world.currentMapId] || {}).forEach(function (npc) {
-      drawNpcSprite(ctx, npc, content, camera);
+      drawNpcSprite(ctx, npc, content, camera, viewportMetrics);
     });
 
-    drawPlayerSprite(ctx, state, content, camera);
+    drawPlayerSprite(ctx, state, content, camera, viewportMetrics);
 
     drawMap(ctx, map, camera, "foreground", viewport);
   }
