@@ -6,6 +6,9 @@
   const keysDown = new Set();
   const TOUCH_KEYS = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"];
   const VIEWPORT = { width: 960, height: 640 };
+  const ELEMENTAL_AFFINITIES = ["Air", "Fire", "Earth", "Water", "Light", "Dark"];
+  const SKILL_ELEMENTS = ["Neutral"].concat(ELEMENTAL_AFFINITIES);
+  const BATTLE_MODIFIER_STATS = ["attack", "defense", "speed", "accuracy"];
   const PLAYER_RADIUS = 16;
   const PLAYER_HITBOX = { width: 28, height: 28 };
   const PLAYER_SPRITE_SHEET = "assets/Characters/Boardwalk girl sprite/boardwalk girlcheckbackground_transparent.png";
@@ -100,6 +103,13 @@
         arenaLeaderMinLevel: 1,
         arenaLeaderMaxLevel: 10,
         arenaLeaderPartySize: 3,
+        battleModel: {
+          skillAttackScale: 0.6,
+          skillDefenseScale: 0.35,
+          basicDefenseDivisor: 2,
+          randomVarianceMax: 3,
+          affinityDamageBonusPerPointPercent: 1,
+        },
         devMode: false,
       },
       allowedZoomLevels: [100, 90, 80, 70, 60, 50],
@@ -113,6 +123,19 @@
           id: "basic-attack",
           name: "Basic Attack",
           kind: "attack",
+          element: "Neutral",
+          maxLevel: 1,
+          levelOverrides: [],
+          accuracy: 100,
+          unlockRequirements: {
+            arenaClears: [],
+            requiredSkillLevels: [],
+          },
+          statModifiers: {
+            self: [],
+            foe: [],
+          },
+          statusEffects: [],
           power: 8,
           description: "A simple physical strike.",
         },
@@ -921,11 +944,157 @@
     });
   }
 
+  function createEmptyElementalPointMap() {
+    return Object.fromEntries(ELEMENTAL_AFFINITIES.map(function (element) {
+      return [element, 0];
+    }));
+  }
+
+  function pickRandomElementalAffinity() {
+    return ELEMENTAL_AFFINITIES[Math.floor(Math.random() * ELEMENTAL_AFFINITIES.length)] || ELEMENTAL_AFFINITIES[0];
+  }
+
+  function getTotalElementalAffinityPointsForLevel(level) {
+    const resolvedLevel = Math.max(1, Number(level || 1));
+    return 1 + Math.floor(resolvedLevel / 4);
+  }
+
+  function ensureElementalAffinityState(monster, options) {
+    if (!monster || typeof monster !== "object") {
+      return null;
+    }
+
+    const primaryElement = ELEMENTAL_AFFINITIES.includes(monster.primaryElementalAffinity)
+      ? monster.primaryElementalAffinity
+      : (ELEMENTAL_AFFINITIES.includes(options?.primaryElement) ? options.primaryElement : pickRandomElementalAffinity());
+    const points = createEmptyElementalPointMap();
+    const savedPoints = monster.elementalAffinityPoints || {};
+    ELEMENTAL_AFFINITIES.forEach(function (element) {
+      points[element] = Math.max(0, Number(savedPoints[element] || 0));
+    });
+    monster.primaryElementalAffinity = primaryElement;
+    monster.elementalAffinityPoints = points;
+    return monster;
+  }
+
+  function getSpentElementalAffinityPoints(monster) {
+    ensureElementalAffinityState(monster);
+    return ELEMENTAL_AFFINITIES.reduce(function (sum, element) {
+      return sum + Math.max(0, Number(monster.elementalAffinityPoints?.[element] || 0));
+    }, 0);
+  }
+
+  function getAvailableElementalAffinityPoints(monster) {
+    const total = getTotalElementalAffinityPointsForLevel(monster?.level || 1);
+    return Math.max(0, total - getSpentElementalAffinityPoints(monster));
+  }
+
+  function getAssignedElementalAffinities(monster) {
+    ensureElementalAffinityState(monster);
+    return ELEMENTAL_AFFINITIES.filter(function (element) {
+      return Number(monster.elementalAffinityPoints?.[element] || 0) > 0;
+    });
+  }
+
+  function getMonsterAffinitySummaryLabel(monster) {
+    const assigned = getAssignedElementalAffinities(monster);
+    if (assigned.length) {
+      return assigned.join(" / ");
+    }
+
+    ensureElementalAffinityState(monster);
+    return monster.primaryElementalAffinity || ELEMENTAL_AFFINITIES[0];
+  }
+
+  function normalizeSkillElement(value) {
+    const requested = String(value || "").trim().toLowerCase();
+    return SKILL_ELEMENTS.find(function (element) {
+      return element.toLowerCase() === requested;
+    }) || "Neutral";
+  }
+
+  function getElementalAffinityDamageBonus(monster, skill) {
+    if (!skill) {
+      return 0;
+    }
+
+    ensureElementalAffinityState(monster);
+    const element = normalizeSkillElement(skill.element);
+    if (element === "Neutral") {
+      return 0;
+    }
+
+    const spentPoints = Math.max(0, Number(monster.elementalAffinityPoints?.[element] || 0));
+    const battleModel = ensureBattleModelSettings(ACTIVE_APP?.content || fallbackContent);
+    return spentPoints * (Number(battleModel.affinityDamageBonusPerPointPercent || 0) / 100);
+  }
+
+  function ensureBattleModelSettings(content) {
+    if (!content.settings) {
+      content.settings = JSON.parse(JSON.stringify(fallbackContent.settings));
+    }
+    if (!content.settings.defaults) {
+      content.settings.defaults = Object.assign({}, fallbackContent.settings.defaults);
+    }
+    const defaults = content.settings.defaults;
+    const source = defaults.battleModel || {};
+    const fallback = fallbackContent.settings.defaults.battleModel;
+    defaults.battleModel = {
+      skillAttackScale: Number(source.skillAttackScale ?? fallback.skillAttackScale),
+      skillDefenseScale: Number(source.skillDefenseScale ?? fallback.skillDefenseScale),
+      basicDefenseDivisor: Math.max(1, Number(source.basicDefenseDivisor ?? fallback.basicDefenseDivisor)),
+      randomVarianceMax: Math.max(0, Number(source.randomVarianceMax ?? fallback.randomVarianceMax)),
+      affinityDamageBonusPerPointPercent: Math.max(0, Number(source.affinityDamageBonusPerPointPercent ?? fallback.affinityDamageBonusPerPointPercent)),
+    };
+    return defaults.battleModel;
+  }
+
+  function getMonsterXpThreshold(monster) {
+    return Math.max(30, Math.round(Math.max(1, Number(monster?.level || 1)) * 30));
+  }
+
+  function getMonsterXpProgress(monster) {
+    const threshold = getMonsterXpThreshold(monster);
+    const xp = Math.max(0, Number(monster?.xp || 0));
+    return {
+      current: xp % threshold,
+      threshold,
+      percent: Math.max(0, Math.min(100, ((xp % threshold) / threshold) * 100)),
+    };
+  }
+
+  function normalizeLookupToken(value) {
+    return String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "");
+  }
+
+  function getSpeciesFlexible(content, speciesIdOrName) {
+    const exact = getSpecies(content, speciesIdOrName);
+    if (exact) {
+      return exact;
+    }
+
+    const requested = normalizeLookupToken(speciesIdOrName);
+    if (!requested) {
+      return null;
+    }
+
+    return (content.monsters?.species || []).find(function (species) {
+      return normalizeLookupToken(species.id) === requested
+        || normalizeLookupToken(species.name) === requested;
+    }) || null;
+  }
+
   function ensureSkillCatalog(content) {
     if (!content.skills || !Array.isArray(content.skills.skills)) {
       content.skills = JSON.parse(JSON.stringify(fallbackContent.skills));
     }
 
+    content.skills.skills.forEach(function (skill) {
+      ensureSkillEffectCollections(skill);
+    });
     return content.skills.skills;
   }
 
@@ -935,9 +1104,283 @@
     });
   }
 
-  function createMonsterInstance(species, level, variantId) {
-    const resolvedVariant = getSpeciesVariant(species, variantId || "");
+  function createEmptySkillModifierEffect() {
     return {
+      type: "modify",
+      stat: "attack",
+      amount: 1,
+      label: "",
+      showLabel: true,
+    };
+  }
+
+  function createEmptySkillStatusEffect() {
+    return {
+      type: "burn",
+      target: "foe",
+      chance: 25,
+      tickChance: 100,
+      power: 2,
+      duration: 3,
+      label: "",
+      showLabel: true,
+    };
+  }
+
+  function ensureSkillEffectCollections(skill) {
+    if (!skill || typeof skill !== "object") {
+      return null;
+    }
+
+    skill.element = normalizeSkillElement(skill.element);
+    skill.accuracy = Math.max(0, Math.min(100, Number(skill.accuracy ?? 100) || 0));
+    skill.maxLevel = Math.max(1, Number(skill.maxLevel ?? 1) || 1);
+    if (!Array.isArray(skill.levelOverrides)) {
+      if (skill.levelOverrides && typeof skill.levelOverrides === "object") {
+        skill.levelOverrides = Object.keys(skill.levelOverrides).map(function (levelKey) {
+          return Object.assign({ level: Number(levelKey || 1) }, skill.levelOverrides[levelKey] || {});
+        });
+      } else {
+        skill.levelOverrides = [];
+      }
+    }
+    skill.levelOverrides = skill.levelOverrides.map(function (entry) {
+      return {
+        level: Math.max(2, Number(entry?.level || 2) || 2),
+        power: entry?.power === null || entry?.power === undefined || entry?.power === "" ? null : Number(entry.power || 0),
+        accuracy: entry?.accuracy === null || entry?.accuracy === undefined || entry?.accuracy === "" ? null : Math.max(0, Math.min(100, Number(entry.accuracy || 0))),
+        element: entry?.element ? normalizeSkillElement(entry.element) : "",
+        description: String(entry?.description || ""),
+      };
+    }).filter(function (entry) {
+      return entry.level <= skill.maxLevel;
+    }).sort(function (left, right) {
+      return left.level - right.level;
+    }).filter(function (entry, index, entries) {
+      return entries.findIndex(function (candidate) { return candidate.level === entry.level; }) === index;
+    });
+    if (!skill.unlockRequirements || typeof skill.unlockRequirements !== "object") {
+      skill.unlockRequirements = {
+        arenaClears: [],
+        requiredSkillLevels: [],
+      };
+    }
+    if (!Array.isArray(skill.unlockRequirements.arenaClears)) {
+      skill.unlockRequirements.arenaClears = [];
+    }
+    skill.unlockRequirements.arenaClears = skill.unlockRequirements.arenaClears
+      .map(function (entry) { return String(entry || "").trim(); })
+      .filter(Boolean);
+    if (!Array.isArray(skill.unlockRequirements.requiredSkillLevels)) {
+      skill.unlockRequirements.requiredSkillLevels = [];
+    }
+    skill.unlockRequirements.requiredSkillLevels = skill.unlockRequirements.requiredSkillLevels.map(function (entry) {
+      return {
+        skillId: String(entry?.skillId || "").trim(),
+        level: Math.max(1, Number(entry?.level || 1) || 1),
+      };
+    }).filter(function (entry) {
+      return !!entry.skillId;
+    });
+    if (!skill.statModifiers || typeof skill.statModifiers !== "object") {
+      skill.statModifiers = { self: [], foe: [] };
+    }
+    if (!Array.isArray(skill.statModifiers.self)) {
+      skill.statModifiers.self = [];
+    }
+    if (!Array.isArray(skill.statModifiers.foe)) {
+      skill.statModifiers.foe = [];
+    }
+    skill.statModifiers.self = skill.statModifiers.self.map(function (entry) {
+      const next = Object.assign(createEmptySkillModifierEffect(), entry || {});
+      next.type = next.type === "cleanse-negative" ? "cleanse-negative" : "modify";
+      next.stat = next.stat === "all" ? "all" : (BATTLE_MODIFIER_STATS.includes(next.stat) ? next.stat : "attack");
+      next.amount = next.type === "cleanse-negative"
+        ? Math.max(0, Number(next.amount || 0))
+        : Number(next.amount || 0);
+      next.showLabel = next.showLabel !== false;
+      return next;
+    });
+    skill.statModifiers.foe = skill.statModifiers.foe.map(function (entry) {
+      const next = Object.assign(createEmptySkillModifierEffect(), entry || {});
+      next.type = next.type === "cleanse-negative" ? "cleanse-negative" : "modify";
+      next.stat = next.stat === "all" ? "all" : (BATTLE_MODIFIER_STATS.includes(next.stat) ? next.stat : "attack");
+      next.amount = next.type === "cleanse-negative"
+        ? Math.max(0, Number(next.amount || 0))
+        : Number(next.amount || 0);
+      next.showLabel = next.showLabel !== false;
+      return next;
+    });
+    if (!Array.isArray(skill.statusEffects)) {
+      skill.statusEffects = [];
+    }
+    skill.statusEffects = skill.statusEffects.map(function (entry) {
+      const next = Object.assign(createEmptySkillStatusEffect(), entry || {});
+      next.type = next.type === "confuse" ? "confuse" : "burn";
+      next.target = next.target === "self" ? "self" : "foe";
+      next.chance = Math.max(0, Math.min(100, Number(next.chance || 0)));
+      next.tickChance = Math.max(0, Math.min(100, Number(next.tickChance || 0)));
+      next.power = Math.max(0, Number(next.power || 0));
+      next.duration = Math.max(1, Number(next.duration || 1));
+      next.showLabel = next.showLabel !== false;
+      return next;
+    });
+    return skill;
+  }
+
+  function createEmptySkillLevelOverride(level) {
+    return {
+      level: Math.max(2, Number(level || 2) || 2),
+      power: null,
+      accuracy: null,
+      element: "",
+      description: "",
+    };
+  }
+
+  function getEffectiveSkillAtLevel(skill, level) {
+    const normalized = ensureSkillEffectCollections(JSON.parse(JSON.stringify(skill || {})));
+    const resolvedLevel = Math.max(1, Math.min(getSkillMaxLevel(normalized), Number(level || 1) || 1));
+    const effective = Object.assign({}, normalized, {
+      statModifiers: {
+        self: JSON.parse(JSON.stringify(normalized.statModifiers?.self || [])),
+        foe: JSON.parse(JSON.stringify(normalized.statModifiers?.foe || [])),
+      },
+      statusEffects: JSON.parse(JSON.stringify(normalized.statusEffects || [])),
+      unlockRequirements: JSON.parse(JSON.stringify(normalized.unlockRequirements || { arenaClears: [], requiredSkillLevels: [] })),
+      levelOverrides: JSON.parse(JSON.stringify(normalized.levelOverrides || [])),
+    });
+
+    (normalized.levelOverrides || []).forEach(function (override) {
+      if (Number(override.level || 0) > resolvedLevel) {
+        return;
+      }
+      if (override.power !== null && override.power !== undefined && override.power !== "") {
+        effective.power = Number(override.power || 0);
+      }
+      if (override.accuracy !== null && override.accuracy !== undefined && override.accuracy !== "") {
+        effective.accuracy = Math.max(0, Math.min(100, Number(override.accuracy || 0)));
+      }
+      if (override.element) {
+        effective.element = normalizeSkillElement(override.element);
+      }
+      if (override.description) {
+        effective.description = String(override.description || "");
+      }
+    });
+
+    effective.currentLevel = resolvedLevel;
+    return effective;
+  }
+
+  function getSkillMaxLevel(skill) {
+    ensureSkillEffectCollections(skill);
+    return Math.max(1, Number(skill?.maxLevel || 1));
+  }
+
+  function parseArenaClearRequirements(rawValue) {
+    if (Array.isArray(rawValue)) {
+      return rawValue.map(function (entry) {
+        return String(entry || "").trim();
+      }).filter(Boolean);
+    }
+
+    return String(rawValue || "")
+      .split(",")
+      .map(function (entry) { return String(entry || "").trim(); })
+      .filter(Boolean);
+  }
+
+  function parseRequiredSkillLevels(rawValue) {
+    if (Array.isArray(rawValue)) {
+      return rawValue.map(function (entry) {
+        return {
+          skillId: String(entry?.skillId || "").trim(),
+          level: Math.max(1, Number(entry?.level || 1) || 1),
+        };
+      }).filter(function (entry) {
+        return !!entry.skillId;
+      });
+    }
+
+    return String(rawValue || "")
+      .split(",")
+      .map(function (entry) { return String(entry || "").trim(); })
+      .filter(Boolean)
+      .map(function (entry) {
+        const parts = entry.split(":");
+        return {
+          skillId: String(parts[0] || "").trim(),
+          level: Math.max(1, Number(parts[1] || 1) || 1),
+        };
+      }).filter(function (entry) {
+        return !!entry.skillId;
+      });
+  }
+
+  function formatArenaClearRequirements(skill) {
+    ensureSkillEffectCollections(skill);
+    return (skill.unlockRequirements?.arenaClears || []).join(", ");
+  }
+
+  function formatRequiredSkillLevels(skill) {
+    ensureSkillEffectCollections(skill);
+    return (skill.unlockRequirements?.requiredSkillLevels || []).map(function (entry) {
+      return entry.skillId + ":" + Number(entry.level || 1);
+    }).join(", ");
+  }
+
+  function replaceSkillReferences(content, previousSkillId, nextSkillId) {
+    if (!previousSkillId || previousSkillId === nextSkillId) {
+      return;
+    }
+
+    (content.monsters?.species || []).forEach(function (species) {
+      if (!Array.isArray(species.skills)) {
+        return;
+      }
+
+      species.skills = species.skills.map(function (skillId) {
+        return skillId === previousSkillId ? nextSkillId : skillId;
+      });
+    });
+
+    ensureSkillCatalog(content).forEach(function (skill) {
+      ensureSkillEffectCollections(skill);
+      skill.unlockRequirements.requiredSkillLevels.forEach(function (requirement) {
+        if (requirement.skillId === previousSkillId) {
+          requirement.skillId = nextSkillId;
+        }
+      });
+    });
+  }
+
+  function removeSkillReferences(content, removedSkillId) {
+    if (!removedSkillId) {
+      return;
+    }
+
+    (content.monsters?.species || []).forEach(function (species) {
+      if (!Array.isArray(species.skills)) {
+        return;
+      }
+
+      species.skills = species.skills.filter(function (skillId) {
+        return skillId !== removedSkillId;
+      });
+    });
+
+    ensureSkillCatalog(content).forEach(function (skill) {
+      ensureSkillEffectCollections(skill);
+      skill.unlockRequirements.requiredSkillLevels = skill.unlockRequirements.requiredSkillLevels.filter(function (requirement) {
+        return requirement.skillId !== removedSkillId;
+      });
+    });
+  }
+
+  function createMonsterInstance(species, level, variantId, options) {
+    const resolvedVariant = getSpeciesVariant(species, variantId || "");
+    const monster = {
       instanceId: window.crypto?.randomUUID ? window.crypto.randomUUID() : String(Date.now() + Math.random()),
       speciesId: species.id,
       variantId: resolvedVariant?.id || species.variants?.[0]?.id || "default",
@@ -945,14 +1388,371 @@
       xp: 0,
       stats: Object.assign({}, species.baseStats),
       currentHp: species.baseStats.hp,
-      skills: (species.skills || []).slice(),
+      skills: getDefaultMonsterSkills(species),
     };
+    ensureElementalAffinityState(monster, { primaryElement: options?.primaryElement || options?.elementalAffinity });
+    if (options?.elementalAffinityPoints && typeof options.elementalAffinityPoints === "object") {
+      ELEMENTAL_AFFINITIES.forEach(function (element) {
+        monster.elementalAffinityPoints[element] = Math.max(0, Number(options.elementalAffinityPoints[element] || 0));
+      });
+    }
+    return monster;
+  }
+
+  function getSpeciesSkillPool(species) {
+    return Array.from(new Set((species?.skills || []).filter(Boolean)));
+  }
+
+  function getDefaultMonsterSkills(species) {
+    const pool = getSpeciesSkillPool(species);
+    if (pool.includes("basic-attack")) {
+      return ["basic-attack"];
+    }
+    return pool.length ? [pool[0]] : [];
+  }
+
+  function arraysHaveSameMembers(left, right) {
+    if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) {
+      return false;
+    }
+
+    const rightSet = new Set(right);
+    return left.every(function (entry) {
+      return rightSet.has(entry);
+    });
+  }
+
+  function ensureMonsterSkillState(monster, content) {
+    if (!monster) {
+      return [];
+    }
+
+    const species = getSpecies(content, monster.speciesId);
+    const pool = getSpeciesSkillPool(species);
+    const defaultSkills = getDefaultMonsterSkills(species);
+    const normalizedSkills = Array.from(new Set((monster.skills || []).filter(function (skillId) {
+      return pool.includes(skillId);
+    })));
+
+    if (monster.skillLoadoutVersion !== 2) {
+      monster.skills = arraysHaveSameMembers(normalizedSkills, pool) ? defaultSkills.slice() : normalizedSkills;
+      monster.skillLoadoutVersion = 2;
+    } else {
+      monster.skills = normalizedSkills;
+    }
+
+    if (!monster.skills.length && defaultSkills.length) {
+      monster.skills = defaultSkills.slice();
+    }
+
+    return monster.skills;
+  }
+
+  function getPlayerSkillProgressEntries(state) {
+    if (!state.player) {
+      state.player = {};
+    }
+    if (!Array.isArray(state.player.skills)) {
+      state.player.skills = [];
+    }
+    return state.player.skills;
+  }
+
+  function getPlayerSkillProgressEntry(state, skillId) {
+    return getPlayerSkillProgressEntries(state).find(function (entry) {
+      return entry.skillId === skillId;
+    }) || null;
+  }
+
+  function getPlayerSkillXp(state, content, skillId) {
+    ensurePlayerSkillProgressState(state, content);
+    return Math.max(0, Number(getPlayerSkillProgressEntry(state, skillId)?.xp || 0));
+  }
+
+  function getPlayerSkillLevel(state, content, skillId) {
+    ensurePlayerSkillProgressState(state, content);
+    return Math.max(0, Number(getPlayerSkillProgressEntry(state, skillId)?.level || 0));
+  }
+
+  function getSkillXpThreshold(skill, level) {
+    const maxLevel = getSkillMaxLevel(skill);
+    const currentLevel = Math.max(1, Math.min(maxLevel, Number(level || 1) || 1));
+    if (currentLevel >= maxLevel) {
+      return 0;
+    }
+    return Math.max(1, currentLevel * 5);
+  }
+
+  function getPlayerSkillXpProgress(state, content, skillId) {
+    const skill = getSkill(content, skillId);
+    const level = getPlayerSkillLevel(state, content, skillId);
+    const xp = getPlayerSkillXp(state, content, skillId);
+    const threshold = skill ? getSkillXpThreshold(skill, level) : 0;
+    if (!skill || level >= getSkillMaxLevel(skill) || threshold <= 0) {
+      return {
+        current: 0,
+        threshold: 0,
+        percent: 100,
+        maxed: true,
+      };
+    }
+    return {
+      current: Math.max(0, Math.min(threshold, xp)),
+      threshold,
+      percent: Math.max(0, Math.min(100, (xp / threshold) * 100)),
+      maxed: false,
+    };
+  }
+
+  function getSkillUnlockStatus(state, content, skill) {
+    ensureSkillEffectCollections(skill);
+    const progress = ensureArenaProgress(state);
+    const reasons = [];
+
+    (skill.unlockRequirements?.arenaClears || []).forEach(function (arenaId) {
+      if (!progress.clearedArenaIds.includes(arenaId)) {
+        const arena = getArena(content, arenaId);
+        reasons.push("Clear arena: " + (arena?.name || arenaId));
+      }
+    });
+    (skill.unlockRequirements?.requiredSkillLevels || []).forEach(function (requirement) {
+      const requiredSkill = getSkill(content, requirement.skillId);
+      const currentLevel = Math.max(0, Number(getPlayerSkillProgressEntry(state, requirement.skillId)?.level || 0));
+      if (currentLevel < Number(requirement.level || 1)) {
+        reasons.push("Reach " + (requiredSkill?.name || requirement.skillId) + " Lv " + Number(requirement.level || 1));
+      }
+    });
+
+    return {
+      unlocked: reasons.length === 0,
+      reasons,
+    };
+  }
+
+  function ensurePlayerSkillProgressState(state, content) {
+    const skills = ensureSkillCatalog(content);
+    const validSkillIds = new Set(skills.map(function (skill) { return skill.id; }).filter(Boolean));
+    const entries = getPlayerSkillProgressEntries(state)
+      .filter(function (entry) {
+        return validSkillIds.has(entry?.skillId);
+      })
+      .map(function (entry) {
+        return {
+          skillId: String(entry.skillId || ""),
+          level: Math.max(0, Number(entry.level || 0)),
+          xp: Math.max(0, Number(entry.xp || 0)),
+        };
+      });
+    state.player.skills = entries;
+
+    skills.forEach(function (skill) {
+      if (!getPlayerSkillProgressEntry(state, skill.id)) {
+        state.player.skills.push({
+          skillId: skill.id,
+          level: 0,
+          xp: 0,
+        });
+      }
+    });
+
+    let changed = true;
+    while (changed) {
+      changed = false;
+      skills.forEach(function (skill) {
+        const entry = getPlayerSkillProgressEntry(state, skill.id);
+        if (!entry) {
+          return;
+        }
+
+        const unlockStatus = getSkillUnlockStatus(state, content, skill);
+        const maxLevel = getSkillMaxLevel(skill);
+        const minimumLevel = unlockStatus.unlocked ? 1 : 0;
+        const clampedLevel = Math.max(minimumLevel, Math.min(maxLevel, Number(entry.level || 0)));
+        if (clampedLevel !== Number(entry.level || 0)) {
+          entry.level = clampedLevel;
+          changed = true;
+        }
+        if (clampedLevel <= 0) {
+          entry.xp = 0;
+        } else if (clampedLevel >= maxLevel) {
+          entry.xp = 0;
+        } else {
+          entry.xp = Math.max(0, Math.min(getSkillXpThreshold(skill, clampedLevel), Number(entry.xp || 0)));
+        }
+      });
+    }
+
+    return state.player.skills;
+  }
+
+  function grantSkillXp(state, content, skillId, amount, options) {
+    if (!skillId || Number(amount || 0) <= 0) {
+      return { gained: 0, leveledUp: false, levelsGained: 0 };
+    }
+
+    ensurePlayerSkillProgressState(state, content);
+    const skill = getSkill(content, skillId);
+    const entry = getPlayerSkillProgressEntry(state, skillId);
+    if (!skill || !entry) {
+      return { gained: 0, leveledUp: false, levelsGained: 0 };
+    }
+
+    const unlockStatus = getSkillUnlockStatus(state, content, skill);
+    if (!unlockStatus.unlocked || Number(entry.level || 0) <= 0 || Number(entry.level || 0) >= getSkillMaxLevel(skill)) {
+      return { gained: 0, leveledUp: false, levelsGained: 0 };
+    }
+
+    let remainingXp = Math.max(0, Number(amount || 0));
+    let gained = 0;
+    let levelsGained = 0;
+    while (remainingXp > 0 && Number(entry.level || 0) < getSkillMaxLevel(skill)) {
+      const threshold = getSkillXpThreshold(skill, entry.level);
+      if (threshold <= 0) {
+        entry.xp = 0;
+        break;
+      }
+
+      const needed = Math.max(0, threshold - Number(entry.xp || 0));
+      const spend = Math.min(remainingXp, needed || remainingXp);
+      entry.xp = Math.max(0, Number(entry.xp || 0) + spend);
+      gained += spend;
+      remainingXp -= spend;
+
+      if (Number(entry.xp || 0) >= threshold) {
+        entry.level = Math.min(getSkillMaxLevel(skill), Number(entry.level || 0) + 1);
+        entry.xp = 0;
+        levelsGained += 1;
+      } else {
+        break;
+      }
+    }
+
+    ensurePlayerSkillProgressState(state, content);
+    if (levelsGained > 0 && state.battle && options?.showBattleLog !== false) {
+      state.battle.log.unshift(skill.name + " leveled up to Lv " + getPlayerSkillLevel(state, content, skillId) + ".");
+    }
+    return {
+      gained,
+      leveledUp: levelsGained > 0,
+      levelsGained,
+    };
+  }
+
+  function ensureBattleTemporaryState(monster) {
+    if (!monster || typeof monster !== "object") {
+      return null;
+    }
+
+    if (!monster._battleTemp || typeof monster._battleTemp !== "object") {
+      monster._battleTemp = {
+        modifiers: Object.fromEntries(BATTLE_MODIFIER_STATS.map(function (stat) { return [stat, 0]; })),
+        statuses: [],
+        tags: [],
+      };
+    }
+
+    if (!monster._battleTemp.modifiers || typeof monster._battleTemp.modifiers !== "object") {
+      monster._battleTemp.modifiers = Object.fromEntries(BATTLE_MODIFIER_STATS.map(function (stat) { return [stat, 0]; }));
+    }
+    BATTLE_MODIFIER_STATS.forEach(function (stat) {
+      monster._battleTemp.modifiers[stat] = Number(monster._battleTemp.modifiers[stat] || 0);
+    });
+    if (!Array.isArray(monster._battleTemp.statuses)) {
+      monster._battleTemp.statuses = [];
+    }
+    if (!Array.isArray(monster._battleTemp.tags)) {
+      monster._battleTemp.tags = [];
+    }
+    return monster._battleTemp;
+  }
+
+  function clearBattleTemporaryState(monster) {
+    if (monster && typeof monster === "object" && monster._battleTemp) {
+      delete monster._battleTemp;
+    }
+  }
+
+  function clearAllBattleTemporaryState(state) {
+    (state.party || []).forEach(clearBattleTemporaryState);
+    (state.bank || []).forEach(clearBattleTemporaryState);
+    (state.battle?.enemyQueue || []).forEach(clearBattleTemporaryState);
+    if (state.battle?.enemy) {
+      clearBattleTemporaryState(state.battle.enemy);
+    }
+  }
+
+  function getEffectiveBattleStat(monster, stat) {
+    if (stat === "accuracy") {
+      const temp = ensureBattleTemporaryState(monster);
+      return Number(temp?.modifiers?.accuracy || 0);
+    }
+
+    const temp = ensureBattleTemporaryState(monster);
+    return Math.max(0, Number(monster?.stats?.[stat] || 0) + Number(temp?.modifiers?.[stat] || 0));
+  }
+
+  function addBattleTag(monster, label) {
+    const temp = ensureBattleTemporaryState(monster);
+    const next = String(label || "").trim();
+    if (!next || temp.tags.includes(next)) {
+      return;
+    }
+    temp.tags.push(next);
+  }
+
+  function getVisibleBattleLabels(monster) {
+    const temp = ensureBattleTemporaryState(monster);
+    const labels = (temp.tags || []).slice();
+    (temp.statuses || []).forEach(function (status) {
+      if (status.showLabel !== false) {
+        const label = String(status.label || status.type || "").trim();
+        if (label && !labels.includes(label)) {
+          labels.push(label);
+        }
+      }
+    });
+    return labels;
+  }
+
+  function getBattlerDisplayName(content, monster) {
+    return getSpecies(content, monster?.speciesId)?.name || monster?.name || monster?.speciesId || "Monster";
   }
 
   function getSpeciesVariant(species, variantId) {
     return species?.variants?.find(function (variant) {
       return variant.id === variantId;
     }) || species?.variants?.[0] || null;
+  }
+
+  function getSpeciesVariantFlexible(species, variantIdOrLabel) {
+    const exact = getSpeciesVariant(species, variantIdOrLabel);
+    if (exact && exact.id === variantIdOrLabel) {
+      return exact;
+    }
+
+    const requested = normalizeLookupToken(variantIdOrLabel);
+    if (!requested) {
+      return exact;
+    }
+
+    return species?.variants?.find(function (variant) {
+      return normalizeLookupToken(variant.id) === requested
+        || normalizeLookupToken(variant.label) === requested
+        || normalizeLookupToken(variant.displayLabel) === requested;
+    }) || exact;
+  }
+
+  function resolveArenaRosterMember(content, member) {
+    const species = getSpeciesFlexible(content, member?.speciesId);
+    if (!species) {
+      return null;
+    }
+
+    const variant = getSpeciesVariantFlexible(species, member?.variantId || "");
+    return Object.assign({}, member, {
+      speciesId: species.id,
+      variantId: variant?.id || species.variants?.[0]?.id || "default",
+    });
   }
 
   function getMonsterOverworldDisplayMode(species, variant) {
@@ -1028,6 +1828,193 @@
     }
 
     return '<div class="' + escapeHtml((className || "arena-crest-image") + " arena-crest-fallback") + '">' + escapeHtml((crestLabel || "?").slice(0, 1)) + "</div>";
+  }
+
+  function renderMonsterAffinityManager(content, monster, options) {
+    if (!monster) {
+      return "";
+    }
+
+    ensureElementalAffinityState(monster);
+    const species = getSpecies(content, monster.speciesId);
+    const availablePoints = getAvailableElementalAffinityPoints(monster);
+    const location = options?.collection === "bank" ? "Bank" : "Party";
+    const controls = ELEMENTAL_AFFINITIES.map(function (element) {
+      const currentPoints = Number(monster.elementalAffinityPoints?.[element] || 0);
+      return [
+        '<div class="monster-affinity-row">',
+        '<span class="monster-affinity-element">' + escapeHtml(element) + '</span>',
+        '<strong class="monster-affinity-value">' + currentPoints + "</strong>",
+        '<button class="secondary-button monster-affinity-spend-button" type="button" data-spend-affinity="' + escapeHtml(location.toLowerCase()) + '" data-monster-index="' + Number(options?.index || 0) + '" data-affinity-element="' + escapeHtml(element) + '"' + (availablePoints <= 0 ? " disabled" : "") + '>+1</button>',
+        "</div>",
+      ].join("");
+    }).join("");
+
+    return [
+      '<article class="monster-affinity-card">',
+      '<div class="monster-affinity-card-header"><div><strong>' + escapeHtml(species?.name || monster.speciesId) + '</strong><span>Lv ' + Number(monster.level || 1) + " · " + escapeHtml(location) + '</span></div><div class="monster-affinity-primary">' + escapeHtml(monster.primaryElementalAffinity) + "</div></div>",
+      '<p class="monster-affinity-summary">Available points: <strong>' + availablePoints + "</strong> of " + getTotalElementalAffinityPointsForLevel(monster.level || 1) + ' total · Primary affinity: <strong>' + escapeHtml(monster.primaryElementalAffinity) + "</strong></p>",
+      '<div class="monster-affinity-grid">' + controls + "</div>",
+      "</article>",
+    ].join("");
+  }
+
+  function renderMonsterAffinityPanel(content, monster, options) {
+    if (!monster) {
+      return "";
+    }
+
+    ensureElementalAffinityState(monster);
+    const availablePoints = getAvailableElementalAffinityPoints(monster);
+    const spentPoints = getSpentElementalAffinityPoints(monster);
+    const totalPoints = getTotalElementalAffinityPointsForLevel(monster.level || 1);
+    const affinitySummary = getMonsterAffinitySummaryLabel(monster);
+    const location = options?.collection === "bank" ? "Bank" : "Party";
+    const controls = ELEMENTAL_AFFINITIES.map(function (element) {
+      const currentPoints = Number(monster.elementalAffinityPoints?.[element] || 0);
+      return [
+        '<div class="monster-affinity-row">',
+        '<span class="monster-affinity-element">' + escapeHtml(element) + '</span>',
+        '<strong class="monster-affinity-value">' + currentPoints + "</strong>",
+        '<div class="monster-affinity-controls">' +
+          '<button class="secondary-button monster-affinity-spend-button" type="button" data-adjust-affinity="' + escapeHtml(location.toLowerCase()) + '" data-monster-index="' + Number(options?.index || 0) + '" data-affinity-element="' + escapeHtml(element) + '" data-affinity-delta="-1"' + (currentPoints <= 0 ? " disabled" : "") + '>-</button>' +
+          '<button class="secondary-button monster-affinity-spend-button" type="button" data-adjust-affinity="' + escapeHtml(location.toLowerCase()) + '" data-monster-index="' + Number(options?.index || 0) + '" data-affinity-element="' + escapeHtml(element) + '" data-affinity-delta="1"' + (availablePoints <= 0 ? " disabled" : "") + '>+</button>' +
+        "</div>",
+        "</div>",
+      ].join("");
+    }).join("");
+
+    return [
+      '<section class="monster-moves-panel monster-affinity-panel">',
+      '<div class="monster-affinity-panel-topline"><strong>Elemental Affinity</strong><span>' + spentPoints + "/" + totalPoints + ' spent · ' + availablePoints + ' available</span></div>',
+      '<div class="monster-affinity-grid">' + controls + "</div>",
+      '<p class="monster-moves-note">Current affinity: <strong>' + escapeHtml(affinitySummary) + "</strong>. Monsters can specialize in more than one element as you spend points.</p>",
+      "</section>",
+    ].join("");
+  }
+
+  function renderMonsterRosterCard(content, monster, options) {
+    if (!monster) {
+      return "";
+    }
+
+    ensureElementalAffinityState(monster);
+    const species = getSpecies(content, monster.speciesId);
+    const variant = getSpeciesVariant(species, monster.variantId || "default");
+    const currentHp = Math.max(0, Number(monster.currentHp || 0));
+    const maxHp = Math.max(1, Number(monster.stats?.hp || species?.baseStats?.hp || 1));
+    const hpPercent = Math.max(0, Math.min(100, (currentHp / maxHp) * 100));
+    const xp = getMonsterXpProgress(monster);
+    const spentAffinityPoints = getSpentElementalAffinityPoints(monster);
+    const totalAffinityPoints = getTotalElementalAffinityPointsForLevel(monster.level || 1);
+    const affinitySummary = getMonsterAffinitySummaryLabel(monster);
+    const isParty = options?.collection === "party";
+    const isLead = isParty && Number(options?.index || 0) === 0;
+    const index = Number(options?.index || 0);
+    const collection = isParty ? "party" : "bank";
+    const moveTarget = options?.movesOpen
+      ? renderMonsterMovesPanel(content, monster, { collection, index })
+      : "";
+    const affinityTarget = options?.affinityOpen
+      ? renderMonsterAffinityPanel(content, monster, { collection, index })
+      : "";
+
+    const actionButtons = isParty
+      ? [
+          '<button class="secondary-button monster-card-action' + (options?.movesOpen ? " monster-card-action-active" : "") + '" type="button" data-action="toggle-monster-moves" data-monster-collection="party" data-monster-index="' + index + '">Moves</button>',
+          '<button class="secondary-button monster-card-action' + (options?.affinityOpen ? " monster-card-action-active" : "") + '" type="button" data-action="toggle-monster-affinity" data-monster-collection="party" data-monster-index="' + index + '">Affinity ' + spentAffinityPoints + "/" + totalAffinityPoints + "</button>",
+          '<button class="secondary-button monster-card-action" type="button" data-action="set-party-lead" data-monster-index="' + index + '"' + (isLead ? " disabled" : "") + ">Lead</button>",
+          '<button class="secondary-button monster-card-action" type="button" data-action="move-party-to-bank" data-monster-index="' + index + '"' + (statefulDisablePartyBankButton(options) ? " disabled" : "") + '>Bank</button>',
+          '<button class="secondary-button monster-card-action monster-card-action-icon" type="button" data-action="move-party-up" data-monster-index="' + index + '"' + (index <= 0 ? " disabled" : "") + '>&uarr;</button>',
+          '<button class="secondary-button monster-card-action monster-card-action-icon" type="button" data-action="move-party-down" data-monster-index="' + index + '"' + (index >= Number(options?.partyCount || 1) - 1 ? " disabled" : "") + '>&darr;</button>',
+        ].join("")
+      : [
+          '<button class="secondary-button monster-card-action' + (options?.movesOpen ? " monster-card-action-active" : "") + '" type="button" data-action="toggle-monster-moves" data-monster-collection="bank" data-monster-index="' + index + '">Moves</button>',
+          '<button class="secondary-button monster-card-action' + (options?.affinityOpen ? " monster-card-action-active" : "") + '" type="button" data-action="toggle-monster-affinity" data-monster-collection="bank" data-monster-index="' + index + '">Affinity ' + spentAffinityPoints + "/" + totalAffinityPoints + "</button>",
+          '<button class="secondary-button monster-card-action" type="button" data-action="withdraw-bank-monster" data-monster-index="' + index + '"' + (Number(options?.partyCount || 0) >= Number(options?.partyLimit || 0) ? " disabled" : "") + '>Withdraw</button>',
+        ].join("");
+
+    return [
+      '<article class="monster-roster-card">',
+      '<div class="monster-roster-visual-wrap">' + renderMonsterVariantVisualMarkup(monster.speciesId, variant?.id || monster.variantId || "default", "monster-roster-visual", "default") + "</div>",
+      '<div class="monster-roster-main">',
+      '<div class="monster-roster-topline"><div><strong>' + escapeHtml(species?.name || monster.speciesId) + '</strong><span>Lv ' + Number(monster.level || 1) + " · " + escapeHtml(affinitySummary) + (isLead ? ' · Lead' : "") + '</span></div></div>',
+      '<div class="monster-roster-statrows">',
+      '<div class="monster-roster-statrow"><span>HP</span><div class="monster-roster-bar"><span style="width:' + hpPercent + '%"></span></div><strong>' + currentHp + "/" + maxHp + "</strong></div>",
+      '<div class="monster-roster-statrow"><span>XP</span><div class="monster-roster-bar monster-roster-bar-xp"><span style="width:' + xp.percent + '%"></span></div><strong>' + xp.current + "/" + xp.threshold + "</strong></div>",
+      "</div>",
+      "</div>",
+      '<div class="monster-roster-actions">' + actionButtons + "</div>",
+      moveTarget,
+      affinityTarget,
+      "</article>",
+    ].join("");
+  }
+
+  function statefulDisablePartyBankButton(options) {
+    return Number(options?.partyCount || 0) <= 1;
+  }
+
+  function renderMonsterMovesPanel(content, monster, options) {
+    const profileState = ACTIVE_APP?.state || null;
+    ensureMonsterSkillState(monster, content);
+    const learnedSkills = (monster.skills || []).map(function (skillId) {
+      return getSkill(content, skillId);
+    }).filter(Boolean);
+    const species = getSpecies(content, monster.speciesId);
+    const availableSkills = getSpeciesSkillPool(species).map(function (skillId) {
+      return getSkill(content, skillId);
+    }).filter(Boolean).filter(function (skill) {
+      return !(monster.skills || []).includes(skill.id);
+    });
+
+    const buildSkillRow = function (skill, bucketLabel) {
+      const unlockStatus = profileState ? getSkillUnlockStatus(profileState, content, skill) : { unlocked: true, reasons: [] };
+      const currentLevel = profileState ? getPlayerSkillLevel(profileState, content, skill.id) : 1;
+      const effectiveSkill = getEffectiveSkillAtLevel(skill, currentLevel || 1);
+      const maxLevel = getSkillMaxLevel(skill);
+      const xpProgress = profileState ? getPlayerSkillXpProgress(profileState, content, skill.id) : {
+        current: 0,
+        threshold: 0,
+        percent: 0,
+        maxed: currentLevel >= maxLevel,
+      };
+      const canLearn = bucketLabel === "available" && unlockStatus.unlocked && currentLevel > 0;
+      const actionLabel = bucketLabel === "learned" ? "Remove" : "Learn";
+      const actionName = bucketLabel === "learned" ? "remove-monster-skill" : "learn-monster-skill";
+      const requirementCopy = unlockStatus.unlocked
+        ? (bucketLabel === "learned"
+            ? "Ready to use at player skill level " + currentLevel + "."
+            : "Unlocked for this save.")
+        : unlockStatus.reasons.join(" • ");
+      return [
+        '<li class="monster-move-row' + (unlockStatus.unlocked ? "" : " monster-move-row-locked") + '">',
+        '<div class="monster-move-row-main"><span><strong>' + escapeHtml(skill.name) + '</strong><em>' + escapeHtml(effectiveSkill.kind || "skill") + " · " + escapeHtml(normalizeSkillElement(effectiveSkill.element)) + " · Power " + Number(effectiveSkill.power || 0) + " · Acc " + Number(effectiveSkill.accuracy ?? 100) + '%</em></span><div class="monster-move-xp"><div class="monster-move-xp-bar"><span style="width:' + Number(xpProgress.percent || 0) + '%"></span></div><strong>' + (xpProgress.maxed ? "Max" : (Number(xpProgress.current || 0) + "/" + Number(xpProgress.threshold || 0) + " XP")) + '</strong></div><small>' + escapeHtml(requirementCopy) + (effectiveSkill.description ? "<br>" + escapeHtml(effectiveSkill.description) : "") + "</small></div>",
+        '<div class="monster-move-row-controls"><button class="secondary-button monster-move-action" type="button" data-action="' + actionName + '" data-monster-collection="' + escapeHtml(options?.collection || "party") + '" data-monster-index="' + Number(options?.index || 0) + '" data-skill-id="' + escapeHtml(skill.id) + '"' + (bucketLabel === "available" && !canLearn ? " disabled" : "") + '>' + actionLabel + '</button><span class="monster-move-level-badge">Lv ' + currentLevel + "/" + maxLevel + '</span></div>',
+        '</li>',
+      ].join("");
+    };
+
+    const learnedMarkup = learnedSkills.length
+      ? learnedSkills.map(function (skill) {
+          return buildSkillRow(skill, "learned");
+        }).join("")
+      : "<li><span>No learned moves yet.</span></li>";
+    const availableMarkup = availableSkills.length
+      ? availableSkills.map(function (skill) {
+          return buildSkillRow(skill, "available");
+        }).join("")
+      : "<li><span>No additional moves available yet.</span></li>";
+
+    return [
+      '<section class="monster-moves-panel">',
+      '<div class="monster-moves-columns">',
+      '<div><h4>Learned Moves</h4><ul class="compact-list">' + learnedMarkup + "</ul></div>",
+      '<div><h4>Available Moves</h4><ul class="compact-list">' + availableMarkup + "</ul></div>",
+      "</div>",
+      '<p class="monster-moves-note">' + escapeHtml((species?.name || "This monster") + " can learn moves from the Available Moves column. Skill levels now increase automatically from battle usage and victories.") + "</p>",
+      "</section>",
+    ].join("");
   }
 
   function normalizeFrameList(value, fallbackFrame) {
@@ -1298,28 +2285,35 @@
       return "";
     }
 
+    const ui = ensureWorldUiState(state);
+    const isExpanded = ui.encounterPreviewExpanded !== false;
+
     return (
-      '<div class="encounter-preview-strip">' +
+      '<section class="encounter-preview' + (isExpanded ? " is-expanded" : " is-collapsed") + '" aria-label="Encounter preview">' +
+      '<button class="encounter-preview-heading" type="button" data-action="toggle-encounter-preview" aria-expanded="' + String(isExpanded) + '"><span class="encounter-preview-heading-main"><span class="encounter-preview-title">Encounters</span><span class="encounter-preview-count">' + entries.length + '</span></span><span class="encounter-preview-toggle-label">' + (isExpanded ? "Hide" : "Show") + '</span></button>' +
+      '<div class="encounter-preview-strip" role="list"' + (isExpanded ? "" : " hidden") + '>' +
       entries.map(function (entry) {
-        const sprite = entry.variant?.sprite || "";
-        const variantLabel = entry.variant?.id || "Default";
-        const normalizedVariantLabel = String(variantLabel).trim() || "Default";
-        const label = entry.species.name + " - " + normalizedVariantLabel;
+        const variantLabel = formatMonsterVariantLabel(entry.variant, entry.variantId || "default");
+        const label = entry.species.name + " - " + variantLabel;
         const nowBadge = entry.isCurrent
           ? '<span class="encounter-preview-badge">Now</span>'
           : "";
-        const previewVisual = sprite
-          ? '<img class="encounter-preview-icon" src="' + escapeHtml(sprite) + '" alt="' + escapeHtml(label) + '" title="' + escapeHtml(label) + '" />'
-          : '<span class="encounter-preview-fallback" title="' + escapeHtml(label) + '">' + escapeHtml(entry.species.name.slice(0, 1)) + "</span>";
+        const previewVisual = renderMonsterVariantVisualMarkup(
+          entry.speciesId,
+          entry.variantId || "default",
+          "encounter-preview-icon",
+          "default"
+        );
 
         return (
-          '<div class="encounter-preview-card" title="' + escapeHtml(label) + '">' +
+          '<article class="encounter-preview-card" role="listitem" title="' + escapeHtml(label) + '">' +
           '<div class="encounter-preview-visual">' + previewVisual + nowBadge + "</div>" +
-          '<span class="encounter-preview-label">' + escapeHtml(label) + "</span>" +
-          "</div>"
+          '<div class="encounter-preview-label"><strong>' + escapeHtml(entry.species.name) + '</strong><span>' + escapeHtml(variantLabel) + "</span></div>" +
+          "</article>"
         );
       }).join("") +
-      "</div>"
+      "</div>" +
+      "</section>"
     );
   }
 
@@ -1450,7 +2444,7 @@
     const variantId = getSpawnOptionVariantId(species, pickedOption) || getSpeciesVariant(species, "")?.id || "default";
     const sourceSpawnId = spawn.id || ("spawn-" + (index + 1));
 
-    return {
+    const wildMonster = {
       id: sourceSpawnId,
       speciesId: species.id,
       variantId,
@@ -1472,6 +2466,8 @@
       respawnSeconds: Number(spawn.respawnSeconds || 120),
       spawnConfig: JSON.parse(JSON.stringify(spawn)),
     };
+    ensureElementalAffinityState(wildMonster);
+    return wildMonster;
   }
 
   function getEditableVisibleSpawns(mapMeta) {
@@ -1730,15 +2726,11 @@
   function buildArenaBattleRoster(state, content, arena) {
     ensureArenaPools(content);
     const authoredTeam = (arena?.team || []).map(function (member) {
-      return Object.assign({}, member);
-    }).filter(function (member) {
-      return Boolean(getSpecies(content, member.speciesId));
-    });
+      return resolveArenaRosterMember(content, member);
+    }).filter(Boolean);
     const fallbackPool = (arena?.pool || []).map(function (member) {
-      return Object.assign({}, member);
-    }).filter(function (member) {
-      return Boolean(getSpecies(content, member.speciesId));
-    });
+      return resolveArenaRosterMember(content, member);
+    }).filter(Boolean);
     const requestedSize = Math.max(1, Number(state.settings?.arenaLeaderPartySize || authoredTeam.length || 1));
     const roster = authoredTeam.slice(0, requestedSize);
 
@@ -1808,11 +2800,11 @@
       crestName: arena?.crestName || crestId || "Unassigned Crest",
       recommendedLevel: arena?.recommendedLevel ?? "TBD",
       leaderPartySize: arena?.partySize ?? "TBD",
-      rewardText: arena?.rewardText || "Defeat the arena leader to earn this crest once trainer battles are connected.",
-      introText: interaction.text || arena?.description || "This arena is ready for leader metadata and crest progression.",
+      rewardText: arena?.rewardText || "Defeat the arena leader to earn this crest.",
+      introText: interaction.text || arena?.description || "The arena leader is ready when you are.",
       arenaStatus: isCleared
         ? "Crest earned"
-        : "Arena framework ready. Trainer battle integration will connect here next.",
+        : "Arena challenge ready.",
     };
   }
 
@@ -1973,7 +2965,10 @@
         label: "Prototype wild " + secondSpecies.name,
         sourceSpawnId: "wild-2",
       },
-    ];
+    ].map(function (monster) {
+      ensureElementalAffinityState(monster);
+      return monster;
+    });
   }
 
   function buildStarterVariantSelections(content) {
@@ -2046,7 +3041,7 @@
     };
     world.camera = getCamera(initialCameraTarget, content);
 
-    return {
+    const state = {
       screen: "world",
       currentSaveSlotId: slotId,
       currentSaveName: options.saveName,
@@ -2080,6 +3075,8 @@
         ? "Welcome to " + starterTown.name + ". Leave town through a transition to find wild monsters."
         : "Welcome to " + starterTown.name + ". Walk into a visible wild monster to start a battle.",
     };
+    ensurePlayerSkillProgressState(state, content);
+    return state;
   }
 
   function hydrateStateFromSave(save, content) {
@@ -2108,6 +3105,16 @@
       message: "Loaded " + save.saveName + ".",
     };
 
+    state.party.forEach(function (monster) {
+      ensureElementalAffinityState(monster);
+    });
+    state.bank.forEach(function (monster) {
+      ensureElementalAffinityState(monster);
+    });
+    (state.world.wildMonsters || []).forEach(function (monster) {
+      ensureElementalAffinityState(monster);
+    });
+
     if (!Array.isArray(state.world.wildMonsters) || !state.world.wildMonsters.length) {
       state.world.wildMonsters = createWildMonstersForMap(content, state.world.currentMapId, state.world.position);
     }
@@ -2119,6 +3126,7 @@
     ensurePlayerVisualState(state);
     ensureWorldCameraState(state, content);
     ensureArenaProgress(state);
+    ensurePlayerSkillProgressState(state, content);
 
     return state;
   }
@@ -2127,6 +3135,17 @@
     const world = Object.assign({}, state.world);
     delete world.camera;
     delete world.playerVisual;
+    world.wildMonsters = (state.world?.wildMonsters || []).map(function (monster) {
+      const next = Object.assign({}, monster);
+      delete next._battleTemp;
+      return next;
+    });
+
+    const sanitizeMonster = function (monster) {
+      const next = Object.assign({}, monster);
+      delete next._battleTemp;
+      return next;
+    };
 
     return {
       slotId: state.currentSaveSlotId || "slot-1",
@@ -2136,8 +3155,8 @@
       world,
       settings: state.settings,
       arenaProgress: ensureArenaProgress(state),
-      party: state.party,
-      bank: state.bank,
+      party: (state.party || []).map(sanitizeMonster),
+      bank: (state.bank || []).map(sanitizeMonster),
       registry: state.registry,
       inventory: state.inventory,
     };
@@ -2145,11 +3164,35 @@
 
   function ensureWorldUiState(state) {
     if (!state.ui) {
-      state.ui = { activePanel: "" };
+      state.ui = { activePanel: "", encounterPreviewExpanded: true, monsterMovesTarget: null, monsterAffinityTarget: null };
     }
 
     if (typeof state.ui.activePanel !== "string") {
       state.ui.activePanel = "";
+    }
+
+    if (typeof state.ui.encounterPreviewExpanded !== "boolean") {
+      state.ui.encounterPreviewExpanded = true;
+    }
+
+    if (
+      state.ui.monsterMovesTarget !== null
+      && (
+        typeof state.ui.monsterMovesTarget !== "object"
+        || !["party", "bank"].includes(state.ui.monsterMovesTarget.collection)
+      )
+    ) {
+      state.ui.monsterMovesTarget = null;
+    }
+
+    if (
+      state.ui.monsterAffinityTarget !== null
+      && (
+        typeof state.ui.monsterAffinityTarget !== "object"
+        || !["party", "bank"].includes(state.ui.monsterAffinityTarget.collection)
+      )
+    ) {
+      state.ui.monsterAffinityTarget = null;
     }
 
     return state.ui;
@@ -2337,12 +3380,20 @@
     return visual;
   }
 
-  function calculateDamage(attacker, defender) {
-    const base = attacker.stats.attack - Math.floor(defender.stats.defense / 2);
-    return Math.max(1, base + Math.floor(Math.random() * 3));
+  function calculateDamage(attacker, defender, options) {
+    const skill = options?.skill || null;
+    const battleModel = options?.battleModel || ensureBattleModelSettings(ACTIVE_APP?.content || fallbackContent);
+    const basePower = Number(skill?.power ?? options?.power ?? 0);
+    const rawBase = basePower > 0
+      ? basePower + Math.floor(getEffectiveBattleStat(attacker, "attack") * Number(battleModel.skillAttackScale || 0)) - Math.floor(getEffectiveBattleStat(defender, "defense") * Number(battleModel.skillDefenseScale || 0))
+      : getEffectiveBattleStat(attacker, "attack") - Math.floor(getEffectiveBattleStat(defender, "defense") / Math.max(1, Number(battleModel.basicDefenseDivisor || 1)));
+    const variance = Math.floor(Math.random() * (Math.max(0, Number(battleModel.randomVarianceMax || 0)) || 1));
+    const affinityMultiplier = 1 + getElementalAffinityDamageBonus(attacker, skill);
+    return Math.max(1, Math.round((Math.max(1, rawBase) + variance) * affinityMultiplier));
   }
 
   function startBattle(state, content, wildMonsterId) {
+    clearAllBattleTemporaryState(state);
     const wildMonster = state.world.wildMonsters.find(function (monster) {
       return monster.id === wildMonsterId;
     });
@@ -2363,6 +3414,9 @@
       currentHp: species.baseStats.hp,
       maxHp: species.baseStats.hp,
     };
+    ensureElementalAffinityState(enemy, {
+      primaryElement: wildMonster.primaryElementalAffinity,
+    });
 
     state.battle = {
       enemy,
@@ -2392,15 +3446,25 @@
     state.player.money += 12;
   }
 
+  function grantBattleVictorySkillXp(state, content, monster) {
+    if (!monster || !Array.isArray(monster.skills)) {
+      return;
+    }
+
+    monster.skills.forEach(function (skillId) {
+      grantSkillXp(state, content, skillId, 2, { showBattleLog: true });
+    });
+  }
+
   function createBattleEnemyFromArenaTeamMember(content, member) {
-    const species = getSpecies(content, member.speciesId);
+    const species = getSpeciesFlexible(content, member.speciesId);
     if (!species) {
       return null;
     }
 
     const level = Math.max(1, Number(member.level || 1));
-    const variant = getSpeciesVariant(species, member.variantId || "");
-    return {
+    const variant = getSpeciesVariantFlexible(species, member.variantId || "");
+    const enemy = {
       speciesId: species.id,
       variantId: variant?.id || "default",
       name: species.name,
@@ -2409,9 +3473,14 @@
       currentHp: species.baseStats.hp,
       maxHp: species.baseStats.hp,
     };
+    ensureElementalAffinityState(enemy, {
+      primaryElement: member?.primaryElementalAffinity,
+    });
+    return enemy;
   }
 
   function startArenaBattle(state, content, arena, interaction) {
+    clearAllBattleTemporaryState(state);
     const roster = buildArenaBattleRoster(state, content, arena);
     const team = roster.map(function (member) {
       return createBattleEnemyFromArenaTeamMember(content, member);
@@ -2443,6 +3512,187 @@
     state.message = "Arena battle started at " + (arena.name || interaction.label || "the arena") + ".";
   }
 
+  function getSkillHitChance(monster, skill) {
+    ensureSkillEffectCollections(skill);
+    return Math.max(0, Math.min(100, Number(skill?.accuracy ?? 100) + getEffectiveBattleStat(monster, "accuracy")));
+  }
+
+  function applySkillModifierEffect(target, effect) {
+    const temp = ensureBattleTemporaryState(target);
+    if (!effect) {
+      return;
+    }
+
+    if (effect.type === "cleanse-negative") {
+      if (effect.stat === "all") {
+        BATTLE_MODIFIER_STATS.forEach(function (stat) {
+          if (temp.modifiers[stat] < 0) {
+            temp.modifiers[stat] = Math.min(0, temp.modifiers[stat] + Number(effect.amount || 0));
+          }
+        });
+      } else if (temp.modifiers[effect.stat] < 0) {
+        temp.modifiers[effect.stat] = Math.min(0, temp.modifiers[effect.stat] + Number(effect.amount || 0));
+      }
+    } else {
+      const direction = effect.amount || 0;
+      if (effect.stat === "all") {
+        BATTLE_MODIFIER_STATS.forEach(function (stat) {
+          temp.modifiers[stat] += direction;
+        });
+      } else {
+        temp.modifiers[effect.stat] += direction;
+      }
+    }
+
+    if (effect.showLabel !== false && effect.label) {
+      addBattleTag(target, effect.label);
+    }
+  }
+
+  function applySkillStatusEffect(target, effect) {
+    const temp = ensureBattleTemporaryState(target);
+    const existing = temp.statuses.find(function (entry) {
+      return entry.type === effect.type && String(entry.label || "") === String(effect.label || "");
+    });
+    if (existing) {
+      existing.duration = Math.max(existing.duration, Number(effect.duration || 1));
+      existing.power = Math.max(existing.power, Number(effect.power || 0));
+      existing.tickChance = Math.max(existing.tickChance, Number(effect.tickChance || 0));
+      existing.showLabel = effect.showLabel !== false;
+      return existing;
+    }
+
+    const next = {
+      type: effect.type,
+      label: effect.label || effect.type,
+      showLabel: effect.showLabel !== false,
+      duration: Math.max(1, Number(effect.duration || 1)),
+      power: Math.max(0, Number(effect.power || 0)),
+      tickChance: Math.max(0, Math.min(100, Number(effect.tickChance || 0))),
+    };
+    temp.statuses.push(next);
+    return next;
+  }
+
+  function processSkillSecondaryEffects(state, content, user, target, skill) {
+    ensureSkillEffectCollections(skill);
+    const userName = getBattlerDisplayName(content, user);
+    const targetName = getBattlerDisplayName(content, target);
+
+    (skill.statModifiers?.self || []).forEach(function (effect) {
+      applySkillModifierEffect(user, effect);
+      if (effect.label) {
+        state.battle.log.unshift(userName + " gained " + effect.label + ".");
+      }
+    });
+    (skill.statModifiers?.foe || []).forEach(function (effect) {
+      applySkillModifierEffect(target, effect);
+      if (effect.label) {
+        state.battle.log.unshift(targetName + " was affected by " + effect.label + ".");
+      }
+    });
+    (skill.statusEffects || []).forEach(function (effect) {
+      if (Math.random() * 100 > Number(effect.chance || 0)) {
+        return;
+      }
+      const recipient = effect.target === "self" ? user : target;
+      const recipientName = recipient === user ? userName : targetName;
+      const applied = applySkillStatusEffect(recipient, effect);
+      state.battle.log.unshift(recipientName + " was afflicted with " + (applied.label || applied.type) + ".");
+    });
+  }
+
+  function processPreTurnStatuses(state, content, battler) {
+    const temp = ensureBattleTemporaryState(battler);
+    const confusion = temp.statuses.find(function (status) {
+      return status.type === "confuse";
+    });
+    if (!confusion) {
+      return { canAct: true };
+    }
+
+    const name = getBattlerDisplayName(content, battler);
+    const roll = Math.random();
+    if (roll < 1 / 3) {
+      const selfDamage = Math.max(1, Math.round((Number(confusion.power || 4) + getEffectiveBattleStat(battler, "attack") * 0.25)));
+      battler.currentHp = Math.max(0, Number(battler.currentHp || 0) - selfDamage);
+      state.battle.log.unshift(name + " hurt itself in confusion for " + selfDamage + " damage.");
+      return { canAct: false, selfDamage: true };
+    }
+    if (roll < 2 / 3) {
+      state.battle.log.unshift(name + " was confused and could not act.");
+      return { canAct: false };
+    }
+    state.battle.log.unshift(name + " fought through the confusion.");
+    return { canAct: true };
+  }
+
+  function processEndOfTurnStatuses(state, content, battler) {
+    const temp = ensureBattleTemporaryState(battler);
+    const name = getBattlerDisplayName(content, battler);
+    const nextStatuses = [];
+
+    (temp.statuses || []).forEach(function (status) {
+      if (status.type === "burn" && Math.random() * 100 <= Number(status.tickChance || 0)) {
+        const burnDamage = Math.max(1, Number(status.power || 1));
+        battler.currentHp = Math.max(0, Number(battler.currentHp || 0) - burnDamage);
+        state.battle.log.unshift(name + " suffered " + burnDamage + " burn damage.");
+      }
+
+      status.duration = Math.max(0, Number(status.duration || 0) - 1);
+      if (status.duration > 0) {
+        nextStatuses.push(status);
+      } else {
+        state.battle.log.unshift((status.label || status.type) + " wore off " + name + ".");
+      }
+    });
+
+    temp.statuses = nextStatuses;
+  }
+
+  function handlePlayerDefeat(state, content, playerMonster) {
+    state.battle.outcome = "defeat";
+    state.battle.log.unshift("Your " + getBattlerDisplayName(content, playerMonster) + " fainted.");
+    playerMonster.currentHp = playerMonster.stats.hp;
+    returnToTown(state, content);
+    state.message = "You blacked out and returned to " + content.mapMetadata[state.world.currentMapId].displayName + ".";
+  }
+
+  function handleEnemyDefeat(state, content, enemy) {
+    const enemySpecies = getSpecies(content, enemy.speciesId);
+    const activeMonster = state.party[state.battle.playerIndex] || state.party[0] || null;
+    state.battle.log.unshift(enemySpecies.name + " fainted.");
+    if (state.battle.type === "trainer") {
+      const nextEnemyIndex = Number(state.battle.enemyIndex || 0) + 1;
+      const nextEnemy = state.battle.enemyQueue?.[nextEnemyIndex];
+      if (nextEnemy) {
+        state.battle.enemyIndex = nextEnemyIndex;
+        state.battle.enemy = nextEnemy;
+        state.battle.log.unshift((state.battle.opponentTitle || "Leader") + " " + (state.battle.opponentName || "Trainer") + " sent out " + nextEnemy.name + ".");
+      } else {
+        state.battle.outcome = "victory";
+        rewardArenaVictory(state, state.battle);
+        grantBattleVictorySkillXp(state, content, activeMonster);
+        const rewardParts = [];
+        if (state.battle.crestName) {
+          rewardParts.push("the " + state.battle.crestName);
+        }
+        if (Number(state.battle.rewardMoney || 0) > 0) {
+          rewardParts.push("$" + Number(state.battle.rewardMoney || 0));
+        }
+        state.message = rewardParts.length
+          ? "Victory. You earned " + rewardParts.join(" and ") + "."
+          : "Victory. You cleared the arena challenge.";
+      }
+    } else {
+      state.battle.outcome = "victory";
+      markWildMonsterDefeated(state, enemy.wildMonsterId);
+      grantVictoryRewards(state);
+      grantBattleVictorySkillXp(state, content, activeMonster);
+      state.message = "Victory. Your party earned 5 XP and $12.";
+    }
+  }
+
   function rewardArenaVictory(state, battle) {
     const progress = ensureArenaProgress(state);
     const activeMonster = state.party[0];
@@ -2469,14 +3719,17 @@
     syncCameraToPlayer(state, content);
   }
 
-  function resolveBattleAttack(state, content) {
+  function resolveBattleAttack(state, content, options) {
     if (!state.battle || state.battle.outcome) {
       return;
     }
 
     const playerMonster = state.party[state.battle.playerIndex];
+    const selectedSkill = options?.skill || null;
+    ensureSkillEffectCollections(selectedSkill);
+    const battleModel = ensureBattleModelSettings(content);
     let skipEnemyTurn = false;
-    const playerFirst = playerMonster.stats.speed >= state.battle.enemy.stats.speed;
+    const playerFirst = getEffectiveBattleStat(playerMonster, "speed") >= getEffectiveBattleStat(state.battle.enemy, "speed");
     const steps = playerFirst ? ["player", "enemy"] : ["enemy", "player"];
 
     steps.forEach(function (step) {
@@ -2489,56 +3742,81 @@
       const enemyInstance = {
         stats: enemy.stats,
         currentHp: enemy.currentHp,
+        _battleTemp: enemy._battleTemp,
       };
 
       if (step === "player") {
-        const damage = calculateDamage(playerMonster, enemyInstance);
-        enemy.currentHp = Math.max(0, enemy.currentHp - damage);
-        state.battle.log.unshift(getSpecies(content, playerMonster.speciesId).name + " dealt " + damage + " damage.");
-
-        if (enemy.currentHp <= 0) {
-          state.battle.log.unshift(enemySpecies.name + " fainted.");
-          skipEnemyTurn = true;
-
-          if (state.battle.type === "trainer") {
-            const nextEnemyIndex = Number(state.battle.enemyIndex || 0) + 1;
-            const nextEnemy = state.battle.enemyQueue?.[nextEnemyIndex];
-            if (nextEnemy) {
-              state.battle.enemyIndex = nextEnemyIndex;
-              state.battle.enemy = nextEnemy;
-              state.battle.log.unshift((state.battle.opponentTitle || "Leader") + " " + (state.battle.opponentName || "Trainer") + " sent out " + nextEnemy.name + ".");
-            } else {
-              state.battle.outcome = "victory";
-              rewardArenaVictory(state, state.battle);
-              const rewardParts = [];
-              if (state.battle.crestName) {
-                rewardParts.push("the " + state.battle.crestName);
-              }
-              if (Number(state.battle.rewardMoney || 0) > 0) {
-                rewardParts.push("$" + Number(state.battle.rewardMoney || 0));
-              }
-              state.message = rewardParts.length
-                ? "Victory. You earned " + rewardParts.join(" and ") + "."
-                : "Victory. You cleared the arena challenge.";
-            }
-          } else {
-            state.battle.outcome = "victory";
-            markWildMonsterDefeated(state, enemy.wildMonsterId);
-            grantVictoryRewards(state);
-            state.message = "Victory. Your party earned 5 XP and $12.";
+        const preTurn = processPreTurnStatuses(state, content, playerMonster);
+        if (!preTurn.canAct) {
+          if (Number(playerMonster.currentHp || 0) <= 0) {
+            handlePlayerDefeat(state, content, playerMonster);
+            return;
           }
+          processEndOfTurnStatuses(state, content, playerMonster);
+          if (Number(playerMonster.currentHp || 0) <= 0 && !state.battle.outcome) {
+            handlePlayerDefeat(state, content, playerMonster);
+          }
+          return;
+        }
+
+        const hitChance = selectedSkill ? getSkillHitChance(playerMonster, selectedSkill) : 100;
+        if (selectedSkill && Math.random() * 100 > hitChance) {
+          state.battle.log.unshift(getBattlerDisplayName(content, playerMonster) + " missed.");
+          processEndOfTurnStatuses(state, content, playerMonster);
+          if (Number(playerMonster.currentHp || 0) <= 0 && !state.battle.outcome) {
+            handlePlayerDefeat(state, content, playerMonster);
+          }
+          return;
+        }
+
+        const skillDealsDamage = !selectedSkill || selectedSkill.kind === "attack" || Number(selectedSkill.power || 0) > 0;
+        const damage = calculateDamage(playerMonster, enemyInstance, { skill: selectedSkill, battleModel });
+        if (skillDealsDamage) {
+          enemy.currentHp = Math.max(0, enemy.currentHp - damage);
+          const damageSuffix = selectedSkill && normalizeSkillElement(selectedSkill.element) !== "Neutral"
+            ? " with " + normalizeSkillElement(selectedSkill.element) + " power"
+            : "";
+          state.battle.log.unshift(getSpecies(content, playerMonster.speciesId).name + " dealt " + damage + " damage" + damageSuffix + ".");
+        } else {
+          state.battle.log.unshift(getBattlerDisplayName(content, playerMonster) + " used a non-damaging skill.");
+        }
+
+        if (selectedSkill) {
+          processSkillSecondaryEffects(state, content, playerMonster, enemy, selectedSkill);
+        }
+        if (enemy.currentHp <= 0) {
+          skipEnemyTurn = true;
+          handleEnemyDefeat(state, content, enemy);
+        }
+        processEndOfTurnStatuses(state, content, playerMonster);
+        if (Number(playerMonster.currentHp || 0) <= 0 && !state.battle.outcome) {
+          handlePlayerDefeat(state, content, playerMonster);
         }
       } else {
-        const damage = calculateDamage({ stats: enemy.stats }, playerMonster);
+        const preTurn = processPreTurnStatuses(state, content, enemy);
+        if (!preTurn.canAct) {
+          if (Number(enemy.currentHp || 0) <= 0) {
+            handleEnemyDefeat(state, content, enemy);
+            return;
+          }
+          processEndOfTurnStatuses(state, content, enemy);
+          if (Number(enemy.currentHp || 0) <= 0 && !state.battle.outcome) {
+            handleEnemyDefeat(state, content, enemy);
+          }
+          return;
+        }
+        const damage = calculateDamage({ stats: enemy.stats, elementalAffinityPoints: enemy.elementalAffinityPoints, primaryElementalAffinity: enemy.primaryElementalAffinity }, playerMonster, { battleModel });
         playerMonster.currentHp = Math.max(0, playerMonster.currentHp - damage);
         state.battle.log.unshift(enemySpecies.name + " dealt " + damage + " damage.");
 
         if (playerMonster.currentHp <= 0) {
-          state.battle.outcome = "defeat";
-          state.battle.log.unshift("Your " + getSpecies(content, playerMonster.speciesId).name + " fainted.");
-          playerMonster.currentHp = playerMonster.stats.hp;
-          returnToTown(state, content);
-          state.message = "You blacked out and returned to " + content.mapMetadata[state.world.currentMapId].displayName + ".";
+          handlePlayerDefeat(state, content, playerMonster);
+          return;
+        }
+
+        processEndOfTurnStatuses(state, content, enemy);
+        if (Number(enemy.currentHp || 0) <= 0 && !state.battle.outcome) {
+          handleEnemyDefeat(state, content, enemy);
         }
       }
     });
@@ -2549,17 +3827,24 @@
       return;
     }
 
-    const skill = ensureSkillCatalog(content).find(function (entry) {
+    ensurePlayerSkillProgressState(state, content);
+    const baseSkill = ensureSkillCatalog(content).find(function (entry) {
       return entry.id === skillId;
     });
-
-    if (skill) {
-      const activeMonster = state.party[state.battle.playerIndex];
-      const species = getSpecies(content, activeMonster.speciesId);
-      state.battle.log.unshift((species?.name || "Your monster") + " used " + skill.name + ".");
+    const skillLevel = getPlayerSkillLevel(state, content, skillId);
+    if (!baseSkill || skillLevel <= 0) {
+      state.battle.log.unshift("That skill is not unlocked for this save yet.");
+      return;
     }
+    const skill = getEffectiveSkillAtLevel(baseSkill, skillLevel);
 
-    resolveBattleAttack(state, content);
+    const activeMonster = state.party[state.battle.playerIndex];
+    const species = getSpecies(content, activeMonster.speciesId);
+    const elementLabel = normalizeSkillElement(skill.element);
+    state.battle.log.unshift((species?.name || "Your monster") + " used " + skill.name + " Lv " + skillLevel + (elementLabel !== "Neutral" ? " (" + elementLabel + ")" : "") + ".");
+
+    grantSkillXp(state, content, skillId, 1, { showBattleLog: true });
+    resolveBattleAttack(state, content, { skill });
   }
 
   function resolveCatch(state, content) {
@@ -2583,8 +3868,9 @@
     const catchChance = Math.max(0.25, 0.95 - hpRatio * 0.7);
 
     if (Math.random() <= catchChance) {
-      const captured = createMonsterInstance(species, enemy.level);
-      captured.variantId = enemy.variantId || captured.variantId;
+      const captured = createMonsterInstance(species, enemy.level, enemy.variantId, {
+        primaryElement: enemy.primaryElementalAffinity,
+      });
       state.registry.seen = Array.from(new Set(state.registry.seen.concat(species.id)));
       state.registry.caught = Array.from(new Set(state.registry.caught.concat(species.id)));
 
@@ -2627,8 +3913,9 @@
     const befriendChance = Math.max(0.25, 0.95 - hpRatio * 0.7);
 
     if (Math.random() <= befriendChance) {
-      const befriended = createMonsterInstance(species, enemy.level);
-      befriended.variantId = enemy.variantId || befriended.variantId;
+      const befriended = createMonsterInstance(species, enemy.level, enemy.variantId, {
+        primaryElement: enemy.primaryElementalAffinity,
+      });
       state.registry.seen = Array.from(new Set(state.registry.seen.concat(species.id)));
       state.registry.caught = Array.from(new Set(state.registry.caught.concat(species.id)));
 
@@ -2658,15 +3945,36 @@
     const playerMonster = state.party[state.battle.playerIndex];
     const enemy = state.battle.enemy;
     const enemySpecies = getSpecies(content, enemy.speciesId);
-    const damage = calculateDamage({ stats: enemy.stats }, playerMonster);
+    const preTurn = processPreTurnStatuses(state, content, enemy);
+    if (!preTurn.canAct) {
+      if (Number(enemy.currentHp || 0) <= 0) {
+        handleEnemyDefeat(state, content, enemy);
+        return;
+      }
+      processEndOfTurnStatuses(state, content, enemy);
+      if (Number(enemy.currentHp || 0) <= 0 && !state.battle.outcome) {
+        handleEnemyDefeat(state, content, enemy);
+      }
+      return;
+    }
+
+    const damage = calculateDamage({
+      stats: enemy.stats,
+      elementalAffinityPoints: enemy.elementalAffinityPoints,
+      primaryElementalAffinity: enemy.primaryElementalAffinity,
+      _battleTemp: enemy._battleTemp,
+    }, playerMonster);
     playerMonster.currentHp = Math.max(0, playerMonster.currentHp - damage);
     state.battle.log.unshift(enemySpecies.name + " hit back for " + damage + " damage.");
 
     if (playerMonster.currentHp <= 0) {
-      state.battle.outcome = "defeat";
-      playerMonster.currentHp = playerMonster.stats.hp;
-      returnToTown(state, content);
-      state.message = "You blacked out and returned to " + content.mapMetadata[state.world.currentMapId].displayName + ".";
+      handlePlayerDefeat(state, content, playerMonster);
+      return;
+    }
+
+    processEndOfTurnStatuses(state, content, enemy);
+    if (Number(enemy.currentHp || 0) <= 0 && !state.battle.outcome) {
+      handleEnemyDefeat(state, content, enemy);
     }
   }
 
@@ -3779,6 +5087,7 @@
     const currentHp = Number(options.currentHp || monster.currentHp || 0);
     const hpPercent = Math.max(0, Math.min(100, (currentHp / Math.max(1, maxHp)) * 100));
     const visual = renderMonsterVariantVisualMarkup(monster.speciesId, variant?.id || monster.variantId || "default", "battle-hud-sprite", "default");
+    const labels = getVisibleBattleLabels(monster);
     const badgeSideClass = options.badgeSide === "right"
       ? " battle-hud-level-badge-right"
       : " battle-hud-level-badge-left";
@@ -3790,6 +5099,11 @@
       '<h3 class="battle-hud-name">' + escapeHtml(species?.name || monster.speciesId) + " (" + escapeHtml(variantLabel) + ")" + "</h3>",
       '<div class="battle-hp-bar battle-hp-bar-hud"><span style="width:' + hpPercent + '%"></span></div>',
       '<div class="battle-hp-row"><span>' + currentHp + "/" + maxHp + ' HP</span></div>',
+      (labels.length
+        ? '<div class="battle-hud-labels">' + labels.map(function (label) {
+            return '<span class="battle-hud-label">' + escapeHtml(label) + "</span>";
+          }).join("") + "</div>"
+        : ""),
       (options.partyPips || ""),
       "</div>",
       "</article>",
@@ -4086,11 +5400,18 @@
       ? state.battle.enemyQueue
       : [enemy];
     const enemyActiveIndex = isTrainerBattle ? Number(state.battle.enemyIndex || 0) : 0;
+    ensurePlayerSkillProgressState(state, content);
     const activeSkills = (activeMonster.skills || []).map(function (skillId) {
-      return ensureSkillCatalog(content).find(function (entry) {
+      const baseSkill = ensureSkillCatalog(content).find(function (entry) {
         return entry.id === skillId;
       });
-    }).filter(Boolean);
+      if (!baseSkill) {
+        return null;
+      }
+      return getEffectiveSkillAtLevel(baseSkill, getPlayerSkillLevel(state, content, skillId));
+    }).filter(function (skill) {
+      return skill && getPlayerSkillLevel(state, content, skill.id) > 0;
+    });
     const enemyPartyPips = renderBattlePartyPips(enemyRoster, enemyActiveIndex, "battle-party-pips-enemy");
     const playerPartyPips = renderBattlePartyPips(state.party, state.battle.playerIndex, "battle-party-pips-player");
     const partyRoster = state.party.map(function (monster, index) {
@@ -4120,9 +5441,12 @@
     } else if (menu === "fight") {
       commandCopy = "Choose a skill to use.";
       actionPanel = '<div class="battle-action-grid">' +
-        activeSkills.map(function (skill) {
-          return '<button type="button" class="battle-action-card" data-battle-skill="' + escapeHtml(skill.id) + '"><strong>' + escapeHtml(skill.name) + '</strong><span>' + escapeHtml(skill.kind || "skill") + " · Power " + Number(skill.power || 0) + "</span></button>";
-        }).join("") +
+        (activeSkills.length ? activeSkills.map(function (skill) {
+          const skillElement = normalizeSkillElement(skill.element);
+          const affinityBonusPercent = Math.round(getElementalAffinityDamageBonus(activeMonster, skill) * 100);
+          const skillLevel = getPlayerSkillLevel(state, content, skill.id);
+          return '<button type="button" class="battle-action-card" data-battle-skill="' + escapeHtml(skill.id) + '"><strong>' + escapeHtml(skill.name) + ' · Lv ' + skillLevel + "/" + getSkillMaxLevel(skill) + '</strong><span>' + escapeHtml(skill.kind || "skill") + " · " + escapeHtml(skillElement) + " · Power " + Number(skill.power || 0) + " · Acc " + Number(skill.accuracy ?? 100) + "%" + (affinityBonusPercent > 0 ? " · +" + affinityBonusPercent + "% affinity" : "") + "</span></button>";
+        }).join("") : '<div class="battle-action-card battle-action-card-secondary"><strong>No Skills Ready</strong><span>Raise a global skill level in the party Moves panel first.</span></div>') +
         '<button type="button" class="battle-action-card battle-action-card-secondary" data-battle-action="back-menu"><strong>Back</strong><span>Return to commands</span></button>' +
       "</div>";
     } else if (menu === "switch") {
@@ -4143,7 +5467,7 @@
 
     if (!state.battle.outcome) {
       rootActionPanel = '<div class="battle-action-grid battle-action-grid-root">' +
-        '<button type="button" class="battle-action-card battle-action-card-root' + (menu === "fight" ? " battle-action-card-selected" : "") + '" data-battle-action="open-fight-menu"><strong>Fight</strong><span>Skills</span></button>' +
+        '<button type="button" class="battle-action-card battle-action-card-root' + (menu === "fight" ? " battle-action-card-selected" : "") + '" data-battle-action="open-fight-menu"' + (activeSkills.length ? "" : " disabled") + '><strong>Fight</strong><span>Skills</span></button>' +
         '<button type="button" class="battle-action-card battle-action-card-root' + (menu === "switch" ? " battle-action-card-selected" : "") + '" data-battle-action="open-switch-menu"' + (!hasBench ? " disabled" : "") + '><strong>Switch</strong><span>Party</span></button>' +
         '<button type="button" class="battle-action-card battle-action-card-root' + (menu === "item" ? " battle-action-card-selected" : "") + '" data-battle-action="open-item-menu"><strong>Item</strong><span>Support</span></button>' +
         '<button type="button" class="battle-action-card battle-action-card-root' + (menu === "befriend" ? " battle-action-card-selected" : "") + '" data-battle-action="befriend"' + (isTrainerBattle || orbCount <= 0 ? " disabled" : "") + '><strong>Befriend</strong><span>Attempt</span></button>' +
@@ -4353,23 +5677,36 @@
         return "<li><span>" + escapeHtml(item.itemId) + "</span><strong>x" + Number(item.quantity) + "</strong></li>";
       }).join("") + "</ul>";
     } else if (panel === "monsters") {
-      const partyList = state.party.map(function (monster) {
-        const species = getSpecies(content, monster.speciesId);
-        return "<li><span>" + escapeHtml(species?.name || monster.speciesId) + " Lv " + monster.level + "</span><strong>" + monster.currentHp + "/" + monster.stats.hp + " HP</strong></li>";
-      }).join("");
-      const bankList = state.bank.length
-        ? state.bank.map(function (monster) {
-            const species = getSpecies(content, monster.speciesId);
-            return "<li><span>" + escapeHtml(species?.name || monster.speciesId) + " Lv " + monster.level + "</span><strong>Banked</strong></li>";
+      const movesTarget = ui.monsterMovesTarget;
+      const partyCards = state.party.length
+        ? state.party.map(function (monster, index) {
+            return renderMonsterRosterCard(content, monster, {
+              collection: "party",
+              index,
+              partyCount: state.party.length,
+              partyLimit: state.settings.partySize,
+              movesOpen: movesTarget?.collection === "party" && Number(movesTarget?.index) === index,
+              affinityOpen: ui.monsterAffinityTarget?.collection === "party" && Number(ui.monsterAffinityTarget?.index) === index,
+            });
           }).join("")
-        : "<li><span>No monsters in the bank yet.</span></li>";
+        : "<p>No party monsters yet.</p>";
+      const bankCards = state.bank.length
+        ? state.bank.map(function (monster, index) {
+            return renderMonsterRosterCard(content, monster, {
+              collection: "bank",
+              index,
+              partyCount: state.party.length,
+              partyLimit: state.settings.partySize,
+              movesOpen: movesTarget?.collection === "bank" && Number(movesTarget?.index) === index,
+              affinityOpen: ui.monsterAffinityTarget?.collection === "bank" && Number(ui.monsterAffinityTarget?.index) === index,
+            });
+          }).join("")
+        : "<p>No monsters in the bank yet.</p>";
 
       panelBody = [
         "<p>Party size setting: " + Number(state.settings.partySize) + "</p>",
-        "<h3>Party</h3>",
-        '<ul class="compact-list">' + partyList + "</ul>",
-        "<h3>Bank</h3>",
-        '<ul class="compact-list">' + bankList + "</ul>",
+        '<section class="monster-roster-section"><div class="section-heading"><h3>Current Party ' + state.party.length + "/" + Number(state.settings.partySize) + '</h3></div><div class="monster-roster-stack">' + partyCards + "</div></section>",
+        '<section class="monster-roster-section"><div class="section-heading"><h3>Monster Bank ' + state.bank.length + '</h3></div><div class="monster-roster-stack">' + bankCards + "</div></section>",
       ].join("");
     } else if (panel === "registry") {
       const earnedCrests = ensureArenaProgress(state).earnedCrests.map(function (crestId) {
@@ -5274,6 +6611,19 @@
       id: "skill-" + index,
       name: "New Skill",
       kind: "attack",
+      element: "Neutral",
+      maxLevel: 1,
+      levelOverrides: [],
+      accuracy: 100,
+      unlockRequirements: {
+        arenaClears: [],
+        requiredSkillLevels: [],
+      },
+      statModifiers: {
+        self: [],
+        foe: [],
+      },
+      statusEffects: [],
       power: 0,
       description: "",
     };
@@ -5611,6 +6961,28 @@
       if (!Number.isFinite(Number(skill.power)) || Number(skill.power) < 0) {
         pushSkillError(skillKey, "Skill '" + (skill.id || ("#" + (index + 1))) + "' needs a non-negative power value.");
       }
+      if (!Number.isFinite(Number(skill.accuracy)) || Number(skill.accuracy) < 0 || Number(skill.accuracy) > 100) {
+        pushSkillError(skillKey, "Skill '" + (skill.id || ("#" + (index + 1))) + "' needs an accuracy between 0 and 100.");
+      }
+      if (!Number.isFinite(Number(skill.maxLevel)) || Number(skill.maxLevel) < 1) {
+        pushSkillError(skillKey, "Skill '" + (skill.id || ("#" + (index + 1))) + "' needs a max level of at least 1.");
+      }
+      const seenOverrideLevels = new Set();
+      (skill.levelOverrides || []).forEach(function (override) {
+        const overrideLevel = Number(override.level || 0);
+        if (overrideLevel < 2 || overrideLevel > Number(skill.maxLevel || 1)) {
+          pushSkillError(skillKey, "Skill '" + (skill.id || ("#" + (index + 1))) + "' has a level override outside the allowed range.");
+        }
+        if (seenOverrideLevels.has(overrideLevel)) {
+          pushSkillError(skillKey, "Skill '" + (skill.id || ("#" + (index + 1))) + "' has duplicate level override " + overrideLevel + ".");
+        }
+        seenOverrideLevels.add(overrideLevel);
+      });
+      (skill.unlockRequirements?.requiredSkillLevels || []).forEach(function (requirement) {
+        if (!skillIds.has(requirement.skillId)) {
+          pushSkillError(skillKey, "Skill '" + (skill.id || ("#" + (index + 1))) + "' requires missing skill '" + requirement.skillId + "'.");
+        }
+      });
     });
 
     species.forEach(function (entry, index) {
@@ -5891,6 +7263,149 @@
         return '<section class="dev-editor"><h3>No Skill Selected</h3><p>Add a skill to begin editing.</p></section>';
       }
 
+      ensureSkillEffectCollections(selectedSkill);
+      const battleModel = ensureBattleModelSettings(content);
+      const skillElementOptions = SKILL_ELEMENTS.map(function (element) {
+        const selected = normalizeSkillElement(selectedSkill.element) === element ? " selected" : "";
+        return '<option value="' + escapeHtml(element) + '"' + selected + '>' + escapeHtml(element) + "</option>";
+      }).join("");
+      const modifierTypeOptions = [
+        { value: "modify", label: "Modify Stat" },
+        { value: "cleanse-negative", label: "Reduce Negative Modifiers" },
+      ];
+      const modifierStatOptions = [{ value: "all", label: "All Stats" }].concat(BATTLE_MODIFIER_STATS.map(function (stat) {
+        return { value: stat, label: stat.charAt(0).toUpperCase() + stat.slice(1) };
+      }));
+      const statusTypeOptions = [
+        { value: "burn", label: "Burn" },
+        { value: "confuse", label: "Confuse" },
+      ];
+      const statusTargetOptions = [
+        { value: "foe", label: "Foe" },
+        { value: "self", label: "Self" },
+      ];
+      const arenaOptions = ensureArenaCatalog(content);
+      const prerequisiteSkillOptions = ensureSkillCatalog(content).filter(function (entry) {
+        return entry.id !== selectedSkill.id;
+      });
+      const renderModifierRows = function (targetKey, effects, title) {
+        const rows = (effects || []).map(function (effect, index) {
+          const typeOptions = modifierTypeOptions.map(function (entry) {
+            const selected = effect.type === entry.value ? " selected" : "";
+            return '<option value="' + escapeHtml(entry.value) + '"' + selected + '>' + escapeHtml(entry.label) + "</option>";
+          }).join("");
+          const statOptions = modifierStatOptions.map(function (entry) {
+            const selected = effect.stat === entry.value ? " selected" : "";
+            return '<option value="' + escapeHtml(entry.value) + '"' + selected + '>' + escapeHtml(entry.label) + "</option>";
+          }).join("");
+          return [
+            '<div class="dev-subcard dev-effect-card">',
+            '<div class="section-heading"><h3>' + escapeHtml(title) + " " + (index + 1) + '</h3><button class="secondary-button" type="button" data-action="delete-skill-modifier" data-skill-effect-target="' + escapeHtml(targetKey) + '" data-skill-effect-index="' + index + '">Delete</button></div>',
+            '<div class="form-grid">',
+            '<label class="input-group"><span>Effect Type</span><select data-dev-skill-modifier-field="type" data-skill-effect-target="' + escapeHtml(targetKey) + '" data-skill-effect-index="' + index + '">' + typeOptions + '</select></label>',
+            '<label class="input-group"><span>Stat</span><select data-dev-skill-modifier-field="stat" data-skill-effect-target="' + escapeHtml(targetKey) + '" data-skill-effect-index="' + index + '">' + statOptions + '</select></label>',
+            '<label class="input-group"><span>Amount</span><input type="number" step="1" data-dev-skill-modifier-field="amount" data-skill-effect-target="' + escapeHtml(targetKey) + '" data-skill-effect-index="' + index + '" value="' + Number(effect.amount || 0) + '" /></label>',
+            '<label class="input-group"><span>Battle Label</span><input data-dev-skill-modifier-field="label" data-skill-effect-target="' + escapeHtml(targetKey) + '" data-skill-effect-index="' + index + '" value="' + escapeHtml(effect.label || "") + '" placeholder="Attack Up" /></label>',
+            '<label class="input-group"><span>Show Label</span><select data-dev-skill-modifier-field="showLabel" data-skill-effect-target="' + escapeHtml(targetKey) + '" data-skill-effect-index="' + index + '"><option value="true"' + (effect.showLabel !== false ? " selected" : "") + '>Show In Battle</option><option value="false"' + (effect.showLabel === false ? " selected" : "") + '>Hide In Battle</option></select></label>',
+            '</div>',
+            '<p class="dev-helper-text">' + (effect.type === "cleanse-negative"
+              ? "Use a positive amount to remove debuffs from the selected stat."
+              : "Positive values boost stats. Negative values reduce stats, so foe attack down would use -1.") + '</p>',
+            '</div>',
+          ].join("");
+        }).join("");
+        return '<section class="panel-block"><div class="section-heading"><h3>' + escapeHtml(title) + '</h3><button class="secondary-button" type="button" data-action="add-skill-modifier" data-skill-effect-target="' + escapeHtml(targetKey) + '">Add Effect</button></div>' + (rows || '<p class="dev-helper-text">No effects yet.</p>') + '</section>';
+      };
+      const renderStatusRows = function (effects) {
+        const rows = (effects || []).map(function (effect, index) {
+          const typeOptions = statusTypeOptions.map(function (entry) {
+            const selected = effect.type === entry.value ? " selected" : "";
+            return '<option value="' + escapeHtml(entry.value) + '"' + selected + '>' + escapeHtml(entry.label) + "</option>";
+          }).join("");
+          const targetOptions = statusTargetOptions.map(function (entry) {
+            const selected = effect.target === entry.value ? " selected" : "";
+            return '<option value="' + escapeHtml(entry.value) + '"' + selected + '>' + escapeHtml(entry.label) + "</option>";
+          }).join("");
+          return [
+            '<div class="dev-subcard dev-effect-card">',
+            '<div class="section-heading"><h3>Status Effect ' + (index + 1) + '</h3><button class="secondary-button" type="button" data-action="delete-skill-status" data-skill-status-index="' + index + '">Delete</button></div>',
+            '<div class="form-grid">',
+            '<label class="input-group"><span>Status</span><select data-dev-skill-status-field="type" data-skill-status-index="' + index + '">' + typeOptions + '</select></label>',
+            '<label class="input-group"><span>Target</span><select data-dev-skill-status-field="target" data-skill-status-index="' + index + '">' + targetOptions + '</select></label>',
+            '<label class="input-group"><span>Apply Chance %</span><input type="number" min="0" max="100" step="1" data-dev-skill-status-field="chance" data-skill-status-index="' + index + '" value="' + Number(effect.chance || 0) + '" /></label>',
+            '<label class="input-group"><span>Duration</span><input type="number" min="1" step="1" data-dev-skill-status-field="duration" data-skill-status-index="' + index + '" value="' + Number(effect.duration || 1) + '" /></label>',
+            '<label class="input-group"><span>Tick / Trigger Chance %</span><input type="number" min="0" max="100" step="1" data-dev-skill-status-field="tickChance" data-skill-status-index="' + index + '" value="' + Number(effect.tickChance || 0) + '" /></label>',
+            '<label class="input-group"><span>Power</span><input type="number" min="0" step="1" data-dev-skill-status-field="power" data-skill-status-index="' + index + '" value="' + Number(effect.power || 0) + '" /></label>',
+            '<label class="input-group"><span>Battle Label</span><input data-dev-skill-status-field="label" data-skill-status-index="' + index + '" value="' + escapeHtml(effect.label || "") + '" placeholder="Burned" /></label>',
+            '<label class="input-group"><span>Show Label</span><select data-dev-skill-status-field="showLabel" data-skill-status-index="' + index + '"><option value="true"' + (effect.showLabel !== false ? " selected" : "") + '>Show In Battle</option><option value="false"' + (effect.showLabel === false ? " selected" : "") + '>Hide In Battle</option></select></label>',
+            '</div>',
+            '<p class="dev-helper-text">' + (effect.type === "burn"
+              ? "Burn can chip damage at the end of each turn. Power is the burn damage."
+              : "Confuse is checked at the start of the battler's turn. Power is used for self-hit damage.") + '</p>',
+            '</div>',
+          ].join("");
+        }).join("");
+        return '<section class="panel-block"><div class="section-heading"><h3>Status / Damage Over Time</h3><button class="secondary-button" type="button" data-action="add-skill-status">Add Status</button></div>' + (rows || '<p class="dev-helper-text">No status effects yet.</p>') + '</section>';
+      };
+      const renderArenaGateRows = function () {
+        const gates = selectedSkill.unlockRequirements?.arenaClears || [];
+        const rows = gates.map(function (arenaId, index) {
+          const selectOptions = ['<option value="">Select Arena</option>'].concat(arenaOptions.map(function (arena) {
+            const selected = arena.id === arenaId ? " selected" : "";
+            return '<option value="' + escapeHtml(arena.id) + '"' + selected + '>' + escapeHtml(arena.name || arena.id) + " · " + escapeHtml(arena.id) + "</option>";
+          })).join("");
+          return [
+            '<div class="dev-subcard dev-effect-card">',
+            '<div class="section-heading"><h3>Arena Gate ' + (index + 1) + '</h3><button class="secondary-button" type="button" data-action="delete-skill-arena-gate" data-skill-arena-index="' + index + '">Delete</button></div>',
+            '<div class="form-grid">',
+            '<label class="input-group dev-input-group-wide"><span>Required Arena Clear</span><select data-dev-skill-arena-gate-field="arenaId" data-skill-arena-index="' + index + '">' + selectOptions + '</select></label>',
+            '</div>',
+            '</div>',
+          ].join("");
+        }).join("");
+        return '<section class="panel-block"><div class="section-heading"><h3>Arena Clear Gates</h3><button class="secondary-button" type="button" data-action="add-skill-arena-gate">Add Arena Gate</button></div>' + (rows || '<p class="dev-helper-text">No arena gates yet.</p>') + '</section>';
+      };
+      const renderPrerequisiteSkillRows = function () {
+        const requirements = selectedSkill.unlockRequirements?.requiredSkillLevels || [];
+        const rows = requirements.map(function (requirement, index) {
+          const skillOptions = ['<option value="">Select Skill</option>'].concat(prerequisiteSkillOptions.map(function (skillEntry) {
+            const selected = skillEntry.id === requirement.skillId ? " selected" : "";
+            return '<option value="' + escapeHtml(skillEntry.id) + '"' + selected + '>' + escapeHtml(skillEntry.name || skillEntry.id) + " · " + escapeHtml(skillEntry.id) + "</option>";
+          })).join("");
+          return [
+            '<div class="dev-subcard dev-effect-card">',
+            '<div class="section-heading"><h3>Required Skill ' + (index + 1) + '</h3><button class="secondary-button" type="button" data-action="delete-skill-prerequisite" data-skill-prerequisite-index="' + index + '">Delete</button></div>',
+            '<div class="form-grid">',
+            '<label class="input-group"><span>Skill</span><select data-dev-skill-prerequisite-field="skillId" data-skill-prerequisite-index="' + index + '">' + skillOptions + '</select></label>',
+            '<label class="input-group"><span>Required Level</span><input type="number" min="1" step="1" data-dev-skill-prerequisite-field="level" data-skill-prerequisite-index="' + index + '" value="' + Number(requirement.level || 1) + '" /></label>',
+            '</div>',
+            '</div>',
+          ].join("");
+        }).join("");
+        return '<section class="panel-block"><div class="section-heading"><h3>Required Skill Levels</h3><button class="secondary-button" type="button" data-action="add-skill-prerequisite">Add Skill Requirement</button></div>' + (rows || '<p class="dev-helper-text">No skill prerequisites yet.</p>') + '</section>';
+      };
+      const renderLevelOverrideRows = function () {
+        const rows = (selectedSkill.levelOverrides || []).map(function (override, index) {
+          const elementOptions = ['<option value="">Use Base Element</option>'].concat(SKILL_ELEMENTS.map(function (element) {
+            const selected = normalizeSkillElement(override.element || "") === element ? " selected" : "";
+            return '<option value="' + escapeHtml(element) + '"' + selected + '>' + escapeHtml(element) + "</option>";
+          })).join("");
+          return [
+            '<div class="dev-subcard dev-effect-card">',
+            '<div class="section-heading"><h3>Level Override ' + (index + 1) + '</h3><button class="secondary-button" type="button" data-action="delete-skill-level-override" data-skill-level-override-index="' + index + '">Delete</button></div>',
+            '<div class="form-grid">',
+            '<label class="input-group"><span>Skill Level</span><input type="number" min="2" max="' + getSkillMaxLevel(selectedSkill) + '" step="1" data-dev-skill-level-override-field="level" data-skill-level-override-index="' + index + '" value="' + Number(override.level || 2) + '" /></label>',
+            '<label class="input-group"><span>Power Override</span><input type="number" step="1" data-dev-skill-level-override-field="power" data-skill-level-override-index="' + index + '" value="' + escapeHtml(override.power ?? "") + '" placeholder="Use base" /></label>',
+            '<label class="input-group"><span>Accuracy Override %</span><input type="number" min="0" max="100" step="1" data-dev-skill-level-override-field="accuracy" data-skill-level-override-index="' + index + '" value="' + escapeHtml(override.accuracy ?? "") + '" placeholder="Use base" /></label>',
+            '<label class="input-group"><span>Element Override</span><select data-dev-skill-level-override-field="element" data-skill-level-override-index="' + index + '">' + elementOptions + '</select></label>',
+            '<label class="input-group dev-input-group-wide"><span>Description Override</span><textarea rows="3" data-dev-skill-level-override-field="description" data-skill-level-override-index="' + index + '" placeholder="Optional description for this level.">' + escapeHtml(override.description || "") + '</textarea></label>',
+            '</div>',
+            '</div>',
+          ].join("");
+        }).join("");
+        return '<section class="panel-block"><div class="section-heading"><h3>Level Overrides</h3><button class="secondary-button" type="button" data-action="add-skill-level-override">Add Level Override</button></div><p class="dev-helper-text">Level 1 uses the base skill fields above. Add overrides for higher levels when power, accuracy, element, or copy changes.</p>' + (rows || '<p class="dev-helper-text">No level overrides yet.</p>') + '</section>';
+      };
+
       return [
         '<section class="dev-editor">',
         '<div class="section-heading"><h3>Edit Skill</h3><div class="topbar-stats"><button class="secondary-button" type="button" data-action="duplicate-skill">Duplicate</button><button class="secondary-button" type="button" data-action="delete-skill">Delete</button></div></div>',
@@ -5899,9 +7414,32 @@
         '<label class="input-group"><span>ID</span><input data-dev-skill-field="id" value="' + escapeHtml(selectedSkill.id || "") + '" /></label>',
         '<label class="input-group"><span>Name</span><input data-dev-skill-field="name" value="' + escapeHtml(selectedSkill.name || "") + '" /></label>',
         '<label class="input-group"><span>Kind</span><input data-dev-skill-field="kind" value="' + escapeHtml(selectedSkill.kind || "") + '" /></label>',
+        '<label class="input-group"><span>Element</span><select data-dev-skill-field="element">' + skillElementOptions + '</select></label>',
+        '<label class="input-group"><span>Max Level</span><input type="number" min="1" step="1" data-dev-skill-field="maxLevel" value="' + getSkillMaxLevel(selectedSkill) + '" /></label>',
+        '<label class="input-group"><span>Accuracy %</span><input type="number" min="0" max="100" step="1" data-dev-skill-field="accuracy" value="' + Number(selectedSkill.accuracy ?? 100) + '" /></label>',
         '<label class="input-group"><span>Power</span><input type="number" step="1" data-dev-skill-field="power" value="' + Number(selectedSkill.power || 0) + '" /></label>',
         '<label class="input-group dev-input-group-wide"><span>Description</span><textarea rows="5" data-dev-skill-field="description">' + escapeHtml(selectedSkill.description || "") + '</textarea></label>',
         '</div>',
+        '<p class="dev-helper-text">Matching elemental affinity grants <strong>+1% damage per point spent</strong> for this skill. Neutral skills do not receive an elemental bonus. Gates are checked against save-wide player skill progression, not monster level.</p>',
+        renderLevelOverrideRows(),
+        renderArenaGateRows(),
+        renderPrerequisiteSkillRows(),
+        renderModifierRows("self", selectedSkill.statModifiers?.self || [], "Friendly Modifiers"),
+        renderModifierRows("foe", selectedSkill.statModifiers?.foe || [], "Foe Modifiers"),
+        renderStatusRows(selectedSkill.statusEffects || []),
+        '<section class="panel-block">',
+        '<div class="section-heading"><h3>Battle Model</h3></div>',
+        '<p>The live damage formula for elemental attack skills is currently <code>max(1, round((power + attack * attackScale - defense * defenseScale + variance) * (1 + affinityBonus)))</code>.</p>',
+        '<p><strong>Speed</strong> currently decides turn order only. If the player monster speed is greater than or equal to the enemy speed, the player acts first; otherwise the enemy acts first.</p>',
+        '<div class="form-grid">',
+        '<label class="input-group"><span>Attack Scale</span><input type="number" step="0.05" data-dev-battle-model-field="skillAttackScale" value="' + Number(battleModel.skillAttackScale || 0) + '" /></label>',
+        '<label class="input-group"><span>Defense Scale</span><input type="number" step="0.05" data-dev-battle-model-field="skillDefenseScale" value="' + Number(battleModel.skillDefenseScale || 0) + '" /></label>',
+        '<label class="input-group"><span>Basic Defense Divisor</span><input type="number" step="0.1" min="1" data-dev-battle-model-field="basicDefenseDivisor" value="' + Number(battleModel.basicDefenseDivisor || 1) + '" /></label>',
+        '<label class="input-group"><span>Random Variance Max</span><input type="number" step="1" min="0" data-dev-battle-model-field="randomVarianceMax" value="' + Number(battleModel.randomVarianceMax || 0) + '" /></label>',
+        '<label class="input-group"><span>Affinity Bonus Per Point %</span><input type="number" step="0.1" min="0" data-dev-battle-model-field="affinityDamageBonusPerPointPercent" value="' + Number(battleModel.affinityDamageBonusPerPointPercent || 0) + '" /></label>',
+        '</div>',
+        '<p class="dev-helper-text">Basic attacks without a skill power still use the simpler fallback formula <code>attack - defense / divisor + variance</code>.</p>',
+        '</section>',
         '</section>',
       ].join("");
     };
@@ -5914,7 +7452,7 @@
         }).join("")
       : skills.map(function (entry) {
           const selected = entry.id === devToolsState.selectedSkillId ? " compact-list-selected" : "";
-          return '<li class="' + selected.trim() + '"><button type="button" class="link-button" data-dev-select-skill="' + entry.id + '"><strong>' + escapeHtml(entry.name || entry.id) + '</strong><span>' + escapeHtml(entry.id) + ' · ' + escapeHtml(entry.kind || "attack") + ' · Power ' + Number(entry.power || 0) + "</span></button></li>";
+          return '<li class="' + selected.trim() + '"><button type="button" class="link-button" data-dev-select-skill="' + entry.id + '"><strong>' + escapeHtml(entry.name || entry.id) + '</strong><span>' + escapeHtml(entry.id) + ' · ' + escapeHtml(entry.kind || "attack") + ' · ' + escapeHtml(normalizeSkillElement(entry.element)) + ' · Power ' + Number(entry.power || 0) + "</span></button></li>";
         }).join("");
 
     const addAction = monsterSubMode === "species" ? "add-species" : "add-skill";
@@ -6829,7 +8367,7 @@
     root.innerHTML = [
       '<main class="game-shell">',
       '<header class="game-topbar">',
-      '<div class="world-location-header"><div class="world-location-line"><span class="world-location-tag">Location</span><strong>' + mapName + '</strong>' + encounterPreviewIcons + '</div><div class="world-meta-row"><span class="world-clock">' + currentTime + '</span><span class="world-currency">$' + state.player.money + '</span></div></div>',
+      '<div class="world-location-header"><div class="world-location-line"><span class="world-location-tag">Location</span><strong>' + mapName + '</strong></div><div class="world-meta-row"><span class="world-clock">' + currentTime + '</span><span class="world-currency">$' + state.player.money + '</span></div>' + encounterPreviewIcons + '</div>',
       '<div class="topbar-stats"><button class="secondary-button" type="button" data-action="title">Title</button><div class="world-topbar-actions"><button class="secondary-button" type="button" data-action="save">Save</button><button class="secondary-button" type="button" data-action="open-settings">Settings</button></div></div>',
       "</header>",
       '<section class="play-area">',
@@ -6893,6 +8431,9 @@
     root.querySelector('[data-action="title"]')?.addEventListener("click", function () {
       app.showTitle();
     });
+    root.querySelector('[data-action="toggle-encounter-preview"]')?.addEventListener("click", function () {
+      app.toggleEncounterPreviewExpanded();
+    });
     root.querySelector('[data-action="close-interaction"]')?.addEventListener("click", function () {
       app.closeInteraction();
     });
@@ -6921,6 +8462,75 @@
     root.querySelectorAll("[data-world-player-field]").forEach(function (field) {
       field.addEventListener("change", function () {
         app.updateWorldPlayerField(field.getAttribute("data-world-player-field"), field.value);
+      });
+    });
+    root.querySelectorAll("[data-adjust-affinity]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.adjustMonsterAffinityPoint(
+          button.getAttribute("data-adjust-affinity"),
+          Number(button.getAttribute("data-monster-index") || 0),
+          button.getAttribute("data-affinity-element") || "",
+          Number(button.getAttribute("data-affinity-delta") || 0)
+        );
+      });
+    });
+    root.querySelectorAll('[data-action="toggle-monster-moves"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.toggleMonsterMovesPanel(
+          button.getAttribute("data-monster-collection") || "party",
+          Number(button.getAttribute("data-monster-index") || 0)
+        );
+      });
+    });
+    root.querySelectorAll('[data-action="toggle-monster-affinity"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.toggleMonsterAffinityPanel(
+          button.getAttribute("data-monster-collection") || "party",
+          Number(button.getAttribute("data-monster-index") || 0)
+        );
+      });
+    });
+    root.querySelectorAll('[data-action="set-party-lead"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.setPartyLeadMonster(Number(button.getAttribute("data-monster-index") || 0));
+      });
+    });
+    root.querySelectorAll('[data-action="move-party-up"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.movePartyMonster(Number(button.getAttribute("data-monster-index") || 0), -1);
+      });
+    });
+    root.querySelectorAll('[data-action="move-party-down"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.movePartyMonster(Number(button.getAttribute("data-monster-index") || 0), 1);
+      });
+    });
+    root.querySelectorAll('[data-action="move-party-to-bank"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.movePartyMonsterToBank(Number(button.getAttribute("data-monster-index") || 0));
+      });
+    });
+    root.querySelectorAll('[data-action="withdraw-bank-monster"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.withdrawBankMonster(Number(button.getAttribute("data-monster-index") || 0));
+      });
+    });
+    root.querySelectorAll('[data-action="learn-monster-skill"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.learnMonsterSkill(
+          button.getAttribute("data-monster-collection") || "party",
+          Number(button.getAttribute("data-monster-index") || 0),
+          button.getAttribute("data-skill-id") || ""
+        );
+      });
+    });
+    root.querySelectorAll('[data-action="remove-monster-skill"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.removeMonsterSkill(
+          button.getAttribute("data-monster-collection") || "party",
+          Number(button.getAttribute("data-monster-index") || 0),
+          button.getAttribute("data-skill-id") || ""
+        );
       });
     });
 
@@ -7029,6 +8639,51 @@
     });
     root.querySelector('[data-action="delete-skill"]')?.addEventListener("click", function () {
       app.deleteSkill();
+    });
+    root.querySelectorAll('[data-action="add-skill-modifier"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.addSkillModifier(button.getAttribute("data-skill-effect-target") || "self");
+      });
+    });
+    root.querySelectorAll('[data-action="delete-skill-modifier"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.deleteSkillModifier(
+          button.getAttribute("data-skill-effect-target") || "self",
+          Number(button.getAttribute("data-skill-effect-index") || 0)
+        );
+      });
+    });
+    root.querySelector('[data-action="add-skill-status"]')?.addEventListener("click", function () {
+      app.addSkillStatusEffect();
+    });
+    root.querySelectorAll('[data-action="delete-skill-status"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.deleteSkillStatusEffect(Number(button.getAttribute("data-skill-status-index") || 0));
+      });
+    });
+    root.querySelector('[data-action="add-skill-arena-gate"]')?.addEventListener("click", function () {
+      app.addSkillArenaGate();
+    });
+    root.querySelectorAll('[data-action="delete-skill-arena-gate"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.deleteSkillArenaGate(Number(button.getAttribute("data-skill-arena-index") || 0));
+      });
+    });
+    root.querySelector('[data-action="add-skill-prerequisite"]')?.addEventListener("click", function () {
+      app.addSkillPrerequisite();
+    });
+    root.querySelectorAll('[data-action="delete-skill-prerequisite"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.deleteSkillPrerequisite(Number(button.getAttribute("data-skill-prerequisite-index") || 0));
+      });
+    });
+    root.querySelector('[data-action="add-skill-level-override"]')?.addEventListener("click", function () {
+      app.addSkillLevelOverride();
+    });
+    root.querySelectorAll('[data-action="delete-skill-level-override"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.deleteSkillLevelOverride(Number(button.getAttribute("data-skill-level-override-index") || 0));
+      });
     });
     root.querySelector('[data-action="add-variant"]')?.addEventListener("click", function () {
       app.addVariant();
@@ -7318,6 +8973,118 @@
       if (useDeferredRender) {
         field.addEventListener("change", function () {
           app.updateSkillField(field.getAttribute("data-dev-skill-field"), field.value);
+        });
+      }
+    });
+    root.querySelectorAll("[data-dev-battle-model-field]").forEach(function (field) {
+      field.addEventListener("change", function () {
+        app.updateBattleModelField(field.getAttribute("data-dev-battle-model-field"), field.value);
+      });
+    });
+    root.querySelectorAll("[data-dev-skill-modifier-field]").forEach(function (field) {
+      const useDeferredRender = isDeferredDevTextField(field);
+      const eventName = field.tagName === "SELECT" ? "change" : "input";
+      field.addEventListener(eventName, function () {
+        app.updateSkillModifierField(
+          field.getAttribute("data-skill-effect-target") || "self",
+          Number(field.getAttribute("data-skill-effect-index") || 0),
+          field.getAttribute("data-dev-skill-modifier-field"),
+          field.value,
+          !useDeferredRender
+        );
+        if (useDeferredRender) {
+          app.clearDeferredRender();
+        }
+      });
+      if (useDeferredRender) {
+        field.addEventListener("change", function () {
+          app.updateSkillModifierField(
+            field.getAttribute("data-skill-effect-target") || "self",
+            Number(field.getAttribute("data-skill-effect-index") || 0),
+            field.getAttribute("data-dev-skill-modifier-field"),
+            field.value
+          );
+        });
+      }
+    });
+    root.querySelectorAll("[data-dev-skill-status-field]").forEach(function (field) {
+      const useDeferredRender = isDeferredDevTextField(field);
+      const eventName = field.tagName === "SELECT" ? "change" : "input";
+      field.addEventListener(eventName, function () {
+        app.updateSkillStatusEffectField(
+          Number(field.getAttribute("data-skill-status-index") || 0),
+          field.getAttribute("data-dev-skill-status-field"),
+          field.value,
+          !useDeferredRender
+        );
+        if (useDeferredRender) {
+          app.clearDeferredRender();
+        }
+      });
+      if (useDeferredRender) {
+        field.addEventListener("change", function () {
+          app.updateSkillStatusEffectField(
+            Number(field.getAttribute("data-skill-status-index") || 0),
+            field.getAttribute("data-dev-skill-status-field"),
+            field.value
+          );
+        });
+      }
+    });
+    root.querySelectorAll("[data-dev-skill-arena-gate-field]").forEach(function (field) {
+      field.addEventListener("change", function () {
+        app.updateSkillArenaGateField(
+          Number(field.getAttribute("data-skill-arena-index") || 0),
+          field.getAttribute("data-dev-skill-arena-gate-field"),
+          field.value
+        );
+      });
+    });
+    root.querySelectorAll("[data-dev-skill-prerequisite-field]").forEach(function (field) {
+      const useDeferredRender = isDeferredDevTextField(field);
+      const eventName = field.tagName === "SELECT" ? "change" : "input";
+      field.addEventListener(eventName, function () {
+        app.updateSkillPrerequisiteField(
+          Number(field.getAttribute("data-skill-prerequisite-index") || 0),
+          field.getAttribute("data-dev-skill-prerequisite-field"),
+          field.value,
+          !useDeferredRender
+        );
+        if (useDeferredRender) {
+          app.clearDeferredRender();
+        }
+      });
+      if (useDeferredRender) {
+        field.addEventListener("change", function () {
+          app.updateSkillPrerequisiteField(
+            Number(field.getAttribute("data-skill-prerequisite-index") || 0),
+            field.getAttribute("data-dev-skill-prerequisite-field"),
+            field.value
+          );
+        });
+      }
+    });
+    root.querySelectorAll("[data-dev-skill-level-override-field]").forEach(function (field) {
+      const useDeferredRender = isDeferredDevTextField(field);
+      const eventName = field.tagName === "SELECT" ? "change" : "input";
+      field.addEventListener(eventName, function () {
+        app.updateSkillLevelOverrideField(
+          Number(field.getAttribute("data-skill-level-override-index") || 0),
+          field.getAttribute("data-dev-skill-level-override-field"),
+          field.value,
+          !useDeferredRender
+        );
+        if (useDeferredRender) {
+          app.clearDeferredRender();
+        }
+      });
+      if (useDeferredRender) {
+        field.addEventListener("change", function () {
+          app.updateSkillLevelOverrideField(
+            Number(field.getAttribute("data-skill-level-override-index") || 0),
+            field.getAttribute("data-dev-skill-level-override-field"),
+            field.value
+          );
         });
       }
     });
@@ -7830,6 +9597,15 @@
         ensureWorldUiState(this.state).activePanel = "";
         this.render();
       },
+      toggleEncounterPreviewExpanded: function () {
+        if (this.state.screen !== "world") {
+          return;
+        }
+
+        const ui = ensureWorldUiState(this.state);
+        ui.encounterPreviewExpanded = !ui.encounterPreviewExpanded;
+        this.render();
+      },
       updateWorldSetting: function (key, rawValue) {
         if (this.state.screen !== "world") {
           return;
@@ -7855,6 +9631,236 @@
           this.state.player[key] = rawValue;
         }
 
+        this.render();
+      },
+      adjustMonsterAffinityPoint: function (collection, index, element, delta) {
+        if (this.state.screen !== "world" || !ELEMENTAL_AFFINITIES.includes(element) || ![-1, 1].includes(Number(delta))) {
+          return;
+        }
+
+        const source = collection === "bank" ? this.state.bank : this.state.party;
+        const monster = source?.[index];
+        if (!monster) {
+          return;
+        }
+
+        ensureElementalAffinityState(monster);
+        const currentPoints = Math.max(0, Number(monster.elementalAffinityPoints[element] || 0));
+        if (Number(delta) > 0 && getAvailableElementalAffinityPoints(monster) <= 0) {
+          return;
+        }
+        if (Number(delta) < 0 && currentPoints <= 0) {
+          return;
+        }
+
+        monster.elementalAffinityPoints[element] = Math.max(0, currentPoints + Number(delta));
+        this.state.message = (getSpecies(this.content, monster.speciesId)?.name || "Monster") + (Number(delta) > 0
+          ? " gained +1 " + element + " affinity."
+          : " refunded 1 " + element + " affinity point.");
+        this.render();
+      },
+      toggleMonsterMovesPanel: function (collection, index) {
+        if (this.state.screen !== "world") {
+          return;
+        }
+
+        const ui = ensureWorldUiState(this.state);
+        if (ui.monsterMovesTarget?.collection === collection && Number(ui.monsterMovesTarget?.index) === index) {
+          ui.monsterMovesTarget = null;
+        } else {
+          ui.monsterMovesTarget = { collection, index };
+        }
+        this.render();
+      },
+      toggleMonsterAffinityPanel: function (collection, index) {
+        if (this.state.screen !== "world") {
+          return;
+        }
+
+        const ui = ensureWorldUiState(this.state);
+        if (ui.monsterAffinityTarget?.collection === collection && Number(ui.monsterAffinityTarget?.index) === index) {
+          ui.monsterAffinityTarget = null;
+        } else {
+          ui.monsterAffinityTarget = { collection, index };
+        }
+        this.render();
+      },
+      setPartyLeadMonster: function (index) {
+        if (this.state.screen !== "world" || index <= 0 || index >= this.state.party.length) {
+          return;
+        }
+
+        const moved = this.state.party.splice(index, 1)[0];
+        this.state.party.unshift(moved);
+        this.state.message = (getSpecies(this.content, moved.speciesId)?.name || "Monster") + " is now leading the party.";
+        const ui = ensureWorldUiState(this.state);
+        if (ui.monsterMovesTarget?.collection === "party") {
+          ui.monsterMovesTarget.index = ui.monsterMovesTarget.index === index
+            ? 0
+            : ui.monsterMovesTarget.index < index
+              ? ui.monsterMovesTarget.index + 1
+              : ui.monsterMovesTarget.index;
+        }
+        if (ui.monsterAffinityTarget?.collection === "party") {
+          ui.monsterAffinityTarget.index = ui.monsterAffinityTarget.index === index
+            ? 0
+            : ui.monsterAffinityTarget.index < index
+              ? ui.monsterAffinityTarget.index + 1
+              : ui.monsterAffinityTarget.index;
+        }
+        this.render();
+      },
+      movePartyMonster: function (index, direction) {
+        if (this.state.screen !== "world") {
+          return;
+        }
+
+        const nextIndex = index + Number(direction || 0);
+        if (index < 0 || index >= this.state.party.length || nextIndex < 0 || nextIndex >= this.state.party.length) {
+          return;
+        }
+
+        const moved = this.state.party[index];
+        this.state.party[index] = this.state.party[nextIndex];
+        this.state.party[nextIndex] = moved;
+        const ui = ensureWorldUiState(this.state);
+        if (ui.monsterMovesTarget?.collection === "party") {
+          if (ui.monsterMovesTarget.index === index) {
+            ui.monsterMovesTarget.index = nextIndex;
+          } else if (ui.monsterMovesTarget.index === nextIndex) {
+            ui.monsterMovesTarget.index = index;
+          }
+        }
+        if (ui.monsterAffinityTarget?.collection === "party") {
+          if (ui.monsterAffinityTarget.index === index) {
+            ui.monsterAffinityTarget.index = nextIndex;
+          } else if (ui.monsterAffinityTarget.index === nextIndex) {
+            ui.monsterAffinityTarget.index = index;
+          }
+        }
+        this.render();
+      },
+      movePartyMonsterToBank: function (index) {
+        if (this.state.screen !== "world" || this.state.party.length <= 1 || index < 0 || index >= this.state.party.length) {
+          return;
+        }
+
+        const moved = this.state.party.splice(index, 1)[0];
+        this.state.bank.push(moved);
+        const ui = ensureWorldUiState(this.state);
+        ui.monsterMovesTarget = null;
+        ui.monsterAffinityTarget = null;
+        this.state.message = (getSpecies(this.content, moved.speciesId)?.name || "Monster") + " was moved to the bank.";
+        this.render();
+      },
+      adjustPlayerSkillLevel: function (skillId, delta) {
+        if (this.state.screen !== "world" || !skillId || !delta) {
+          return;
+        }
+
+        ensurePlayerSkillProgressState(this.state, this.content);
+        const skill = getSkill(this.content, skillId);
+        const entry = getPlayerSkillProgressEntry(this.state, skillId);
+        if (!skill || !entry) {
+          return;
+        }
+
+        const unlockStatus = getSkillUnlockStatus(this.state, this.content, skill);
+        const levelFloor = unlockStatus.unlocked ? 1 : 0;
+        const nextLevel = Math.max(levelFloor, Math.min(getSkillMaxLevel(skill), Number(entry.level || 0) + Number(delta || 0)));
+        if (nextLevel === Number(entry.level || 0)) {
+          this.state.message = unlockStatus.unlocked
+            ? (skill.name + " is already at " + (nextLevel >= getSkillMaxLevel(skill) ? "max level." : "its minimum level."))
+            : ("Unlock " + skill.name + " first: " + unlockStatus.reasons.join(", "));
+          this.render();
+          return;
+        }
+
+        entry.level = nextLevel;
+        ensurePlayerSkillProgressState(this.state, this.content);
+        this.state.message = skill.name + " is now Lv " + getPlayerSkillLevel(this.state, this.content, skillId) + ".";
+        this.render();
+      },
+      learnMonsterSkill: function (collection, index, skillId) {
+        if (this.state.screen !== "world" || !skillId) {
+          return;
+        }
+
+        ensurePlayerSkillProgressState(this.state, this.content);
+        const roster = collection === "bank" ? this.state.bank : this.state.party;
+        const monster = roster?.[index];
+        const skill = getSkill(this.content, skillId);
+        if (!monster || !skill) {
+          return;
+        }
+        ensureMonsterSkillState(monster, this.content);
+        const species = getSpecies(this.content, monster.speciesId);
+        const speciesSkillPool = getSpeciesSkillPool(species);
+        if (!speciesSkillPool.includes(skillId)) {
+          this.state.message = (species?.name || "This monster") + " cannot learn " + skill.name + ".";
+          this.render();
+          return;
+        }
+
+        if ((monster.skills || []).includes(skillId)) {
+          this.state.message = (species?.name || "Monster") + " already knows " + skill.name + ".";
+          this.render();
+          return;
+        }
+
+        const unlockStatus = getSkillUnlockStatus(this.state, this.content, skill);
+        const currentLevel = getPlayerSkillLevel(this.state, this.content, skillId);
+        if (!unlockStatus.unlocked || currentLevel <= 0) {
+          this.state.message = unlockStatus.unlocked
+            ? ("Raise " + skill.name + " above Lv 0 before teaching it.")
+            : ("Unlock " + skill.name + " first: " + unlockStatus.reasons.join(", "));
+          this.render();
+          return;
+        }
+
+        monster.skills = Array.isArray(monster.skills) ? monster.skills.slice() : [];
+        monster.skills.push(skillId);
+        this.state.message = (species?.name || "Monster") + " learned " + skill.name + ".";
+        this.render();
+      },
+      removeMonsterSkill: function (collection, index, skillId) {
+        if (this.state.screen !== "world" || !skillId) {
+          return;
+        }
+
+        const roster = collection === "bank" ? this.state.bank : this.state.party;
+        const monster = roster?.[index];
+        const skill = getSkill(this.content, skillId);
+        if (!monster || !skill) {
+          return;
+        }
+        ensureMonsterSkillState(monster, this.content);
+        if (!Array.isArray(monster.skills) || !monster.skills.includes(skillId)) {
+          return;
+        }
+
+        monster.skills = monster.skills.filter(function (entry) {
+          return entry !== skillId;
+        });
+        this.state.message = (getSpecies(this.content, monster.speciesId)?.name || "Monster") + " forgot " + skill.name + ".";
+        this.render();
+      },
+      withdrawBankMonster: function (index) {
+        if (
+          this.state.screen !== "world"
+          || index < 0
+          || index >= this.state.bank.length
+          || this.state.party.length >= Number(this.state.settings.partySize || 0)
+        ) {
+          return;
+        }
+
+        const moved = this.state.bank.splice(index, 1)[0];
+        this.state.party.push(moved);
+        const ui = ensureWorldUiState(this.state);
+        ui.monsterMovesTarget = null;
+        ui.monsterAffinityTarget = null;
+        this.state.message = (getSpecies(this.content, moved.speciesId)?.name || "Monster") + " joined your party.";
         this.render();
       },
       closeInteraction: function () {
@@ -8023,6 +10029,7 @@
           attemptRun(this.state, this.content);
           this.state.battle.menu = "root";
         } else if (action === "close-battle") {
+          clearAllBattleTemporaryState(this.state);
           this.state.battle = null;
         }
 
@@ -8453,10 +10460,266 @@
         this.render();
       },
       deleteSkill: function () {
+        const removedSkillId = this.devTools.selectedSkillId;
         const skills = ensureSkillCatalog(this.content).filter((entry) => entry.id !== this.devTools.selectedSkillId);
         this.content.skills.skills = skills;
+        removeSkillReferences(this.content, removedSkillId);
         syncMonsterDevSelection(this.content, this.devTools);
         this.render();
+      },
+      addSkillModifier: function (targetKey) {
+        const skill = ensureSkillCatalog(this.content).find((entry) => entry.id === this.devTools.selectedSkillId);
+        if (!skill) {
+          return;
+        }
+
+        ensureSkillEffectCollections(skill);
+        const bucket = targetKey === "foe" ? skill.statModifiers.foe : skill.statModifiers.self;
+        bucket.push(createEmptySkillModifierEffect());
+        this.render();
+      },
+      deleteSkillModifier: function (targetKey, effectIndex) {
+        const skill = ensureSkillCatalog(this.content).find((entry) => entry.id === this.devTools.selectedSkillId);
+        if (!skill) {
+          return;
+        }
+
+        ensureSkillEffectCollections(skill);
+        const bucket = targetKey === "foe" ? skill.statModifiers.foe : skill.statModifiers.self;
+        if (!bucket[effectIndex]) {
+          return;
+        }
+
+        bucket.splice(effectIndex, 1);
+        this.render();
+      },
+      updateSkillModifierField: function (targetKey, effectIndex, field, rawValue, shouldRender) {
+        const skill = ensureSkillCatalog(this.content).find((entry) => entry.id === this.devTools.selectedSkillId);
+        if (!skill) {
+          return;
+        }
+
+        ensureSkillEffectCollections(skill);
+        const bucket = targetKey === "foe" ? skill.statModifiers.foe : skill.statModifiers.self;
+        const effect = bucket[effectIndex];
+        if (!effect) {
+          return;
+        }
+
+        if (field === "amount") {
+          effect[field] = Number(rawValue || 0);
+        } else if (field === "showLabel") {
+          effect[field] = rawValue === "true";
+        } else {
+          effect[field] = rawValue;
+        }
+
+        ensureSkillEffectCollections(skill);
+        if (shouldRender !== false) {
+          this.render();
+        }
+      },
+      addSkillStatusEffect: function () {
+        const skill = ensureSkillCatalog(this.content).find((entry) => entry.id === this.devTools.selectedSkillId);
+        if (!skill) {
+          return;
+        }
+
+        ensureSkillEffectCollections(skill);
+        skill.statusEffects.push(createEmptySkillStatusEffect());
+        this.render();
+      },
+      deleteSkillStatusEffect: function (effectIndex) {
+        const skill = ensureSkillCatalog(this.content).find((entry) => entry.id === this.devTools.selectedSkillId);
+        if (!skill) {
+          return;
+        }
+
+        ensureSkillEffectCollections(skill);
+        if (!skill.statusEffects[effectIndex]) {
+          return;
+        }
+
+        skill.statusEffects.splice(effectIndex, 1);
+        this.render();
+      },
+      updateSkillStatusEffectField: function (effectIndex, field, rawValue, shouldRender) {
+        const skill = ensureSkillCatalog(this.content).find((entry) => entry.id === this.devTools.selectedSkillId);
+        if (!skill) {
+          return;
+        }
+
+        ensureSkillEffectCollections(skill);
+        const effect = skill.statusEffects[effectIndex];
+        if (!effect) {
+          return;
+        }
+
+        if (["chance", "tickChance", "power", "duration"].includes(field)) {
+          effect[field] = Number(rawValue || 0);
+        } else if (field === "showLabel") {
+          effect[field] = rawValue === "true";
+        } else {
+          effect[field] = rawValue;
+        }
+
+        ensureSkillEffectCollections(skill);
+        if (shouldRender !== false) {
+          this.render();
+        }
+      },
+      addSkillArenaGate: function () {
+        const skill = ensureSkillCatalog(this.content).find((entry) => entry.id === this.devTools.selectedSkillId);
+        if (!skill) {
+          return;
+        }
+
+        ensureSkillEffectCollections(skill);
+        const firstArenaId = ensureArenaCatalog(this.content)[0]?.id || "";
+        skill.unlockRequirements.arenaClears.push(firstArenaId);
+        ensureSkillEffectCollections(skill);
+        this.render();
+      },
+      deleteSkillArenaGate: function (gateIndex) {
+        const skill = ensureSkillCatalog(this.content).find((entry) => entry.id === this.devTools.selectedSkillId);
+        if (!skill) {
+          return;
+        }
+
+        ensureSkillEffectCollections(skill);
+        if (!skill.unlockRequirements.arenaClears[gateIndex]) {
+          return;
+        }
+
+        skill.unlockRequirements.arenaClears.splice(gateIndex, 1);
+        this.render();
+      },
+      updateSkillArenaGateField: function (gateIndex, field, rawValue, shouldRender) {
+        const skill = ensureSkillCatalog(this.content).find((entry) => entry.id === this.devTools.selectedSkillId);
+        if (!skill) {
+          return;
+        }
+
+        ensureSkillEffectCollections(skill);
+        if (field === "arenaId" && skill.unlockRequirements.arenaClears[gateIndex] !== undefined) {
+          skill.unlockRequirements.arenaClears[gateIndex] = String(rawValue || "").trim();
+        }
+        ensureSkillEffectCollections(skill);
+        if (shouldRender !== false) {
+          this.render();
+        }
+      },
+      addSkillPrerequisite: function () {
+        const skill = ensureSkillCatalog(this.content).find((entry) => entry.id === this.devTools.selectedSkillId);
+        if (!skill) {
+          return;
+        }
+
+        ensureSkillEffectCollections(skill);
+        const firstOtherSkillId = ensureSkillCatalog(this.content).find((entry) => entry.id !== skill.id)?.id || "";
+        skill.unlockRequirements.requiredSkillLevels.push({
+          skillId: firstOtherSkillId,
+          level: 1,
+        });
+        ensureSkillEffectCollections(skill);
+        this.render();
+      },
+      deleteSkillPrerequisite: function (requirementIndex) {
+        const skill = ensureSkillCatalog(this.content).find((entry) => entry.id === this.devTools.selectedSkillId);
+        if (!skill) {
+          return;
+        }
+
+        ensureSkillEffectCollections(skill);
+        if (!skill.unlockRequirements.requiredSkillLevels[requirementIndex]) {
+          return;
+        }
+
+        skill.unlockRequirements.requiredSkillLevels.splice(requirementIndex, 1);
+        this.render();
+      },
+      updateSkillPrerequisiteField: function (requirementIndex, field, rawValue, shouldRender) {
+        const skill = ensureSkillCatalog(this.content).find((entry) => entry.id === this.devTools.selectedSkillId);
+        if (!skill) {
+          return;
+        }
+
+        ensureSkillEffectCollections(skill);
+        const requirement = skill.unlockRequirements.requiredSkillLevels[requirementIndex];
+        if (!requirement) {
+          return;
+        }
+
+        if (field === "level") {
+          requirement.level = Math.max(1, Number(rawValue || 1));
+        } else {
+          requirement[field] = String(rawValue || "").trim();
+        }
+        ensureSkillEffectCollections(skill);
+        if (shouldRender !== false) {
+          this.render();
+        }
+      },
+      addSkillLevelOverride: function () {
+        const skill = ensureSkillCatalog(this.content).find((entry) => entry.id === this.devTools.selectedSkillId);
+        if (!skill) {
+          return;
+        }
+
+        ensureSkillEffectCollections(skill);
+        const usedLevels = new Set((skill.levelOverrides || []).map(function (entry) { return Number(entry.level || 0); }));
+        let nextLevel = 2;
+        while (usedLevels.has(nextLevel) && nextLevel <= getSkillMaxLevel(skill)) {
+          nextLevel += 1;
+        }
+        if (nextLevel > getSkillMaxLevel(skill)) {
+          this.state.message = "Every skill level already has an override.";
+          this.render();
+          return;
+        }
+
+        skill.levelOverrides.push(createEmptySkillLevelOverride(nextLevel));
+        ensureSkillEffectCollections(skill);
+        this.render();
+      },
+      deleteSkillLevelOverride: function (overrideIndex) {
+        const skill = ensureSkillCatalog(this.content).find((entry) => entry.id === this.devTools.selectedSkillId);
+        if (!skill) {
+          return;
+        }
+
+        ensureSkillEffectCollections(skill);
+        if (!skill.levelOverrides[overrideIndex]) {
+          return;
+        }
+
+        skill.levelOverrides.splice(overrideIndex, 1);
+        ensureSkillEffectCollections(skill);
+        this.render();
+      },
+      updateSkillLevelOverrideField: function (overrideIndex, field, rawValue, shouldRender) {
+        const skill = ensureSkillCatalog(this.content).find((entry) => entry.id === this.devTools.selectedSkillId);
+        if (!skill) {
+          return;
+        }
+
+        ensureSkillEffectCollections(skill);
+        const override = skill.levelOverrides[overrideIndex];
+        if (!override) {
+          return;
+        }
+
+        if (field === "level") {
+          override.level = Math.max(2, Math.min(getSkillMaxLevel(skill), Number(rawValue || 2) || 2));
+        } else if (field === "power" || field === "accuracy") {
+          override[field] = rawValue === "" ? null : Number(rawValue || 0);
+        } else {
+          override[field] = rawValue;
+        }
+        ensureSkillEffectCollections(skill);
+        if (shouldRender !== false) {
+          this.render();
+        }
       },
       addVariant: function () {
         const species = this.content.monsters.species.find((entry) => entry.id === this.devTools.selectedSpeciesId);
@@ -8927,10 +11190,54 @@
           return;
         }
 
-        const value = path === "power" ? Number(rawValue || 0) : rawValue;
-        skill[path] = value;
+        const previousId = skill.id;
+        if (path.includes(".")) {
+          const parts = path.split(".");
+          let current = skill;
+          for (let index = 0; index < parts.length - 1; index += 1) {
+            if (!current[parts[index]] || typeof current[parts[index]] !== "object") {
+              current[parts[index]] = {};
+            }
+            current = current[parts[index]];
+          }
+          const leaf = parts[parts.length - 1];
+          if (path === "unlockRequirements.arenaClears") {
+            current[leaf] = parseArenaClearRequirements(rawValue);
+          } else if (path === "unlockRequirements.requiredSkillLevels") {
+            current[leaf] = parseRequiredSkillLevels(rawValue);
+          } else {
+            current[leaf] = rawValue;
+          }
+        } else {
+          const value = path === "power"
+            ? Number(rawValue || 0)
+            : path === "accuracy"
+              ? Math.max(0, Math.min(100, Number(rawValue || 0)))
+            : path === "maxLevel"
+              ? Math.max(1, Number(rawValue || 1))
+            : path === "element"
+              ? normalizeSkillElement(rawValue)
+              : rawValue;
+          skill[path] = value;
+        }
+        ensureSkillEffectCollections(skill);
         if (path === "id") {
+          replaceSkillReferences(this.content, previousId, rawValue);
           this.devTools.selectedSkillId = rawValue;
+        }
+        if (shouldRender !== false) {
+          this.render();
+        }
+      },
+      updateBattleModelField: function (path, rawValue, shouldRender) {
+        const battleModel = ensureBattleModelSettings(this.content);
+        const numericValue = Number(rawValue || 0);
+        if (path === "basicDefenseDivisor") {
+          battleModel[path] = Math.max(1, numericValue || 1);
+        } else if (path === "randomVarianceMax" || path === "affinityDamageBonusPerPointPercent") {
+          battleModel[path] = Math.max(0, numericValue || 0);
+        } else {
+          battleModel[path] = numericValue;
         }
         if (shouldRender !== false) {
           this.render();

@@ -6,7 +6,7 @@
       "leaderName": "Heather",
       "leaderTitle": "Leader",
       "crestId": "crest-1",
-      "crestName": "Lily Crest",
+      "crestName": "Lily Harbor Crest",
       "recommendedLevel": 5,
       "partySize": 2,
       "rewardMoney": 100,
@@ -42,7 +42,7 @@
       "crestName": "Camelia Ranch Crest",
       "recommendedLevel": 5,
       "partySize": 2,
-      "rewardMoney": 50,
+      "rewardMoney": 100,
       "rewardText": "",
       "description": "",
       "mapId": "camelia-ranch",
@@ -72,11 +72,11 @@
       "leaderName": "Kai",
       "leaderTitle": "Leader",
       "crestId": "crest-3",
-      "crestName": "New Crest",
+      "crestName": "Plumeria Shores Crest",
       "crestImagePath": "assets/Crests/crest5.png",
       "recommendedLevel": 5,
       "partySize": 1,
-      "rewardMoney": 50,
+      "rewardMoney": 100,
       "rewardText": "",
       "description": "",
       "mapId": "",
@@ -91,6 +91,85 @@
         {
           "speciesId": "Caniri",
           "variantId": "Caniri-grass"
+        }
+      ]
+    },
+    {
+      "id": "arena-4",
+      "name": "Jasmine Bay Arena",
+      "leaderName": "Allison",
+      "leaderTitle": "Leader",
+      "crestId": "crest-4",
+      "crestName": "Jasmine Bay Crest",
+      "crestImagePath": "assets/Crests/crest3.png",
+      "recommendedLevel": 5,
+      "partySize": 3,
+      "rewardMoney": 50,
+      "rewardText": "",
+      "description": "",
+      "mapId": "",
+      "team": [
+        {
+          "speciesId": "equira",
+          "variantId": "Equira-Galaxy",
+          "level": 5
+        },
+        {
+          "speciesId": "pawlit",
+          "variantId": "default-galaxy",
+          "level": 5
+        },
+        {
+          "speciesId": "Owlet",
+          "variantId": "owlet-galaxy",
+          "level": 5
+        }
+      ],
+      "pool": [
+        {
+          "speciesId": "equira",
+          "variantId": "Equira-Galaxy"
+        },
+        {
+          "speciesId": "pawlit",
+          "variantId": "default-galaxy"
+        }
+      ]
+    },
+    {
+      "id": "arena-5",
+      "name": "Rose Town Arena",
+      "leaderName": "Hugo",
+      "leaderTitle": "Leader",
+      "crestId": "crest-5",
+      "crestName": "Rose Town Crest",
+      "crestImagePath": "assets/Crests/crest4.png",
+      "recommendedLevel": 5,
+      "partySize": 2,
+      "rewardMoney": 50,
+      "rewardText": "",
+      "description": "",
+      "mapId": "",
+      "team": [
+        {
+          "speciesId": "Fluffram",
+          "variantId": "fluffram-grass",
+          "level": 5
+        },
+        {
+          "speciesId": "Owlet",
+          "variantId": "owlet-grass",
+          "level": 5
+        }
+      ],
+      "pool": [
+        {
+          "speciesId": "equira",
+          "variantId": "Equira-grass"
+        },
+        {
+          "speciesId": "pawlit",
+          "variantId": "default-grass"
         }
       ]
     }

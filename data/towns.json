@@ -43,7 +43,7 @@
       "includeInStarterSelection": true,
       "cardBackgrounds": {
         "desktop": {
-          "imagePath": "assets/posters/bougainvillea_poster.png",
+          "imagePath": "assets/posters/BougainvilleaPoster.png",
           "fit": "cover",
           "zoom": 100,
           "positionX": 50,
@@ -52,7 +52,7 @@
           "overlayOpacity": 0.28
         },
         "mobile": {
-          "imagePath": "assets/posters/bougainvillea_poster.png",
+          "imagePath": "assets/posters/BougainvilleaPoster.png",
           "fit": "cover",
           "zoom": 100,
           "positionX": 82,
@@ -161,13 +161,13 @@
       "cardSubtitle": "",
       "mapId": "rose-town",
       "spawn": {
-        "x": 128,
-        "y": 128
+        "x": 1600,
+        "y": 1088
       },
       "includeInStarterSelection": true,
       "cardBackgrounds": {
         "desktop": {
-          "imagePath": "",
+          "imagePath": "assets/posters/Rose Town.png",
           "fit": "cover",
           "zoom": 100,
           "positionX": 50,
@@ -175,10 +175,10 @@
           "repeat": "no-repeat"
         },
         "mobile": {
-          "imagePath": "",
+          "imagePath": "assets/posters/Rose Town.png",
           "fit": "cover",
           "zoom": 100,
-          "positionX": 50,
+          "positionX": 77,
           "positionY": 50,
           "repeat": "no-repeat",
           "overlayOpacity": 0.18

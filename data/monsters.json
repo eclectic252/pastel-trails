@@ -12,7 +12,9 @@
       "growth": "medium",
       "overworldDisplayMode": "portrait",
       "skills": [
-        "basic-attack"
+        "basic-attack",
+        "skill-2",
+        "skill-3"
       ],
       "variants": [
         {
@@ -270,7 +272,9 @@
       "growth": "medium",
       "overworldDisplayMode": "portrait",
       "skills": [
-        "basic-attack"
+        "basic-attack",
+        "skill-3",
+        "skill-2"
       ],
       "variants": [
         {
@@ -528,7 +532,9 @@
       "growth": "medium",
       "overworldDisplayMode": "portrait",
       "skills": [
-        "basic-attack"
+        "basic-attack",
+        "skill-2",
+        "skill-3"
       ],
       "variants": [
         {
@@ -737,7 +743,9 @@
       "growth": "medium",
       "overworldDisplayMode": "walk",
       "skills": [
-        "basic-attack"
+        "basic-attack",
+        "skill-2",
+        "skill-3"
       ],
       "variants": [
         {
@@ -1003,7 +1011,9 @@
       "growth": "medium",
       "overworldDisplayMode": "portrait",
       "skills": [
-        "basic-attack"
+        "basic-attack",
+        "skill-2",
+        "skill-3"
       ],
       "variants": [
         {
@@ -1270,7 +1280,9 @@
       "growth": "medium",
       "overworldDisplayMode": "walk",
       "skills": [
-        "basic-attack"
+        "basic-attack",
+        "skill-2",
+        "skill-3"
       ],
       "variants": [
         {
@@ -1383,7 +1395,9 @@
       "growth": "medium",
       "overworldDisplayMode": "walk",
       "skills": [
-        "basic-attack"
+        "basic-attack",
+        "skill-2",
+        "skill-3"
       ],
       "variants": [
         {

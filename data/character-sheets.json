@@ -1,6 +1,145 @@
 {
   "sheets": [
     {
+      "id": "assets-characters-boardwalk-girl-sprite-bouganvillea1",
+      "label": "Bouganvillea1",
+      "playerLabel": "Bouganvillea1",
+      "playerSelectable": true,
+      "kind": "character",
+      "group": "Characters / Boardwalk girl sprite",
+      "path": "assets/Characters/Boardwalk girl sprite/Bouganvillea1.png",
+      "columns": 4,
+      "rows": 4,
+      "frameHeight": 313,
+      "offsetX": 0,
+      "offsetY": 0,
+      "renderWidth": null,
+      "rowOffsets": [
+        {
+          "x": 0,
+          "y": 23
+        },
+        {
+          "x": 0,
+          "y": 37
+        },
+        {
+          "x": 0,
+          "y": 45
+        },
+        {
+          "x": 0,
+          "y": 70
+        }
+      ],
+      "frameOffsets": [
+        [
+          {
+            "x": 26,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -69,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -158,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -250,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 5,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -68,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -136,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -214,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 6,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -73,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -143,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -214,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 1,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -71,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -138,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -215,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ]
+      ]
+    },
+    {
       "id": "dawn-tan-overalls",
       "label": "Dawn Tan Overalls",
       "playerLabel": "Tan Overalls",
@@ -140,6 +279,145 @@
       ]
     },
     {
+      "id": "assets-characters-boardwalk-girl-sprite-frost-coat",
+      "label": "Frost Coat",
+      "playerLabel": "Frost Coat",
+      "playerSelectable": true,
+      "kind": "character",
+      "group": "Characters / Boardwalk girl sprite",
+      "path": "assets/Characters/Boardwalk girl sprite/Frost_Coat.png",
+      "columns": 4,
+      "rows": 4,
+      "frameHeight": 313,
+      "offsetX": 0,
+      "offsetY": 0,
+      "renderWidth": null,
+      "rowOffsets": [
+        {
+          "x": 0,
+          "y": 25
+        },
+        {
+          "x": 0,
+          "y": 51
+        },
+        {
+          "x": 0,
+          "y": 58
+        },
+        {
+          "x": 0,
+          "y": 76
+        }
+      ],
+      "frameOffsets": [
+        [
+          {
+            "x": 104,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 32,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -39,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -108,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 69,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 26,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -38,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -91,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 107,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 52,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -4,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -54,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 70,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 14,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -40,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -100,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ]
+      ]
+    },
+    {
       "id": "frostbite",
       "label": "Frostbite",
       "playerLabel": "Frostbite",
@@ -156,29 +434,101 @@
       "rowOffsets": [
         {
           "x": 0,
-          "y": 18
+          "y": 9
         },
         {
           "x": 0,
-          "y": 61
+          "y": 16
         },
         {
           "x": 0,
-          "y": 75
+          "y": 17
         },
         {
           "x": 0,
-          "y": 80
+          "y": 25
         }
       ],
       "frameOffsets": [
         [
           {
-            "x": 28,
+            "x": 8,
             "y": 0,
             "width": 0,
             "height": 0
           },
+          {
+            "x": -43,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -90,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -149,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 4,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -43,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -79,
+            "y": 2,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -122,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": -1,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -40,
+            "y": 3,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -65,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -110,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
           {
             "x": -7,
             "y": 0,
@@ -186,91 +536,19 @@
             "height": 0
           },
           {
-            "x": -46,
+            "x": -52,
             "y": 0,
             "width": 0,
             "height": 0
           },
           {
-            "x": -79,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          }
-        ],
-        [
-          {
-            "x": 30,
+            "x": -77,
             "y": 0,
             "width": 0,
             "height": 0
           },
           {
-            "x": 5,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": -21,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": -49,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          }
-        ],
-        [
-          {
-            "x": 48,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 10,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": -9,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": -44,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          }
-        ],
-        [
-          {
-            "x": 35,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 7,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": -17,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": -47,
+            "x": -119,
             "y": 0,
             "width": 0,
             "height": 0
@@ -1669,6 +1947,284 @@
       ]
     },
     {
+      "id": "assets-characters-boardwalk-girl-sprite-gray-pants-walksheet",
+      "label": "Gray Pants Walksheet",
+      "playerLabel": "Gray Pants Walksheet",
+      "playerSelectable": true,
+      "kind": "character",
+      "group": "Characters / Boardwalk girl sprite",
+      "path": "assets/Characters/Boardwalk girl sprite/gray_pants_walksheet.png",
+      "columns": 4,
+      "rows": 4,
+      "frameHeight": 313,
+      "offsetX": 0,
+      "offsetY": 0,
+      "renderWidth": null,
+      "rowOffsets": [
+        {
+          "x": 0,
+          "y": 30
+        },
+        {
+          "x": 0,
+          "y": 33
+        },
+        {
+          "x": 0,
+          "y": 42
+        },
+        {
+          "x": 0,
+          "y": 71
+        }
+      ],
+      "frameOffsets": [
+        [
+          {
+            "x": 24,
+            "y": -2,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -34,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -98,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -158,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 13,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -30,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -81,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -133,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 22,
+            "y": -2,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -25,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -76,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -119,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 25,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -28,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -76,
+            "y": 2,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -123,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ]
+      ]
+    },
+    {
+      "id": "assets-characters-boardwalk-girl-sprite-greenpants",
+      "label": "Greenpants",
+      "playerLabel": "Greenpants",
+      "playerSelectable": true,
+      "kind": "character",
+      "group": "Characters / Boardwalk girl sprite",
+      "path": "assets/Characters/Boardwalk girl sprite/greenpants.png",
+      "columns": 4,
+      "rows": 4,
+      "frameHeight": 313,
+      "offsetX": 0,
+      "offsetY": 0,
+      "renderWidth": null,
+      "rowOffsets": [
+        {
+          "x": 0,
+          "y": 22
+        },
+        {
+          "x": 0,
+          "y": 35
+        },
+        {
+          "x": 0,
+          "y": 49
+        },
+        {
+          "x": 0,
+          "y": 62
+        }
+      ],
+      "frameOffsets": [
+        [
+          {
+            "x": 67,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 11,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -51,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -98,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 73,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 14,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -60,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -138,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 59,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -71,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -151,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 70,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 16,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -48,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -100,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ]
+      ]
+    },
+    {
       "id": "man-walksheet-v1-4x4-source-alpha",
       "label": "Man Walksheet V1 4x4 Source Alpha",
       "playerLabel": "Electric Jacket Man",
@@ -2225,67 +2781,41 @@
       ]
     },
     {
-      "id": "assets-monsters-pawlit-pawlit-tide-walksheet",
+      "id": "assets-monsters-pawlit-old-pawlit-tide-walksheet",
       "label": "Pawlit Tide Walksheet",
       "playerLabel": "Pawlit Tide Walksheet",
       "playerSelectable": false,
       "kind": "monster",
-      "group": "Monsters / Pawlit",
-      "path": "assets/Monsters/Pawlit/Pawlit_Tide_walksheet.png",
+      "group": "Monsters / Pawlit / old",
+      "path": "assets/Monsters/Pawlit/old/Pawlit_Tide_walksheet.png",
       "columns": 4,
       "rows": 4,
       "frameHeight": 313,
       "offsetX": 0,
       "offsetY": 0,
-      "renderWidth": 100,
+      "renderWidth": null,
       "rowOffsets": [
         {
           "x": 0,
-          "y": 19
+          "y": 0
         },
         {
           "x": 0,
-          "y": 18
+          "y": 0
         },
         {
           "x": 0,
-          "y": 38
+          "y": 0
         },
         {
           "x": 0,
-          "y": 96
+          "y": 0
         }
       ],
       "frameOffsets": [
         [
           {
-            "x": 22,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": -31,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": -70,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": -106,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          }
-        ],
-        [
-          {
-            "x": 43,
+            "x": 0,
             "y": 0,
             "width": 0,
             "height": 0
@@ -2297,13 +2827,13 @@
             "height": 0
           },
           {
-            "x": -41,
+            "x": 0,
             "y": 0,
             "width": 0,
             "height": 0
           },
           {
-            "x": -53,
+            "x": 0,
             "y": 0,
             "width": 0,
             "height": 0
@@ -2311,25 +2841,25 @@
         ],
         [
           {
-            "x": 15,
+            "x": 0,
             "y": 0,
             "width": 0,
             "height": 0
           },
           {
-            "x": -20,
+            "x": 0,
             "y": 0,
             "width": 0,
             "height": 0
           },
           {
-            "x": -10,
+            "x": 0,
             "y": 0,
             "width": 0,
             "height": 0
           },
           {
-            "x": -5,
+            "x": 0,
             "y": 0,
             "width": 0,
             "height": 0
@@ -2337,25 +2867,51 @@
         ],
         [
           {
-            "x": 22,
+            "x": 0,
             "y": 0,
             "width": 0,
             "height": 0
           },
           {
-            "x": -21,
+            "x": 0,
             "y": 0,
             "width": 0,
             "height": 0
           },
           {
-            "x": -46,
+            "x": 0,
             "y": 0,
             "width": 0,
             "height": 0
           },
           {
-            "x": -86,
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 0,
             "y": 0,
             "width": 0,
             "height": 0
@@ -2364,67 +2920,41 @@
       ]
     },
     {
-      "id": "assets-monsters-pawlit-pawlit-blue-walksheet",
+      "id": "assets-monsters-pawlit-old-pawlit-blue-walksheet",
       "label": "Pawlit Blue Walksheet",
       "playerLabel": "Pawlit Blue Walksheet",
       "playerSelectable": false,
       "kind": "monster",
-      "group": "Monsters / Pawlit",
-      "path": "assets/Monsters/Pawlit/pawlit-blue-walksheet.png",
+      "group": "Monsters / Pawlit / old",
+      "path": "assets/Monsters/Pawlit/old/pawlit-blue-walksheet.png",
       "columns": 4,
       "rows": 4,
       "frameHeight": 313,
-      "offsetX": 1,
+      "offsetX": 0,
       "offsetY": 0,
-      "renderWidth": 100,
+      "renderWidth": null,
       "rowOffsets": [
         {
           "x": 0,
-          "y": 21
+          "y": 0
         },
         {
           "x": 0,
-          "y": 12
+          "y": 0
         },
         {
           "x": 0,
-          "y": -9
+          "y": 0
         },
         {
           "x": 0,
-          "y": -27
+          "y": 0
         }
       ],
       "frameOffsets": [
         [
           {
-            "x": 33,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": -18,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": -37,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": -62,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          }
-        ],
-        [
-          {
-            "x": 21,
+            "x": 0,
             "y": 0,
             "width": 0,
             "height": 0
@@ -2436,13 +2966,13 @@
             "height": 0
           },
           {
-            "x": -34,
+            "x": 0,
             "y": 0,
             "width": 0,
             "height": 0
           },
           {
-            "x": -60,
+            "x": 0,
             "y": 0,
             "width": 0,
             "height": 0
@@ -2476,25 +3006,51 @@
         ],
         [
           {
-            "x": 14,
+            "x": 0,
             "y": 0,
             "width": 0,
             "height": 0
           },
           {
-            "x": -15,
+            "x": 0,
             "y": 0,
             "width": 0,
             "height": 0
           },
           {
-            "x": -28,
+            "x": 0,
             "y": 0,
             "width": 0,
             "height": 0
           },
           {
-            "x": -55,
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": 0,
             "y": 0,
             "width": 0,
             "height": 0
@@ -2503,59 +3059,59 @@
       ]
     },
     {
-      "id": "assets-monsters-pawlit-pawlit-classic-walksheet",
+      "id": "assets-monsters-pawlit-old-pawlit-classic-walksheet",
       "label": "Pawlit Classic Walksheet",
       "playerLabel": "Pawlit Classic Walksheet",
       "playerSelectable": false,
       "kind": "monster",
-      "group": "Monsters / Pawlit",
-      "path": "assets/Monsters/Pawlit/pawlit-classic-walksheet.png",
+      "group": "Monsters / Pawlit / old",
+      "path": "assets/Monsters/Pawlit/old/pawlit-classic-walksheet.png",
       "columns": 4,
       "rows": 4,
       "frameHeight": 313,
       "offsetX": 0,
       "offsetY": 0,
-      "renderWidth": 100,
+      "renderWidth": null,
       "rowOffsets": [
         {
           "x": 0,
-          "y": 14
+          "y": 0
         },
         {
           "x": 0,
-          "y": 9
+          "y": 0
         },
         {
           "x": 0,
-          "y": 2
+          "y": 0
         },
         {
           "x": 0,
-          "y": 69
+          "y": 0
         }
       ],
       "frameOffsets": [
         [
           {
-            "x": 37,
+            "x": 0,
             "y": 0,
             "width": 0,
             "height": 0
           },
           {
-            "x": -12,
+            "x": 0,
             "y": 0,
             "width": 0,
             "height": 0
           },
           {
-            "x": -58,
+            "x": 0,
             "y": 0,
             "width": 0,
             "height": 0
           },
           {
-            "x": -101,
+            "x": 0,
             "y": 0,
             "width": 0,
             "height": 0
@@ -2563,25 +3119,25 @@
         ],
         [
           {
-            "x": 32,
+            "x": 0,
             "y": 0,
             "width": 0,
             "height": 0
           },
           {
-            "x": 18,
+            "x": 0,
             "y": 0,
             "width": 0,
             "height": 0
           },
           {
-            "x": 5,
+            "x": 0,
             "y": 0,
             "width": 0,
             "height": 0
           },
           {
-            "x": -18,
+            "x": 0,
             "y": 0,
             "width": 0,
             "height": 0
@@ -2589,25 +3145,25 @@
         ],
         [
           {
-            "x": 16,
+            "x": 0,
             "y": 0,
             "width": 0,
             "height": 0
           },
           {
-            "x": -20,
+            "x": 0,
             "y": 0,
             "width": 0,
             "height": 0
           },
           {
-            "x": -10,
+            "x": 0,
             "y": 0,
             "width": 0,
             "height": 0
           },
           {
-            "x": -53,
+            "x": 0,
             "y": 0,
             "width": 0,
             "height": 0
@@ -2615,25 +3171,25 @@
         ],
         [
           {
-            "x": 50,
+            "x": 0,
             "y": 0,
             "width": 0,
             "height": 0
           },
           {
-            "x": -5,
+            "x": 0,
             "y": 0,
             "width": 0,
             "height": 0
           },
           {
-            "x": -37,
+            "x": 0,
             "y": 0,
             "width": 0,
             "height": 0
           },
           {
-            "x": -84,
+            "x": 0,
             "y": 0,
             "width": 0,
             "height": 0
@@ -2642,708 +3198,13 @@
       ]
     },
     {
-      "id": "assets-monsters-pawlit-pawlit-pink-walksheet",
+      "id": "assets-monsters-pawlit-old-pawlit-pink-walksheet",
       "label": "Pawlit Pink Walksheet",
       "playerLabel": "Pawlit Pink Walksheet",
       "playerSelectable": false,
       "kind": "monster",
-      "group": "Monsters / Pawlit",
-      "path": "assets/Monsters/Pawlit/pawlit-pink-walksheet.png",
-      "columns": 4,
-      "rows": 4,
-      "frameHeight": 313,
-      "offsetX": 0,
-      "offsetY": 0,
-      "renderWidth": null,
-      "rowOffsets": [
-        {
-          "x": 0,
-          "y": 0
-        },
-        {
-          "x": 0,
-          "y": 0
-        },
-        {
-          "x": 0,
-          "y": 0
-        },
-        {
-          "x": 0,
-          "y": 0
-        }
-      ],
-      "frameOffsets": [
-        [
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          }
-        ],
-        [
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          }
-        ],
-        [
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          }
-        ],
-        [
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          }
-        ]
-      ]
-    },
-    {
-      "id": "pawlit-classic-walksheet",
-      "label": "Pawlit",
-      "playerLabel": "Pawlit",
-      "playerSelectable": false,
-      "kind": "monster",
-      "group": "Monsters / Monster Spritesheets",
-      "path": "assets/Monsters/Monster Spritesheets/pawlit-classic-walksheet.png",
-      "columns": 4,
-      "rows": 4,
-      "frameHeight": 313,
-      "offsetX": 0,
-      "offsetY": 0,
-      "renderWidth": 64,
-      "rowOffsets": [
-        {
-          "x": 0,
-          "y": 15
-        },
-        {
-          "x": 0,
-          "y": 10
-        },
-        {
-          "x": 0,
-          "y": -26
-        },
-        {
-          "x": 0,
-          "y": -37
-        }
-      ],
-      "frameOffsets": [
-        [
-          {
-            "x": 20,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": -8,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": -25,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": -45,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          }
-        ],
-        [
-          {
-            "x": 45,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 3,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": -19,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": -53,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          }
-        ],
-        [
-          {
-            "x": 21,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": -6,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": -29,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": -59,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          }
-        ],
-        [
-          {
-            "x": 10,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": -22,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": -30,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": -50,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          }
-        ]
-      ]
-    },
-    {
-      "id": "blue-girl-spritesheet",
-      "label": "Blue Girl Spritesheet",
-      "playerLabel": "Blue Girl Spritesheet",
-      "playerSelectable": true,
-      "kind": "character",
-      "group": "Characters",
-      "path": "assets/Characters/Blue_Girl_spritesheet.png",
-      "columns": 4,
-      "rows": 4,
-      "frameHeight": 313,
-      "offsetX": 0,
-      "offsetY": 0,
-      "renderWidth": null,
-      "rowOffsets": [
-        {
-          "x": 0,
-          "y": 0
-        },
-        {
-          "x": 0,
-          "y": 0
-        },
-        {
-          "x": 0,
-          "y": 0
-        },
-        {
-          "x": 0,
-          "y": 0
-        }
-      ],
-      "frameOffsets": [
-        [
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          }
-        ],
-        [
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          }
-        ],
-        [
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          }
-        ],
-        [
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          }
-        ]
-      ]
-    },
-    {
-      "id": "dawn-view",
-      "label": "Dawn View",
-      "playerLabel": "Dawn View",
-      "playerSelectable": true,
-      "kind": "character",
-      "group": "Characters",
-      "path": "assets/Characters/Dawn_view.png",
-      "columns": 4,
-      "rows": 4,
-      "frameHeight": 313,
-      "offsetX": 0,
-      "offsetY": 0,
-      "renderWidth": null,
-      "rowOffsets": [
-        {
-          "x": 0,
-          "y": 0
-        },
-        {
-          "x": 0,
-          "y": 0
-        },
-        {
-          "x": 0,
-          "y": 0
-        },
-        {
-          "x": 0,
-          "y": 0
-        }
-      ],
-      "frameOffsets": [
-        [
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          }
-        ],
-        [
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          }
-        ],
-        [
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          }
-        ],
-        [
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          }
-        ]
-      ]
-    },
-    {
-      "id": "pink-girl-spritesheet",
-      "label": "Pink Girl Spritesheet",
-      "playerLabel": "Pink Girl Spritesheet",
-      "playerSelectable": true,
-      "kind": "character",
-      "group": "Characters",
-      "path": "assets/Characters/Pink_Girl_spritesheet.png",
-      "columns": 4,
-      "rows": 4,
-      "frameHeight": 313,
-      "offsetX": 0,
-      "offsetY": 0,
-      "renderWidth": null,
-      "rowOffsets": [
-        {
-          "x": 0,
-          "y": 0
-        },
-        {
-          "x": 0,
-          "y": 0
-        },
-        {
-          "x": 0,
-          "y": 0
-        },
-        {
-          "x": 0,
-          "y": 0
-        }
-      ],
-      "frameOffsets": [
-        [
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          }
-        ],
-        [
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          }
-        ],
-        [
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          }
-        ],
-        [
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          },
-          {
-            "x": 0,
-            "y": 0,
-            "width": 0,
-            "height": 0
-          }
-        ]
-      ]
-    },
-    {
-      "id": "player-girl-front-idle-128x128",
-      "label": "Player Girl Front Idle 128x128",
-      "playerLabel": "Player Girl Front Idle 128x128",
-      "playerSelectable": true,
-      "kind": "character",
-      "group": "Characters",
-      "path": "assets/Characters/player_girl_front_idle_128x128.png",
+      "group": "Monsters / Pawlit / old",
+      "path": "assets/Monsters/Pawlit/old/pawlit-pink-walksheet.png",
       "columns": 4,
       "rows": 4,
       "frameHeight": 313,

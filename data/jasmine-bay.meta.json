@@ -1,20 +1,32 @@
 {
-  "mapId": "rose-town",
-  "displayName": "Rose Town",
+  "mapId": "jasmine-bay",
+  "displayName": "Jasmine Bay",
   "isTown": true,
   "safezone": true,
   "collisionGrid": 64,
   "transitions": [
     {
-      "id": "rose-to-rooute3",
-      "x": 2304,
-      "y": 1152,
+      "id": "transition-1",
+      "x": 2176,
+      "y": 512,
       "width": 128,
-      "height": 256,
+      "height": 512,
+      "targetMapId": "route-1",
+      "targetSpawn": {
+        "x": 64,
+        "y": 960
+      }
+    },
+    {
+      "id": "jasmine-to-route3",
+      "x": 1408,
+      "y": 0,
+      "width": 512,
+      "height": 128,
       "targetMapId": "route-3",
       "targetSpawn": {
-        "x": 192,
-        "y": 4416
+        "x": 1088,
+        "y": 8384
       }
     }
   ],
@@ -22,30 +34,15 @@
     {
       "id": "interaction-1",
       "type": "arena",
-      "x": 896,
-      "y": 512,
+      "x": 768,
+      "y": 640,
       "width": 256,
       "height": 128,
-      "label": "Rose Town Arena",
+      "label": "Jasmine Bay Arena",
       "text": "Add interaction text here.",
       "data": {
         "shopId": "",
-        "arenaId": "arena-5",
-        "crestId": ""
-      }
-    },
-    {
-      "id": "interaction-2",
-      "type": "healing-center",
-      "x": 384,
-      "y": 1024,
-      "width": 256,
-      "height": 128,
-      "label": "Healing Center",
-      "text": "Add interaction text here.",
-      "data": {
-        "shopId": "",
-        "arenaId": "",
+        "arenaId": "arena-4",
         "crestId": ""
       }
     }

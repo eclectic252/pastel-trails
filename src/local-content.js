@@ -59,10 +59,96 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
     "skills": [
       {
         "id": "basic-attack",
-        "name": "Basic Attack",
+        "name": "Tackle",
         "kind": "attack",
-        "power": 8,
-        "description": "A simple physical strike."
+        "power": 5,
+        "description": "A simple physical strike.",
+        "element": "Neutral",
+        "accuracy": 100,
+        "maxLevel": 2,
+        "levelOverrides": [
+          {
+            "level": 2,
+            "power": 10,
+            "accuracy": null,
+            "element": "",
+            "description": ""
+          }
+        ],
+        "unlockRequirements": {
+          "arenaClears": [],
+          "requiredSkillLevels": []
+        },
+        "statModifiers": {
+          "self": [],
+          "foe": []
+        },
+        "statusEffects": []
+      },
+      {
+        "id": "skill-2",
+        "name": "Gust",
+        "kind": "attack",
+        "element": "Air",
+        "maxLevel": 2,
+        "levelOverrides": [
+          {
+            "level": 2,
+            "power": 8,
+            "accuracy": null,
+            "element": "",
+            "description": ""
+          }
+        ],
+        "accuracy": 100,
+        "unlockRequirements": {
+          "arenaClears": [],
+          "requiredSkillLevels": []
+        },
+        "statModifiers": {
+          "self": [],
+          "foe": []
+        },
+        "statusEffects": [],
+        "power": 6,
+        "description": ""
+      },
+      {
+        "id": "skill-3",
+        "name": "Whirlwind",
+        "kind": "attack",
+        "element": "Air",
+        "maxLevel": 2,
+        "levelOverrides": [
+          {
+            "level": 2,
+            "power": 15,
+            "accuracy": null,
+            "element": "",
+            "description": ""
+          }
+        ],
+        "accuracy": 95,
+        "unlockRequirements": {
+          "arenaClears": [],
+          "requiredSkillLevels": [
+            {
+              "skillId": "skill-2",
+              "level": 2
+            },
+            {
+              "skillId": "basic-attack",
+              "level": 1
+            }
+          ]
+        },
+        "statModifiers": {
+          "self": [],
+          "foe": []
+        },
+        "statusEffects": [],
+        "power": 10,
+        "description": ""
       }
     ]
   },
@@ -80,7 +166,9 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "growth": "medium",
         "overworldDisplayMode": "portrait",
         "skills": [
-          "basic-attack"
+          "basic-attack",
+          "skill-2",
+          "skill-3"
         ],
         "variants": [
           {
@@ -338,7 +426,9 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "growth": "medium",
         "overworldDisplayMode": "portrait",
         "skills": [
-          "basic-attack"
+          "basic-attack",
+          "skill-3",
+          "skill-2"
         ],
         "variants": [
           {
@@ -596,7 +686,9 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "growth": "medium",
         "overworldDisplayMode": "portrait",
         "skills": [
-          "basic-attack"
+          "basic-attack",
+          "skill-2",
+          "skill-3"
         ],
         "variants": [
           {
@@ -805,7 +897,9 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "growth": "medium",
         "overworldDisplayMode": "walk",
         "skills": [
-          "basic-attack"
+          "basic-attack",
+          "skill-2",
+          "skill-3"
         ],
         "variants": [
           {
@@ -1071,7 +1165,9 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "growth": "medium",
         "overworldDisplayMode": "portrait",
         "skills": [
-          "basic-attack"
+          "basic-attack",
+          "skill-2",
+          "skill-3"
         ],
         "variants": [
           {
@@ -1338,7 +1434,9 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "growth": "medium",
         "overworldDisplayMode": "walk",
         "skills": [
-          "basic-attack"
+          "basic-attack",
+          "skill-2",
+          "skill-3"
         ],
         "variants": [
           {
@@ -1451,7 +1549,9 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "growth": "medium",
         "overworldDisplayMode": "walk",
         "skills": [
-          "basic-attack"
+          "basic-attack",
+          "skill-2",
+          "skill-3"
         ],
         "variants": [
           {
@@ -1550,7 +1650,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "includeInStarterSelection": true,
         "cardBackgrounds": {
           "desktop": {
-            "imagePath": "assets/posters/bougainvillea_poster.png",
+            "imagePath": "assets/posters/BougainvilleaPoster.png",
             "fit": "cover",
             "zoom": 100,
             "positionX": 50,
@@ -1559,7 +1659,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "overlayOpacity": 0.28
           },
           "mobile": {
-            "imagePath": "assets/posters/bougainvillea_poster.png",
+            "imagePath": "assets/posters/BougainvilleaPoster.png",
             "fit": "cover",
             "zoom": 100,
             "positionX": 82,
@@ -1668,13 +1768,13 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "cardSubtitle": "",
         "mapId": "rose-town",
         "spawn": {
-          "x": 128,
-          "y": 128
+          "x": 1600,
+          "y": 1088
         },
         "includeInStarterSelection": true,
         "cardBackgrounds": {
           "desktop": {
-            "imagePath": "",
+            "imagePath": "assets/posters/Rose Town.png",
             "fit": "cover",
             "zoom": 100,
             "positionX": 50,
@@ -1682,10 +1782,10 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "repeat": "no-repeat"
           },
           "mobile": {
-            "imagePath": "",
+            "imagePath": "assets/posters/Rose Town.png",
             "fit": "cover",
             "zoom": 100,
-            "positionX": 50,
+            "positionX": 77,
             "positionY": 50,
             "repeat": "no-repeat",
             "overlayOpacity": 0.18
@@ -1702,7 +1802,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "leaderName": "Heather",
         "leaderTitle": "Leader",
         "crestId": "crest-1",
-        "crestName": "Lily Crest",
+        "crestName": "Lily Harbor Crest",
         "recommendedLevel": 5,
         "partySize": 2,
         "rewardMoney": 100,
@@ -1738,7 +1838,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "crestName": "Camelia Ranch Crest",
         "recommendedLevel": 5,
         "partySize": 2,
-        "rewardMoney": 50,
+        "rewardMoney": 100,
         "rewardText": "",
         "description": "",
         "mapId": "camelia-ranch",
@@ -1768,11 +1868,11 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "leaderName": "Kai",
         "leaderTitle": "Leader",
         "crestId": "crest-3",
-        "crestName": "New Crest",
+        "crestName": "Plumeria Shores Crest",
         "crestImagePath": "assets/Crests/crest5.png",
         "recommendedLevel": 5,
         "partySize": 1,
-        "rewardMoney": 50,
+        "rewardMoney": 100,
         "rewardText": "",
         "description": "",
         "mapId": "",
@@ -1789,6 +1889,85 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "variantId": "Caniri-grass"
           }
         ]
+      },
+      {
+        "id": "arena-4",
+        "name": "Jasmine Bay Arena",
+        "leaderName": "Allison",
+        "leaderTitle": "Leader",
+        "crestId": "crest-4",
+        "crestName": "Jasmine Bay Crest",
+        "crestImagePath": "assets/Crests/crest3.png",
+        "recommendedLevel": 5,
+        "partySize": 3,
+        "rewardMoney": 50,
+        "rewardText": "",
+        "description": "",
+        "mapId": "",
+        "team": [
+          {
+            "speciesId": "equira",
+            "variantId": "Equira-Galaxy",
+            "level": 5
+          },
+          {
+            "speciesId": "pawlit",
+            "variantId": "default-galaxy",
+            "level": 5
+          },
+          {
+            "speciesId": "Owlet",
+            "variantId": "owlet-galaxy",
+            "level": 5
+          }
+        ],
+        "pool": [
+          {
+            "speciesId": "equira",
+            "variantId": "Equira-Galaxy"
+          },
+          {
+            "speciesId": "pawlit",
+            "variantId": "default-galaxy"
+          }
+        ]
+      },
+      {
+        "id": "arena-5",
+        "name": "Rose Town Arena",
+        "leaderName": "Hugo",
+        "leaderTitle": "Leader",
+        "crestId": "crest-5",
+        "crestName": "Rose Town Crest",
+        "crestImagePath": "assets/Crests/crest4.png",
+        "recommendedLevel": 5,
+        "partySize": 2,
+        "rewardMoney": 50,
+        "rewardText": "",
+        "description": "",
+        "mapId": "",
+        "team": [
+          {
+            "speciesId": "Fluffram",
+            "variantId": "fluffram-grass",
+            "level": 5
+          },
+          {
+            "speciesId": "Owlet",
+            "variantId": "owlet-grass",
+            "level": 5
+          }
+        ],
+        "pool": [
+          {
+            "speciesId": "equira",
+            "variantId": "Equira-grass"
+          },
+          {
+            "speciesId": "pawlit",
+            "variantId": "default-grass"
+          }
+        ]
       }
     ]
   },
@@ -1797,6 +1976,145 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
   },
   "characterSheets": {
     "sheets": [
+      {
+        "id": "assets-characters-boardwalk-girl-sprite-bouganvillea1",
+        "label": "Bouganvillea1",
+        "playerLabel": "Bouganvillea1",
+        "playerSelectable": true,
+        "kind": "character",
+        "group": "Characters / Boardwalk girl sprite",
+        "path": "assets/Characters/Boardwalk girl sprite/Bouganvillea1.png",
+        "columns": 4,
+        "rows": 4,
+        "frameHeight": 313,
+        "offsetX": 0,
+        "offsetY": 0,
+        "renderWidth": null,
+        "rowOffsets": [
+          {
+            "x": 0,
+            "y": 23
+          },
+          {
+            "x": 0,
+            "y": 37
+          },
+          {
+            "x": 0,
+            "y": 45
+          },
+          {
+            "x": 0,
+            "y": 70
+          }
+        ],
+        "frameOffsets": [
+          [
+            {
+              "x": 26,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -69,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -158,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -250,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 5,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -68,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -136,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -214,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 6,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -73,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -143,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -214,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 1,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -71,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -138,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -215,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ]
+        ]
+      },
       {
         "id": "dawn-tan-overalls",
         "label": "Dawn Tan Overalls",
@@ -1937,6 +2255,145 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         ]
       },
       {
+        "id": "assets-characters-boardwalk-girl-sprite-frost-coat",
+        "label": "Frost Coat",
+        "playerLabel": "Frost Coat",
+        "playerSelectable": true,
+        "kind": "character",
+        "group": "Characters / Boardwalk girl sprite",
+        "path": "assets/Characters/Boardwalk girl sprite/Frost_Coat.png",
+        "columns": 4,
+        "rows": 4,
+        "frameHeight": 313,
+        "offsetX": 0,
+        "offsetY": 0,
+        "renderWidth": null,
+        "rowOffsets": [
+          {
+            "x": 0,
+            "y": 25
+          },
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 0,
+            "y": 58
+          },
+          {
+            "x": 0,
+            "y": 76
+          }
+        ],
+        "frameOffsets": [
+          [
+            {
+              "x": 104,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 32,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -39,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -108,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 107,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 52,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -4,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -54,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 70,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 14,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -40,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -100,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ]
+        ]
+      },
+      {
         "id": "frostbite",
         "label": "Frostbite",
         "playerLabel": "Frostbite",
@@ -1953,29 +2410,101 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "rowOffsets": [
           {
             "x": 0,
-            "y": 18
+            "y": 9
           },
           {
             "x": 0,
-            "y": 61
+            "y": 16
           },
           {
             "x": 0,
-            "y": 75
+            "y": 17
           },
           {
             "x": 0,
-            "y": 80
+            "y": 25
           }
         ],
         "frameOffsets": [
           [
             {
-              "x": 28,
+              "x": 8,
               "y": 0,
               "width": 0,
               "height": 0
             },
+            {
+              "x": -43,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -90,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -149,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 4,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -43,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -79,
+              "y": 2,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -122,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": -1,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -40,
+              "y": 3,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -65,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -110,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
             {
               "x": -7,
               "y": 0,
@@ -1983,91 +2512,19 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               "height": 0
             },
             {
-              "x": -46,
+              "x": -52,
               "y": 0,
               "width": 0,
               "height": 0
             },
             {
-              "x": -79,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            }
-          ],
-          [
-            {
-              "x": 30,
+              "x": -77,
               "y": 0,
               "width": 0,
               "height": 0
             },
             {
-              "x": 5,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": -21,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": -49,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            }
-          ],
-          [
-            {
-              "x": 48,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 10,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": -9,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": -44,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            }
-          ],
-          [
-            {
-              "x": 35,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": 7,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": -17,
-              "y": 0,
-              "width": 0,
-              "height": 0
-            },
-            {
-              "x": -47,
+              "x": -119,
               "y": 0,
               "width": 0,
               "height": 0
@@ -3466,6 +3923,284 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         ]
       },
       {
+        "id": "assets-characters-boardwalk-girl-sprite-gray-pants-walksheet",
+        "label": "Gray Pants Walksheet",
+        "playerLabel": "Gray Pants Walksheet",
+        "playerSelectable": true,
+        "kind": "character",
+        "group": "Characters / Boardwalk girl sprite",
+        "path": "assets/Characters/Boardwalk girl sprite/gray_pants_walksheet.png",
+        "columns": 4,
+        "rows": 4,
+        "frameHeight": 313,
+        "offsetX": 0,
+        "offsetY": 0,
+        "renderWidth": null,
+        "rowOffsets": [
+          {
+            "x": 0,
+            "y": 30
+          },
+          {
+            "x": 0,
+            "y": 33
+          },
+          {
+            "x": 0,
+            "y": 42
+          },
+          {
+            "x": 0,
+            "y": 71
+          }
+        ],
+        "frameOffsets": [
+          [
+            {
+              "x": 24,
+              "y": -2,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -34,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -98,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -158,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 13,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -30,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -81,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -133,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 22,
+              "y": -2,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -25,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -76,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -119,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 25,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -28,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -76,
+              "y": 2,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -123,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ]
+        ]
+      },
+      {
+        "id": "assets-characters-boardwalk-girl-sprite-greenpants",
+        "label": "Greenpants",
+        "playerLabel": "Greenpants",
+        "playerSelectable": true,
+        "kind": "character",
+        "group": "Characters / Boardwalk girl sprite",
+        "path": "assets/Characters/Boardwalk girl sprite/greenpants.png",
+        "columns": 4,
+        "rows": 4,
+        "frameHeight": 313,
+        "offsetX": 0,
+        "offsetY": 0,
+        "renderWidth": null,
+        "rowOffsets": [
+          {
+            "x": 0,
+            "y": 22
+          },
+          {
+            "x": 0,
+            "y": 35
+          },
+          {
+            "x": 0,
+            "y": 49
+          },
+          {
+            "x": 0,
+            "y": 62
+          }
+        ],
+        "frameOffsets": [
+          [
+            {
+              "x": 67,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 11,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -51,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -98,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 73,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 14,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -60,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -138,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 59,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -71,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -151,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 70,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 16,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -48,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -100,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ]
+        ]
+      },
+      {
         "id": "man-walksheet-v1-4x4-source-alpha",
         "label": "Man Walksheet V1 4x4 Source Alpha",
         "playerLabel": "Electric Jacket Man",
@@ -4035,8 +4770,130 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "offsetX": 0,
         "offsetY": 0,
         "renderWidth": null,
-        "rowOffsets": [],
-        "frameOffsets": []
+        "rowOffsets": [
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "frameOffsets": [
+          [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ]
+        ]
       },
       {
         "id": "assets-monsters-pawlit-old-pawlit-blue-walksheet",
@@ -4052,8 +4909,130 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "offsetX": 0,
         "offsetY": 0,
         "renderWidth": null,
-        "rowOffsets": [],
-        "frameOffsets": []
+        "rowOffsets": [
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "frameOffsets": [
+          [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ]
+        ]
       },
       {
         "id": "assets-monsters-pawlit-old-pawlit-classic-walksheet",
@@ -4069,8 +5048,130 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "offsetX": 0,
         "offsetY": 0,
         "renderWidth": null,
-        "rowOffsets": [],
-        "frameOffsets": []
+        "rowOffsets": [
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "frameOffsets": [
+          [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ]
+        ]
       },
       {
         "id": "assets-monsters-pawlit-old-pawlit-pink-walksheet",
@@ -4086,8 +5187,130 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "offsetX": 0,
         "offsetY": 0,
         "renderWidth": null,
-        "rowOffsets": [],
-        "frameOffsets": []
+        "rowOffsets": [
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "frameOffsets": [
+          [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ]
+        ]
       }
     ]
   },
@@ -4171,10 +5394,11 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
   },
   "townAssets": {
     "images": [
+      "assets/posters/BougainvilleaPoster.png",
       "assets/posters/Camelia_ranch_poster.png",
       "assets/posters/JasmineBay.png",
       "assets/posters/Lily_harbor_poster.png",
-      "assets/posters/bougainvillea_poster.png",
+      "assets/posters/Rose Town.png",
       "assets/posters/plumeria_shores.png"
     ]
   },
@@ -4184,7 +5408,10 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       "assets/Crests/crest2.png",
       "assets/Crests/crest3.png",
       "assets/Crests/crest4.png",
-      "assets/Crests/crest5.png"
+      "assets/Crests/crest5.png",
+      "assets/Crests/crest6.png",
+      "assets/Crests/crest7.png",
+      "assets/Crests/crest8.png"
     ]
   },
   "maps": {
@@ -44590,7 +45817,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "height": 384,
           "targetMapId": "route-3",
           "targetSpawn": {
-            "x": 960,
+            "x": 704,
             "y": 448
           }
         }
@@ -44837,7 +46064,38 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           }
         }
       ],
-      "interactions": [],
+      "interactions": [
+        {
+          "id": "interaction-1",
+          "type": "arena",
+          "x": 896,
+          "y": 512,
+          "width": 256,
+          "height": 128,
+          "label": "Rose Town Arena",
+          "text": "Add interaction text here.",
+          "data": {
+            "shopId": "",
+            "arenaId": "arena-5",
+            "crestId": ""
+          }
+        },
+        {
+          "id": "interaction-2",
+          "type": "healing-center",
+          "x": 384,
+          "y": 1024,
+          "width": 256,
+          "height": 128,
+          "label": "Healing Center",
+          "text": "Add interaction text here.",
+          "data": {
+            "shopId": "",
+            "arenaId": "",
+            "crestId": ""
+          }
+        }
+      ],
       "spawnZones": [
         {
           "id": "default-zone",
@@ -45085,7 +46343,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "targetMapId": "camelia-ranch",
           "targetSpawn": {
             "x": 1728,
-            "y": 1344
+            "y": 1216
           }
         },
         {

@@ -639,7 +639,7 @@ button {
 
 .world-location-header {
   display: grid;
-  gap: 0.2rem;
+  gap: 0.45rem;
 }
 
 .world-location-line {
@@ -673,30 +673,97 @@ button {
   min-width: 110px;
 }
 
+.encounter-preview {
+  display: grid;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.encounter-preview-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+  min-width: 0;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.encounter-preview-heading-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.encounter-preview-title {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.68rem;
+}
+
+.encounter-preview-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.4rem;
+  height: 1.4rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: rgba(35, 110, 143, 0.12);
+  color: var(--accent-strong);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.encounter-preview-toggle-label {
+  color: var(--accent-strong);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
 .encounter-preview-strip {
   display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.6rem;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 0.25rem;
+  scrollbar-width: thin;
+  min-width: 0;
+}
+
+.encounter-preview-strip[hidden] {
+  display: none;
 }
 
 .encounter-preview-card {
   display: grid;
+  grid-template-rows: auto auto;
   justify-items: center;
-  gap: 0.3rem;
-  width: 95px;
+  gap: 0.38rem;
+  width: 82px;
+  flex: 0 0 auto;
 }
 
 .encounter-preview-visual {
   position: relative;
-  width: 80px;
-  height: 80px;
+  width: 72px;
+  height: 72px;
 }
 
-.encounter-preview-icon,
-.encounter-preview-fallback {
-  width: 80px;
-  height: 80px;
+.encounter-preview-icon {
+  display: block;
+  width: 72px;
+  height: 72px;
   border-radius: 14px;
   border: 1px solid rgba(57, 79, 91, 0.14);
   background: rgba(255, 255, 255, 0.85);
@@ -704,35 +771,36 @@ button {
 }
 
 .encounter-preview-icon {
-  display: block;
-  object-fit: contain;
-  padding: 0.1rem;
-}
-
-.encounter-preview-fallback {
-  display: grid;
-  place-items: center;
-  color: var(--accent-strong);
-  font-size: 1rem;
-  font-weight: 700;
+  padding: 0.15rem;
 }
 
 .encounter-preview-label {
-  display: block;
+  display: grid;
+  gap: 0.08rem;
   width: 100%;
   text-align: center;
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   line-height: 1.1;
-  white-space: nowrap;
+}
+
+.encounter-preview-label strong,
+.encounter-preview-label span {
+  display: -webkit-box;
   overflow: hidden;
-  text-overflow: ellipsis;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.encounter-preview-label strong {
+  color: var(--text);
+  font-size: 0.76rem;
 }
 
 .encounter-preview-badge {
   position: absolute;
-  right: -8px;
-  top: -8px;
+  right: -6px;
+  top: -6px;
   padding: 0.15rem 0.4rem;
   border-radius: 999px;
   background: var(--warm);
@@ -1046,6 +1114,328 @@ button {
   margin: 0.4rem 0 0;
 }
 
+.monster-roster-section {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.monster-roster-stack {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.monster-roster-card {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr) auto;
+  gap: 0.9rem;
+  align-items: center;
+  padding: 0.95rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(57, 79, 91, 0.12);
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.monster-roster-visual-wrap {
+  width: 84px;
+  height: 84px;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background: rgba(214, 237, 246, 0.48);
+  border: 1px solid rgba(57, 79, 91, 0.1);
+}
+
+.monster-roster-visual {
+  width: 68px;
+  height: 68px;
+}
+
+.monster-roster-main {
+  display: grid;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.monster-roster-topline strong {
+  display: block;
+  font-size: 1rem;
+  line-height: 1.1;
+}
+
+.monster-roster-topline span {
+  display: block;
+  margin-top: 0.18rem;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.monster-roster-statrows {
+  display: grid;
+  gap: 0.38rem;
+}
+
+.monster-roster-statrow {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.86rem;
+}
+
+.monster-roster-statrow span:first-child {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.monster-roster-statrow strong {
+  min-width: 68px;
+  text-align: right;
+  font-size: 0.82rem;
+}
+
+.monster-roster-bar {
+  position: relative;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(82, 106, 120, 0.14);
+}
+
+.monster-roster-bar > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #80cf62, #5cb84c);
+}
+
+.monster-roster-bar-xp > span {
+  background: linear-gradient(90deg, #d8cfef, #b39cec);
+}
+
+.monster-roster-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+
+.monster-card-action {
+  min-height: 38px;
+  padding: 0.55rem 0.8rem;
+}
+
+.monster-card-action-active {
+  background: rgba(214, 237, 246, 0.88);
+  border-color: rgba(35, 110, 143, 0.22);
+}
+
+.monster-card-action-icon {
+  min-width: 42px;
+  padding: 0.55rem;
+}
+
+.monster-moves-panel {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(57, 79, 91, 0.1);
+}
+
+.monster-moves-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.monster-moves-columns h4 {
+  margin: 0 0 0.4rem;
+  font-size: 0.92rem;
+}
+
+.monster-moves-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.monster-move-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.65rem 0.75rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.54);
+}
+
+.monster-move-row + .monster-move-row {
+  margin-top: 0.45rem;
+}
+
+.monster-move-row-locked {
+  background: rgba(233, 228, 223, 0.68);
+}
+
+.monster-move-row-main {
+  min-width: 0;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.monster-move-row-main span,
+.monster-move-row-main strong,
+.monster-move-row-main em,
+.monster-move-row-main small {
+  display: block;
+}
+
+.monster-move-row-main em,
+.monster-move-row-main small {
+  color: var(--muted);
+  font-style: normal;
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.monster-move-xp {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.monster-move-xp strong {
+  font-size: 0.76rem;
+  color: #4d6470;
+  white-space: nowrap;
+}
+
+.monster-move-xp-bar {
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(206, 198, 223, 0.38);
+}
+
+.monster-move-xp-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #8bc5ff, #5b86e5);
+}
+
+.monster-move-row-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.38rem;
+}
+
+.monster-move-level-badge {
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(214, 237, 246, 0.9);
+  border: 1px solid rgba(35, 110, 143, 0.16);
+  color: #355564;
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.monster-move-action {
+  min-width: 72px;
+  padding: 0.55rem 0.8rem;
+}
+
+.monster-affinity-panel-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.monster-affinity-panel-topline span {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.monster-affinity-stack {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.monster-affinity-card {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.9rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(57, 79, 91, 0.12);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.monster-affinity-card-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.monster-affinity-card-header span {
+  display: block;
+  margin-top: 0.16rem;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.monster-affinity-primary {
+  padding: 0.3rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(35, 110, 143, 0.12);
+  color: var(--accent-strong);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.monster-affinity-summary {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.monster-affinity-grid {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.monster-affinity-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.monster-affinity-element {
+  font-weight: 600;
+}
+
+.monster-affinity-value {
+  min-width: 1.6rem;
+  text-align: right;
+}
+
+.monster-affinity-spend-button {
+  min-height: 34px;
+  min-width: 40px;
+  padding: 0.45rem 0.6rem;
+}
+
+.monster-affinity-controls {
+  display: inline-flex;
+  gap: 0.35rem;
+}
+
 .dev-modal {
   width: min(1040px, calc(100vw - 2rem));
 }
@@ -1103,6 +1493,24 @@ button {
   display: grid;
   gap: 0.22rem;
   min-width: 0;
+}
+
+.battle-hud-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.32rem;
+  margin-top: 0.08rem;
+}
+
+.battle-hud-label {
+  padding: 0.14rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(214, 237, 246, 0.9);
+  border: 1px solid rgba(72, 116, 136, 0.18);
+  color: #355564;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.1;
 }
 
 .battle-party-pips {
@@ -1676,6 +2084,10 @@ button {
   background: rgba(255, 255, 255, 0.58);
 }
 
+.dev-effect-card {
+  border: 1px solid rgba(57, 79, 91, 0.08);
+}
+
 .dev-editor h3,
 .panel-block h3 {
   margin: 0 0 0.8rem;
@@ -2027,6 +2439,16 @@ button {
     align-items: flex-start;
   }
 
+  .encounter-preview-card {
+    width: 78px;
+  }
+
+  .encounter-preview-visual,
+  .encounter-preview-icon {
+    width: 68px;
+    height: 68px;
+  }
+
   .world-interaction-prompt {
     left: auto;
     right: 12px;
@@ -2067,6 +2489,29 @@ button {
   .battle-action-grid-root {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .monster-roster-card {
+    grid-template-columns: 72px minmax(0, 1fr);
+  }
+
+  .monster-roster-visual-wrap {
+    width: 72px;
+    height: 72px;
+  }
+
+  .monster-roster-visual {
+    width: 58px;
+    height: 58px;
+  }
+
+  .monster-roster-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+
+  .monster-moves-columns {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 560px) {
@@ -2087,11 +2532,11 @@ button {
   }
 
   .world-location-header {
-    gap: 0;
+    gap: 0.3rem;
   }
 
   .world-location-line {
-    align-items: baseline;
+    align-items: center;
     gap: 0.35rem;
   }
 
@@ -2117,6 +2562,65 @@ button {
     gap: 0.35rem;
     font-size: 0.92rem;
     line-height: 1;
+  }
+
+  .encounter-preview {
+    gap: 0.3rem;
+  }
+
+  .encounter-preview-heading {
+    gap: 0.35rem;
+  }
+
+  .encounter-preview-heading-main {
+    gap: 0.35rem;
+  }
+
+  .encounter-preview-title {
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+  }
+
+  .encounter-preview-count {
+    min-width: 1.2rem;
+    height: 1.2rem;
+    font-size: 0.68rem;
+  }
+
+  .encounter-preview-toggle-label {
+    font-size: 0.66rem;
+  }
+
+  .encounter-preview-strip {
+    gap: 0.45rem;
+    margin-right: -0.15rem;
+    padding-right: 0.15rem;
+  }
+
+  .encounter-preview-card {
+    width: 72px;
+    gap: 0.28rem;
+  }
+
+  .encounter-preview-visual,
+  .encounter-preview-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+  }
+
+  .encounter-preview-label {
+    font-size: 0.66rem;
+  }
+
+  .encounter-preview-label strong {
+    font-size: 0.7rem;
+  }
+
+  .encounter-preview-badge {
+    right: -4px;
+    top: -4px;
+    font-size: 0.56rem;
   }
 
   .world-currency::before {
@@ -2183,6 +2687,45 @@ button {
     padding: 0.58rem 0.2rem;
     border-radius: 14px;
     font-size: 0.82rem;
+  }
+
+  .monster-roster-card {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .monster-roster-visual-wrap {
+    width: 68px;
+    height: 68px;
+  }
+
+  .monster-roster-visual {
+    width: 54px;
+    height: 54px;
+  }
+
+  .monster-roster-statrow {
+    grid-template-columns: 24px minmax(0, 1fr) auto;
+    gap: 0.45rem;
+  }
+
+  .monster-roster-actions {
+    justify-content: flex-start;
+  }
+
+  .monster-card-action {
+    min-height: 34px;
+    padding: 0.5rem 0.7rem;
+    font-size: 0.8rem;
+  }
+
+  .monster-card-action-icon {
+    min-width: 38px;
+    padding: 0.5rem;
+  }
+
+  .monster-affinity-card-header {
+    align-items: flex-start;
   }
   .battle-modal,
   .world-panel-modal,
@@ -2263,6 +2806,36 @@ button {
     gap: 0.45rem;
     font-size: 0.9rem;
     line-height: 1;
+  }
+
+  .encounter-preview {
+    gap: 0.25rem;
+  }
+
+  .encounter-preview-strip {
+    gap: 0.4rem;
+  }
+
+  .encounter-preview-card {
+    width: 68px;
+  }
+
+  .encounter-preview-visual,
+  .encounter-preview-icon {
+    width: 56px;
+    height: 56px;
+  }
+
+  .encounter-preview-label {
+    font-size: 0.62rem;
+  }
+
+  .encounter-preview-label strong {
+    font-size: 0.67rem;
+  }
+
+  .encounter-preview-toggle-label {
+    font-size: 0.62rem;
   }
 
   .topbar-stats {
