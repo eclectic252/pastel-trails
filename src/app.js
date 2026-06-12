@@ -43,6 +43,11 @@
   const NPC_DEFAULT_LOOK_SPEED = 1;
   const NPC_WALK_PAUSE_MS = 700;
   const NPC_DEFAULT_MOVE_SPEED = 72;
+  const DEFAULT_CREST_LEVEL_CAPS = [
+    { crestMin: 0, crestMax: 2, levelCap: 5 },
+    { crestMin: 3, crestMax: 4, levelCap: 10 },
+    { crestMin: 5, crestMax: 99, levelCap: 15 },
+  ];
   const OVERWORLD_LABEL_STYLE = {
     background: "rgba(252, 246, 232, 0.96)",
     border: "rgba(126, 90, 63, 0.95)",
@@ -117,7 +122,13 @@
         arenaLeaderMinLevel: 1,
         arenaLeaderMaxLevel: 5,
         arenaLeaderPartySize: 3,
+        trainerRefightMinLevel: 1,
+        trainerRefightMaxLevel: 5,
+        trainerRefightPartySize: 2,
         wildMonsterMaxLevel: 5,
+        crestLevelCaps: DEFAULT_CREST_LEVEL_CAPS.map(function (entry) {
+          return Object.assign({}, entry);
+        }),
         battleModel: {
           skillAttackScale: 0.6,
           skillDefenseScale: 0.35,
@@ -1811,6 +1822,10 @@
         queue: [],
         current: null,
         actorPose: "",
+        trainerIntro: {
+          active: false,
+          progress: 0,
+        },
         displayedHp: {
           player: Number(playerMonster?.currentHp || 0),
           enemy: Number(enemy?.currentHp || 0),
@@ -1825,6 +1840,12 @@
     }
     if (!animation.displayedHp || typeof animation.displayedHp !== "object") {
       animation.displayedHp = {};
+    }
+    if (!animation.trainerIntro || typeof animation.trainerIntro !== "object") {
+      animation.trainerIntro = {
+        active: false,
+        progress: 0,
+      };
     }
     const playerMonster = state.party?.[state.battle.playerIndex] || null;
     const enemy = state.battle.enemy || null;
@@ -1874,6 +1895,9 @@
         if (typeof animation.current.callback === "function") {
           animation.current.callback();
         }
+      } else if (animation.current.type === "trainer-sendout") {
+        animation.trainerIntro.active = true;
+        animation.trainerIntro.progress = 0;
       } else if (animation.current.type === "lunge") {
         animation.actorPose = animation.current.actor || "";
         const playerMonster = state.party?.[state.battle.playerIndex] || null;
@@ -1899,6 +1923,11 @@
       const to = Number(animation.current.to || 0);
       animation.displayedHp[animation.current.target] = Math.round(from + (to - from) * progress);
       changed = true;
+    } else if (animation.current.type === "trainer-sendout") {
+      const duration = Math.max(1, Number(animation.current.duration || 1));
+      animation.trainerIntro.active = true;
+      animation.trainerIntro.progress = Math.max(0, Math.min(1, animation.current.elapsed / duration));
+      changed = true;
     }
 
     const duration = Math.max(1, Number(animation.current.duration || 1));
@@ -1915,6 +1944,9 @@
         animation.actorPose = "";
       } else if (animation.current.type === "hp") {
         animation.displayedHp[animation.current.target] = Number(animation.current.to || 0);
+      } else if (animation.current.type === "trainer-sendout") {
+        animation.trainerIntro.progress = 1;
+        animation.trainerIntro.active = false;
       }
       animation.current = null;
       changed = true;
@@ -3341,19 +3373,82 @@
     return Array.from(new Set(ensureArenaProgress(state).earnedCrests || [])).length;
   }
 
-  function getLevelCapForCrestCount(crestCount) {
+  function normalizeCrestLevelCapEntry(entry, fallbackEntry) {
+    const fallback = fallbackEntry || DEFAULT_CREST_LEVEL_CAPS[0];
+    const crestMin = Math.max(0, Number(entry?.crestMin ?? fallback.crestMin) || 0);
+    const crestMax = Math.max(crestMin, Number(entry?.crestMax ?? fallback.crestMax) || crestMin);
+    const levelCap = Math.max(1, Number(entry?.levelCap ?? fallback.levelCap) || 1);
+    return { crestMin, crestMax, levelCap };
+  }
+
+  function ensureGlobalCrestLevelCapSettings(content) {
+    if (!content.settings) {
+      content.settings = JSON.parse(JSON.stringify(fallbackContent.settings));
+    }
+    if (!content.settings.defaults) {
+      content.settings.defaults = Object.assign({}, fallbackContent.settings.defaults);
+    }
+
+    const sourceCaps = Array.isArray(content.settings.defaults.crestLevelCaps) && content.settings.defaults.crestLevelCaps.length
+      ? content.settings.defaults.crestLevelCaps
+      : fallbackContent.settings.defaults.crestLevelCaps;
+    const normalizedCaps = sourceCaps.map(function (entry, index) {
+      return normalizeCrestLevelCapEntry(entry, DEFAULT_CREST_LEVEL_CAPS[index] || DEFAULT_CREST_LEVEL_CAPS[DEFAULT_CREST_LEVEL_CAPS.length - 1]);
+    }).sort(function (left, right) {
+      return left.crestMin - right.crestMin;
+    });
+
+    content.settings.defaults.crestLevelCaps = normalizedCaps.length
+      ? normalizedCaps
+      : DEFAULT_CREST_LEVEL_CAPS.map(function (entry) {
+          return Object.assign({}, entry);
+        });
+
+    return content.settings.defaults.crestLevelCaps;
+  }
+
+  function ensureDevToolsCrestLevelCapSettings(devToolsState, content) {
+    devToolsState.crestLevelCaps = ensureGlobalCrestLevelCapSettings(content).map(function (entry, index) {
+      return normalizeCrestLevelCapEntry(entry, DEFAULT_CREST_LEVEL_CAPS[index] || DEFAULT_CREST_LEVEL_CAPS[DEFAULT_CREST_LEVEL_CAPS.length - 1]);
+    });
+    return devToolsState.crestLevelCaps;
+  }
+
+  function syncDevToolsCrestLevelCapSettings(content, devToolsState) {
+    ensureGlobalCrestLevelCapSettings(content);
+    ensureDevToolsCrestLevelCapSettings(devToolsState, content);
+    content.settings.defaults.crestLevelCaps = devToolsState.crestLevelCaps.map(function (entry, index) {
+      return normalizeCrestLevelCapEntry(entry, DEFAULT_CREST_LEVEL_CAPS[index] || DEFAULT_CREST_LEVEL_CAPS[DEFAULT_CREST_LEVEL_CAPS.length - 1]);
+    });
+  }
+
+  function getLevelCapForCrestCount(crestCount, content) {
     const count = Math.max(0, Number(crestCount || 0));
-    if (count >= 5) {
-      return 15;
+    const configuredCaps = ensureGlobalCrestLevelCapSettings(content || ACTIVE_APP?.content || fallbackContent);
+    let fallbackCap = configuredCaps[0]?.levelCap || DEFAULT_CREST_LEVEL_CAPS[0].levelCap;
+    for (let index = 0; index < configuredCaps.length; index += 1) {
+      const entry = configuredCaps[index];
+      if (count >= entry.crestMin) {
+        fallbackCap = entry.levelCap;
+      }
+      if (count >= entry.crestMin && count <= entry.crestMax) {
+        return entry.levelCap;
+      }
     }
-    if (count >= 3) {
-      return 10;
-    }
-    return 5;
+    return fallbackCap;
+  }
+
+  function formatCrestLevelCapSummary(content) {
+    return ensureGlobalCrestLevelCapSettings(content).map(function (entry) {
+      const crestRange = entry.crestMin === entry.crestMax
+        ? String(entry.crestMin)
+        : (entry.crestMax >= 99 ? (entry.crestMin + "+") : (entry.crestMin + "-" + entry.crestMax));
+      return crestRange + " crest" + (entry.crestMin === 1 && entry.crestMax === 1 ? "" : "s") + ": Lv " + entry.levelCap;
+    }).join(", ");
   }
 
   function getCurrentPlayerLevelCap(state) {
-    return getLevelCapForCrestCount(getCollectedCrestCount(state));
+    return getLevelCapForCrestCount(getCollectedCrestCount(state), ACTIVE_APP?.content || fallbackContent);
   }
 
   function getConfiguredWildMonsterMaxLevel(state) {
@@ -3367,8 +3462,12 @@
       return;
     }
     const refightRange = getRefightArenaLeaderLevelRange(state);
+    const trainerRefightRange = getTrainerRefightLevelRange(state);
     state.settings.arenaLeaderMinLevel = refightRange.min;
     state.settings.arenaLeaderMaxLevel = refightRange.max;
+    state.settings.trainerRefightMinLevel = trainerRefightRange.min;
+    state.settings.trainerRefightMaxLevel = trainerRefightRange.max;
+    state.settings.trainerRefightPartySize = Math.max(1, Number(state.settings.trainerRefightPartySize || 1));
     state.settings.wildMonsterMaxLevel = getConfiguredWildMonsterMaxLevel(state);
   }
 
@@ -3439,6 +3538,11 @@
       if (!Array.isArray(trainer.team)) {
         trainer.team = [];
       }
+      if (!Array.isArray(trainer.pool)) {
+        trainer.pool = [];
+      }
+      trainer.partySize = Math.max(1, Number(trainer.partySize || trainer.team.length || 1));
+      trainer.recommendedLevel = Math.max(1, Number(trainer.recommendedLevel || trainer.team[0]?.level || 5));
       trainer.rewardMoney = Math.max(0, Number(trainer.rewardMoney || 0));
       if (typeof trainer.name !== "string") {
         trainer.name = trainer.id || "Trainer";
@@ -3466,14 +3570,16 @@
     }) || null;
   }
 
-  function buildTrainerBattleRoster(content, trainer) {
-    return (trainer?.team || []).map(function (member) {
-      return resolveArenaRosterMember(content, member);
-    }).filter(Boolean).map(function (member) {
-      const nextMember = Object.assign({}, member);
-      nextMember.level = Math.max(1, Number(member.level || 1));
-      return nextMember;
-    });
+  function ensureTrainerProgress(state) {
+    if (!state.trainerProgress) {
+      state.trainerProgress = {
+        defeatedTrainerIds: [],
+      };
+    }
+    if (!Array.isArray(state.trainerProgress.defeatedTrainerIds)) {
+      state.trainerProgress.defeatedTrainerIds = [];
+    }
+    return state.trainerProgress;
   }
 
   function normalizeArenaLeaderLevelRange(settings) {
@@ -3485,6 +3591,20 @@
   function getRefightArenaLeaderLevelRange(state) {
     const crestCap = getCurrentPlayerLevelCap(state);
     const requested = normalizeArenaLeaderLevelRange(state.settings || {});
+    const max = Math.max(1, Math.min(crestCap, requested.max));
+    const min = Math.max(1, Math.min(requested.min, max));
+    return { min, max, crestCap };
+  }
+
+  function normalizeTrainerRefightLevelRange(settings) {
+    const min = Math.max(1, Number(settings?.trainerRefightMinLevel || 1));
+    const max = Math.max(1, Number(settings?.trainerRefightMaxLevel || 100));
+    return min <= max ? { min, max } : { min: max, max: min };
+  }
+
+  function getTrainerRefightLevelRange(state) {
+    const crestCap = getCurrentPlayerLevelCap(state);
+    const requested = normalizeTrainerRefightLevelRange(state.settings || {});
     const max = Math.max(1, Math.min(crestCap, requested.max));
     const min = Math.max(1, Math.min(requested.min, max));
     return { min, max, crestCap };
@@ -3532,6 +3652,100 @@
         ? rollArenaLeaderLevel(refightRange, member.level || arena?.recommendedLevel || 5)
         : Math.max(1, Number(member.level || arena?.recommendedLevel || 5));
       return nextMember;
+    });
+  }
+
+  function buildTrainerBattleRoster(state, content, trainer) {
+    const progress = ensureTrainerProgress(state);
+    const isRefight = Boolean(trainer?.id && progress.defeatedTrainerIds.includes(trainer.id));
+    const authoredTeam = (trainer?.team || []).map(function (member) {
+      return resolveArenaRosterMember(content, member);
+    }).filter(Boolean);
+    const fallbackPool = (trainer?.pool || []).map(function (member) {
+      return resolveArenaRosterMember(content, member);
+    }).filter(Boolean);
+    const requestedSize = isRefight
+      ? Math.max(1, Number(state.settings?.trainerRefightPartySize || authoredTeam.length || trainer?.partySize || 1))
+      : Math.max(1, Number(trainer?.partySize || authoredTeam.length || 1));
+    const roster = authoredTeam.slice(0, requestedSize);
+    const refightRange = getTrainerRefightLevelRange(state);
+
+    while (roster.length < requestedSize && fallbackPool.length) {
+      const picked = fallbackPool[Math.floor(Math.random() * fallbackPool.length)];
+      roster.push({
+        speciesId: picked.speciesId,
+        variantId: picked.variantId || "default",
+        level: isRefight
+          ? rollArenaLeaderLevel(refightRange, trainer?.recommendedLevel || 5)
+          : Math.max(1, Number(trainer?.recommendedLevel || picked.level || 5)),
+      });
+    }
+
+    return roster.map(function (member) {
+      const nextMember = Object.assign({}, member);
+      nextMember.level = isRefight
+        ? rollArenaLeaderLevel(refightRange, member.level || trainer?.recommendedLevel || 5)
+        : Math.max(1, Number(member.level || trainer?.recommendedLevel || 5));
+      return nextMember;
+    });
+  }
+
+  function syncTrainerDevSelection(content, devToolsState) {
+    const trainers = ensureTrainerCatalog(content);
+    if (!trainers.find(function (entry) { return entry.id === devToolsState.selectedTrainerId; })) {
+      devToolsState.selectedTrainerId = trainers[0]?.id || "";
+    }
+  }
+
+  function createEmptyTrainer(index) {
+    return {
+      id: "trainer-" + index,
+      name: "New Trainer",
+      title: "Trainer",
+      introText: "Let's battle.",
+      rewardMoney: 24,
+      rewardText: "",
+      victoryText: "",
+      recommendedLevel: 5,
+      partySize: 1,
+      team: [],
+      pool: [],
+    };
+  }
+
+  function createEmptyTrainerTeamMember(content, trainer) {
+    const species = content.monsters?.species?.[0];
+    const variant = species?.variants?.[0];
+    return {
+      speciesId: species?.id || "",
+      variantId: variant?.id || "default",
+      level: Math.max(1, Number(trainer?.recommendedLevel || 5)),
+    };
+  }
+
+  function createEmptyTrainerPoolMember(content) {
+    const species = content.monsters?.species?.[0];
+    const variant = species?.variants?.[0];
+    return {
+      speciesId: species?.id || "",
+      variantId: variant?.id || "default",
+    };
+  }
+
+  function replaceTrainerReferences(content, previousTrainerId, nextTrainerId) {
+    if (!previousTrainerId || previousTrainerId === nextTrainerId) {
+      return;
+    }
+
+    Object.keys(content.mapMetadata || {}).forEach(function (mapId) {
+      getEditableNpcs(content.mapMetadata[mapId] || {}).forEach(function (npc) {
+        if (String(npc?.data?.trainerId || "") === String(previousTrainerId)) {
+          if (!npc.data || typeof npc.data !== "object") {
+            npc.data = {};
+          }
+          npc.data.trainerId = nextTrainerId;
+        }
+      });
     });
   }
 
@@ -3674,24 +3888,12 @@
     const trainer = trainerId ? getTrainer(content, trainerId) : null;
 
     if (npc.type === "trainer") {
-      const text = npc.text || trainer?.introText || ((trainer?.name || label) + " wants to battle.");
-      const pages = splitDialoguePages(text);
-      state.message = "You approached " + label + ".";
-      state.interaction = {
-        id: npc.id,
-        type: "trainer-battle",
-        title: label,
-        text,
-        pages,
-        pageIndex: 0,
-        trainerId,
-        trainerName: trainer?.name || label,
-        trainerTitle: trainer?.title || "Trainer",
-        rewardMoney: Math.max(0, Number(trainer?.rewardMoney || 0)),
-        rewardText: trainer?.rewardText || "",
-        teamSize: Array.isArray(trainer?.team) ? trainer.team.length : 0,
-        trainerMissing: !trainer,
-      };
+      if (!trainer) {
+        state.message = "This trainer NPC is not linked to a valid trainer record yet.";
+        state.interaction = null;
+        return;
+      }
+      startTrainerBattle(state, content, trainer, npc);
       return;
     }
 
@@ -3829,6 +4031,9 @@
         clearedArenaIds: [],
         earnedCrests: [],
       },
+      trainerProgress: {
+        defeatedTrainerIds: [],
+      },
       battle: null,
       interaction: null,
       message: content.mapMetadata[starterTown.mapId]?.safezone
@@ -3863,6 +4068,9 @@
       arenaProgress: save.arenaProgress || {
         clearedArenaIds: [],
         earnedCrests: [],
+      },
+      trainerProgress: save.trainerProgress || {
+        defeatedTrainerIds: [],
       },
       battle: null,
       interaction: null,
@@ -3903,6 +4111,7 @@
     ensurePlayerVisualState(state);
     ensureWorldCameraState(state, content);
     ensureArenaProgress(state);
+    ensureTrainerProgress(state);
     ensurePlayerSkillProgressState(state, content);
 
     return state;
@@ -3932,6 +4141,7 @@
       world,
       settings: state.settings,
       arenaProgress: ensureArenaProgress(state),
+      trainerProgress: ensureTrainerProgress(state),
       party: (state.party || []).map(sanitizeMonster),
       bank: (state.bank || []).map(sanitizeMonster),
       registry: state.registry,
@@ -4398,7 +4608,7 @@
 
   function startTrainerBattle(state, content, trainer, npc) {
     clearAllBattleTemporaryState(state);
-    const roster = buildTrainerBattleRoster(content, trainer);
+    const roster = buildTrainerBattleRoster(state, content, trainer);
     const team = roster.map(function (member) {
       return createBattleEnemyFromArenaTeamMember(content, member);
     }).filter(Boolean);
@@ -4415,6 +4625,7 @@
       opponentName: trainer.name || npc.label || "Trainer",
       opponentTitle: trainer.title || "Trainer",
       trainerId: trainer.id || npc.id || "",
+      trainerSheetId: npc?.sheetId || "",
       rewardMoney: Math.max(0, Number(trainer.rewardMoney || 0)),
       rewardText: trainer.rewardText || "",
       victoryText: trainer.victoryText || "",
@@ -4426,6 +4637,15 @@
       menu: "root",
       outcome: null,
     };
+    const animation = ensureBattleAnimationState(state);
+    animation.trainerIntro.active = true;
+    animation.trainerIntro.progress = 0;
+    queueBattleAnimationEvents(state, [
+      { type: "log", message: (trainer.title || "Trainer") + " " + (trainer.name || npc.label || "Trainer") + " sends out " + team[0].name + ".", duration: 180 },
+      { type: "pause", duration: 260 },
+      { type: "trainer-sendout", duration: 820 },
+      { type: "pause", duration: 180 },
+    ]);
     state.message = (trainer.name || npc.label || "Trainer") + " challenged you to a battle.";
   }
 
@@ -4602,10 +4822,22 @@
       if (nextEnemy) {
         state.battle.enemyIndex = nextEnemyIndex;
         state.battle.enemy = nextEnemy;
-        addBattleLogEntry(state, (state.battle.opponentTitle || "Leader") + " " + (state.battle.opponentName || "Trainer") + " sent out " + nextEnemy.name + ".");
+        if (state.battle.battleSource === "npc-trainer" && state.battle.trainerSheetId) {
+          const animation = ensureBattleAnimationState(state);
+          animation.trainerIntro.active = true;
+          animation.trainerIntro.progress = 0;
+          queueBattleAnimationEvents(state, [
+            { type: "log", message: (state.battle.opponentTitle || "Leader") + " " + (state.battle.opponentName || "Trainer") + " sends out " + nextEnemy.name + ".", duration: 180 },
+            { type: "pause", duration: 240 },
+            { type: "trainer-sendout", duration: 820 },
+            { type: "pause", duration: 160 },
+          ]);
+        } else {
+          addBattleLogEntry(state, (state.battle.opponentTitle || "Leader") + " " + (state.battle.opponentName || "Trainer") + " sent out " + nextEnemy.name + ".");
+        }
       } else {
         state.battle.outcome = "victory";
-        rewardArenaVictory(state, content, state.battle);
+        rewardStructuredBattleVictory(state, content, state.battle);
         grantBattleVictorySkillXp(state, content, activeMonster);
         const rewardParts = [];
         if (state.battle.crestName) {
@@ -4634,8 +4866,7 @@
     }
   }
 
-  function rewardArenaVictory(state, content, battle) {
-    const progress = ensureArenaProgress(state);
+  function rewardStructuredBattleVictory(state, content, battle) {
     const activeMonster = state.party[0];
     grantMonsterXp(state, content, activeMonster, 10, {
       showBattleLog: true,
@@ -4643,12 +4874,21 @@
     });
     state.player.money += Number(battle.rewardMoney || 0);
 
-    if (battle.arenaId && !progress.clearedArenaIds.includes(battle.arenaId)) {
-      progress.clearedArenaIds.push(battle.arenaId);
+    if (battle.arenaId || battle.crestId) {
+      const arenaProgress = ensureArenaProgress(state);
+      if (battle.arenaId && !arenaProgress.clearedArenaIds.includes(battle.arenaId)) {
+        arenaProgress.clearedArenaIds.push(battle.arenaId);
+      }
+      if (battle.crestId && !arenaProgress.earnedCrests.includes(battle.crestId)) {
+        arenaProgress.earnedCrests.push(battle.crestId);
+      }
     }
 
-    if (battle.crestId && !progress.earnedCrests.includes(battle.crestId)) {
-      progress.earnedCrests.push(battle.crestId);
+    if (battle.trainerId) {
+      const trainerProgress = ensureTrainerProgress(state);
+      if (!trainerProgress.defeatedTrainerIds.includes(battle.trainerId)) {
+        trainerProgress.defeatedTrainerIds.push(battle.trainerId);
+      }
     }
 
     normalizeCrestScaledWorldSettings(state);
@@ -6410,6 +6650,51 @@
     ].join("");
   }
 
+  function renderBattleTrainerIntro(content, battle, animation) {
+    const trainerSheet = getCharacterSheetConfig(content, battle?.trainerSheetId || "");
+    const species = getSpecies(content, battle?.enemy?.speciesId);
+    const variant = getSpeciesVariant(species, battle?.enemy?.variantId || "default");
+    const progress = Math.max(0, Math.min(1, Number(animation?.trainerIntro?.progress || 0)));
+    let trainerTranslateX = 0;
+    let trainerTranslateY = 0;
+    let trainerOpacity = 1;
+    let monsterTranslateX = 0;
+    let monsterTranslateY = 0;
+    let monsterScale = 1;
+    let monsterOpacity = 0;
+
+    if (progress < 0.45) {
+      const enterProgress = progress / 0.45;
+      trainerTranslateX = Math.round(-160 + (160 * enterProgress));
+      trainerTranslateY = Math.round(18 * enterProgress);
+    } else if (progress < 0.65) {
+      trainerTranslateX = 0;
+      trainerTranslateY = 18;
+    } else {
+      const swapProgress = (progress - 0.65) / 0.35;
+      trainerTranslateX = Math.round(-12 - (132 * swapProgress));
+      trainerTranslateY = Math.round(18 - (10 * swapProgress));
+      trainerOpacity = Math.max(0, 1 - swapProgress * 1.15);
+      monsterTranslateX = Math.round(128 - (128 * swapProgress));
+      monsterTranslateY = Math.round(8 * (1 - swapProgress));
+      monsterScale = 0.78 + (0.22 * swapProgress);
+      monsterOpacity = Math.max(0, Math.min(1, swapProgress * 1.25));
+    }
+
+    return [
+      '<div class="battle-trainer-intro-layer">',
+      '<div class="battle-battler battle-battler-enemy battle-battler-trainer-intro" style="transform: translate(' + trainerTranslateX + 'px, ' + trainerTranslateY + 'px); opacity:' + trainerOpacity.toFixed(3) + ';">',
+      '<div class="battle-battler-shadow"></div>',
+      renderAvatarPreviewMarkup(trainerSheet, "battle-trainer-sheet-sprite"),
+      "</div>",
+      '<div class="battle-battler battle-battler-enemy battle-battler-enemy-intro" style="transform: translate(' + monsterTranslateX + 'px, ' + monsterTranslateY + 'px) scale(' + monsterScale.toFixed(3) + '); opacity:' + monsterOpacity.toFixed(3) + ';">',
+      '<div class="battle-battler-shadow"></div>',
+      renderMonsterVariantVisualMarkup(battle.enemy.speciesId, variant?.id || battle.enemy.variantId || "default", "battle-battler-sprite", "default"),
+      "</div>",
+      "</div>",
+    ].join("");
+  }
+
   function renderTitleScreen(root, content, saveSlots, selectedSlotId, onAction, notice) {
     const effectiveSelectedSlotId = selectedSlotId || saveSlots[0]?.slotId || "";
     const totalAvailableMonsters = content.monsters?.species?.length || 0;
@@ -6660,6 +6945,12 @@
     });
     const enemyPartyPips = renderBattlePartyPips(enemyRoster, enemyActiveIndex, "battle-party-pips-enemy");
     const playerPartyPips = renderBattlePartyPips(state.party, state.battle.playerIndex, "battle-party-pips-player");
+    const showTrainerIntro = Boolean(
+      isTrainerBattle
+      && state.battle.battleSource === "npc-trainer"
+      && state.battle.trainerSheetId
+      && animation?.trainerIntro?.active
+    );
     const partyRoster = state.party.map(function (monster, index) {
       const species = getSpecies(content, monster.speciesId);
       const variant = getSpeciesVariant(species, monster.variantId || "default");
@@ -6737,7 +7028,9 @@
       '</section>',
       '<section class="battle-stage">' +
         '<div class="battle-field">' +
-          renderBattleBattler(content, enemy, "battle-battler-enemy") +
+          (showTrainerIntro
+            ? renderBattleTrainerIntro(content, state.battle, animation)
+            : renderBattleBattler(content, enemy, "battle-battler-enemy")) +
           renderBattleBattler(content, activeMonster, "battle-battler-player") +
         '</div>' +
       '</section>',
@@ -6768,7 +7061,7 @@
       const missingTrainer = state.interaction.trainerMissing;
       const actionRow = missingTrainer
         ? '<div class="battle-actions"><button class="primary-button" type="button" data-action="close-interaction">Close</button></div>'
-        : '<div class="battle-actions"><button class="primary-button" type="button" data-action="start-trainer-battle">Battle</button><button class="secondary-button" type="button" data-action="close-interaction">Not Now</button></div>';
+        : '<div class="battle-actions"><button class="primary-button" type="button" data-action="start-trainer-battle">' + (state.interaction.isRefight ? 'Rematch' : 'Battle') + '</button><button class="secondary-button" type="button" data-action="close-interaction">Not Now</button></div>';
       const rewardCopy = Number(state.interaction.rewardMoney || 0) > 0
         ? "$" + Number(state.interaction.rewardMoney || 0)
         : "No money";
@@ -6786,6 +7079,7 @@
           '<div class="panel-block">' +
             "<p><strong>Trainer:</strong> " + escapeHtml(state.interaction.trainerName || state.interaction.title || "Trainer") + "</p>" +
             "<p><strong>Title:</strong> " + escapeHtml(state.interaction.trainerTitle || "Trainer") + "</p>" +
+            "<p><strong>Status:</strong> " + escapeHtml(state.interaction.isRefight ? "Rematch ready" : "First battle") + "</p>" +
             "<p><strong>Party Size:</strong> " + escapeHtml(String(Number(state.interaction.teamSize || 0))) + "</p>" +
             "<p><strong>Prize Money:</strong> " + escapeHtml(rewardCopy) + "</p>" +
             (state.interaction.rewardText ? "<p><strong>Reward Notes:</strong> " + escapeHtml(state.interaction.rewardText) + "</p>" : "") +
@@ -7079,9 +7373,10 @@
         return '<option value="' + zoom + '"' + selected + ">" + zoom + "%</option>";
       }).join("");
       const walkSpeedOptions = [
-        { value: 260, label: "Normal (260)" },
-        { value: 310, label: "Faster x1 (310)" },
-        { value: 360, label: "Faster x2 (360)" },
+        { value: 260, label: "Slower (260)" },
+        { value: 310, label: "Normal (310)" },
+        { value: 360, label: "Faster x1 (360)" },
+        { value: 420, label: "Faster x2 (420)" },
       ].map(function (option) {
         const selected = Number(state.settings.walkSpeed || 260) === Number(option.value) ? " selected" : "";
         return '<option value="' + option.value + '"' + selected + ">" + option.label + "</option>";
@@ -7089,6 +7384,7 @@
       const crestCount = getCollectedCrestCount(state);
       const crestLevelCap = getCurrentPlayerLevelCap(state);
       const refightRange = getRefightArenaLeaderLevelRange(state);
+      const trainerRefightRange = getTrainerRefightLevelRange(state);
       panelBody = [
         '<section class="panel-block"><div class="section-heading"><h3>Now Playing</h3></div><p>' + escapeHtml(state.message || "Exploring the world.") + '</p><p><strong>Location:</strong> ' + escapeHtml(content.mapMetadata[state.world.currentMapId]?.displayName || state.world.currentMapId || "Unknown") + '</p><p><strong>Money:</strong> $' + Number(state.player.money || 0) + '</p><p><strong>Party Lead:</strong> ' + escapeHtml(activeSpecies?.name || activeMonster?.speciesId || "Unknown") + (activeMonster ? (" Lv " + Number(activeMonster.level || 1) + " · HP " + Number(activeMonster.currentHp || 0) + "/" + Number(activeMonster.stats?.hp || 0)) : "") + '</p><p><strong>Save Slots:</strong> ' + saveSlots.length + " stored locally in this browser.</p></section>",
         '<section class="panel-block"><div class="section-heading"><h3>Player Settings</h3></div><div class="form-grid">' +
@@ -7112,6 +7408,12 @@
         '<label class="input-group"><span>Arena Leader Max Level</span><input type="number" min="1" max="' + crestLevelCap + '" data-world-setting="arenaLeaderMaxLevel" value="' + Number(refightRange.max) + '" /></label>' +
         '<label class="input-group"><span>Arena Leader Party Size</span><input type="number" min="1" max="12" data-world-setting="arenaLeaderPartySize" value="' + Number(state.settings.arenaLeaderPartySize || 6) + '" /></label>' +
         '<p class="dev-helper-text">Arena leader settings apply to refights only. Uncollected crests still use each arena&apos;s authored team levels and party size.</p>' +
+        '</div></section>' +
+        '<section class="panel-block"><div class="section-heading"><h3>Trainer Refights</h3></div><div class="form-grid">' +
+        '<label class="input-group"><span>Trainer Min Level</span><input type="number" min="1" max="' + crestLevelCap + '" data-world-setting="trainerRefightMinLevel" value="' + Number(trainerRefightRange.min) + '" /></label>' +
+        '<label class="input-group"><span>Trainer Max Level</span><input type="number" min="1" max="' + crestLevelCap + '" data-world-setting="trainerRefightMaxLevel" value="' + Number(trainerRefightRange.max) + '" /></label>' +
+        '<label class="input-group"><span>Trainer Party Size</span><input type="number" min="1" max="12" data-world-setting="trainerRefightPartySize" value="' + Number(state.settings.trainerRefightPartySize || 1) + '" /></label>' +
+        '<p class="dev-helper-text">Trainer settings apply to rematches only. First battles still use each trainer&apos;s authored team and party size.</p>' +
         '</div></section>',
         '<div class="title-actions"><button class="secondary-button" type="button" data-action="save">Save Game</button><button class="secondary-button" type="button" data-action="title">Return To Title</button></div>',
       ].join("");
@@ -7317,6 +7619,12 @@
         return '<option value="' + escapeHtml(sheet.id) + '"' + selected + ">" + escapeHtml(sheet.playerLabel || sheet.label || sheet.id) + "</option>";
       })
     ).join("");
+    const trainerOptions = ['<option value="">Unlinked</option>'].concat(
+      ensureTrainerCatalog(content).map(function (trainer) {
+        const selected = String(selectedNpc?.data?.trainerId || "") === String(trainer.id) ? " selected" : "";
+        return '<option value="' + escapeHtml(trainer.id) + '"' + selected + ">" + escapeHtml((trainer.title || "Trainer") + " " + (trainer.name || trainer.id)) + "</option>";
+      })
+    ).join("");
     const npcItems = npcs.length
       ? npcs.map(function (npc) {
           const selected = npc.id === selectedNpcId ? " compact-list-selected" : "";
@@ -7341,7 +7649,7 @@
           '<label class="input-group"><span>Look Speed</span><input type="number" min="0.1" step="0.1" data-dev-npc-field="lookSpeed" value="' + Number(selectedNpc.lookSpeed || NPC_DEFAULT_LOOK_SPEED) + '" /></label>',
           '<label class="input-group"><span>Walk Speed</span><input type="number" min="0" step="1" data-dev-npc-field="moveSpeed" value="' + Number(selectedNpc.moveSpeed || NPC_DEFAULT_MOVE_SPEED) + '" /></label>',
           '<label class="input-group"><span>Interaction Radius</span><input type="number" min="24" step="1" data-dev-npc-field="interactionRadius" value="' + Number(selectedNpc.interactionRadius || INTERACTION_PROMPT_RADIUS) + '" /></label>',
-          '<label class="input-group"><span>Trainer ID</span><input data-dev-npc-field="data.trainerId" value="' + escapeHtml(selectedNpc.data?.trainerId || "") + '" /></label>',
+          '<label class="input-group"><span>Trainer</span><select data-dev-npc-field="data.trainerId">' + trainerOptions + '</select></label>',
           '<label class="input-group dev-input-group-wide"><span>Text</span><textarea rows="4" data-dev-npc-field="text">' + escapeHtml(selectedNpc.text || "") + '</textarea></label>',
           "</div>",
           '<div class="title-actions">',
@@ -8406,7 +8714,7 @@
       '<main class="dev-screen">',
       '<header class="game-topbar">',
       '<div><span class="eyebrow">Dev Tools</span><strong>Map Editor</strong></div>',
-      '<div class="topbar-stats"><button class="' + (devToolsState.section === "maps" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-maps">Maps</button><button class="' + (devToolsState.section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button><button class="' + (devToolsState.section === "arenas" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-arenas">Arenas</button><button class="' + (devToolsState.section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button><button class="' + (devToolsState.section === "characters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-characters">Characters</button><button class="secondary-button" type="button" data-action="back-to-title">Back</button><button class="secondary-button" type="button" data-action="load-folder">Load Project Folder</button></div>',
+      '<div class="topbar-stats"><button class="' + (devToolsState.section === "maps" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-maps">Maps</button><button class="' + (devToolsState.section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button><button class="' + (devToolsState.section === "arenas" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-arenas">Arenas</button><button class="' + (devToolsState.section === "trainers" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-trainers">Trainers</button><button class="' + (devToolsState.section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button><button class="' + (devToolsState.section === "characters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-characters">Characters</button><button class="secondary-button" type="button" data-action="back-to-title">Back</button><button class="secondary-button" type="button" data-action="load-folder">Load Project Folder</button></div>',
       "</header>",
       '<section class="dev-screen-layout">',
       '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>Maps</h2></div><ul class="compact-list dev-map-list">' + mapList + "</ul></aside>",
@@ -8799,7 +9107,7 @@
         '<main class="dev-screen">',
         '<header class="game-topbar">',
         '<div><span class="eyebrow">Dev Tools</span><strong>Monster Editor</strong></div>',
-        '<div class="topbar-stats"><button class="' + (devToolsState.section === "maps" ? "secondary-button" : "primary-button") + '" type="button" data-action="dev-section-maps">Maps</button><button class="' + (devToolsState.section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button><button class="' + (devToolsState.section === "arenas" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-arenas">Arenas</button><button class="' + (devToolsState.section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button><button class="' + (devToolsState.section === "characters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-characters">Characters</button><button class="secondary-button" type="button" data-action="back-to-title">Back</button><button class="secondary-button" type="button" data-action="load-folder">Load Project Folder</button></div>',
+        '<div class="topbar-stats"><button class="' + (devToolsState.section === "maps" ? "secondary-button" : "primary-button") + '" type="button" data-action="dev-section-maps">Maps</button><button class="' + (devToolsState.section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button><button class="' + (devToolsState.section === "arenas" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-arenas">Arenas</button><button class="' + (devToolsState.section === "trainers" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-trainers">Trainers</button><button class="' + (devToolsState.section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button><button class="' + (devToolsState.section === "characters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-characters">Characters</button><button class="secondary-button" type="button" data-action="back-to-title">Back</button><button class="secondary-button" type="button" data-action="load-folder">Load Project Folder</button></div>',
         '</header>',
         '<section class="dev-screen-layout">',
         '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>' + (monsterSubMode === "species" ? "Monster Species" : "Skills") + '</h2><button class="secondary-button" type="button" data-action="' + addAction + '">' + addLabel + '</button></div><ul class="compact-list dev-map-list">' + (sidebarItems || "<li>No entries yet.</li>") + '</ul></aside>',
@@ -8930,7 +9238,7 @@
               ? '<ul class="compact-list">' + poolEditor + "</ul>"
               : '<p>No fallback pool monsters configured yet.</p>') +
           "</section>",
-          '<section class="panel-block"><div class="section-heading"><h2>Preview</h2></div><div class="arena-crest-preview">' + renderArenaCrestMarkup(content, selectedArena, "arena-crest-image arena-crest-image-large") + '<div><p><strong>' + escapeHtml(selectedArena.name || selectedArena.id) + '</strong></p><p>' + escapeHtml((selectedArena.leaderTitle || "Leader") + " " + (selectedArena.leaderName || "TBD")) + '</p><p>Crest: ' + escapeHtml(selectedArena.crestName || selectedArena.crestId || "Unassigned") + '</p></div></div><p>Recommended Level: ' + escapeHtml(String(selectedArena.recommendedLevel || "TBD")) + ' · Party Size: ' + escapeHtml(String(selectedArena.partySize || "TBD")) + '</p><p>Reward Money: $' + escapeHtml(String(Number(selectedArena.rewardMoney || 0))) + '</p><p>' + escapeHtml(selectedArena.description || "No arena description yet.") + '</p><p class="dev-helper-text">Uncollected arenas use the authored team levels here. Refights use the player arena settings, capped by crests: 0-2 = Lv 5, 3-4 = Lv 10, 5+ = Lv 15.</p><h3>Configured Team</h3><ul class="compact-list">' + (teamPreview || "<li><span>No team members configured yet.</span></li>") + "</ul><h3>Fallback Pool</h3><ul class=\"compact-list\">" + ((selectedArena.pool || []).map(function (member) { const species = getSpecies(content, member.speciesId); const variant = getSpeciesVariant(species, member.variantId || "default"); return "<li><span>" + escapeHtml(species?.name || member.speciesId || "Unassigned") + " - " + escapeHtml(variant?.id || member.variantId || "default") + "</span><strong>Pool</strong></li>"; }).join("") || "<li><span>No pool monsters configured yet.</span></li>") + "</ul></section>",
+          '<section class="panel-block"><div class="section-heading"><h2>Preview</h2></div><div class="arena-crest-preview">' + renderArenaCrestMarkup(content, selectedArena, "arena-crest-image arena-crest-image-large") + '<div><p><strong>' + escapeHtml(selectedArena.name || selectedArena.id) + '</strong></p><p>' + escapeHtml((selectedArena.leaderTitle || "Leader") + " " + (selectedArena.leaderName || "TBD")) + '</p><p>Crest: ' + escapeHtml(selectedArena.crestName || selectedArena.crestId || "Unassigned") + '</p></div></div><p>Recommended Level: ' + escapeHtml(String(selectedArena.recommendedLevel || "TBD")) + ' · Party Size: ' + escapeHtml(String(selectedArena.partySize || "TBD")) + '</p><p>Reward Money: $' + escapeHtml(String(Number(selectedArena.rewardMoney || 0))) + '</p><p>' + escapeHtml(selectedArena.description || "No arena description yet.") + '</p><p class="dev-helper-text">Uncollected arenas use the authored team levels here. Refights use the player arena settings, capped by the crest progression tiers in <code>settings.json</code>: ' + escapeHtml(formatCrestLevelCapSummary(content)) + '.</p><h3>Configured Team</h3><ul class="compact-list">' + (teamPreview || "<li><span>No team members configured yet.</span></li>") + "</ul><h3>Fallback Pool</h3><ul class=\"compact-list\">" + ((selectedArena.pool || []).map(function (member) { const species = getSpecies(content, member.speciesId); const variant = getSpeciesVariant(species, member.variantId || "default"); return "<li><span>" + escapeHtml(species?.name || member.speciesId || "Unassigned") + " - " + escapeHtml(variant?.id || member.variantId || "default") + "</span><strong>Pool</strong></li>"; }).join("") || "<li><span>No pool monsters configured yet.</span></li>") + "</ul></section>",
         ].join("")
       : '<section class="panel-block dev-editor-panel"><h2>No Arena Selected</h2><p>Add a new arena to begin editing.</p></section>';
 
@@ -8938,7 +9246,7 @@
       '<main class="dev-screen">',
       '<header class="game-topbar">',
       '<div><span class="eyebrow">Dev Tools</span><strong>Arena Editor</strong></div>',
-      '<div class="topbar-stats"><button class="' + (devToolsState.section === "maps" ? "secondary-button" : "primary-button") + '" type="button" data-action="dev-section-maps">Maps</button><button class="' + (devToolsState.section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button><button class="' + (devToolsState.section === "arenas" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-arenas">Arenas</button><button class="' + (devToolsState.section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button><button class="' + (devToolsState.section === "characters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-characters">Characters</button><button class="secondary-button" type="button" data-action="back-to-title">Back</button><button class="secondary-button" type="button" data-action="load-folder">Load Project Folder</button></div>',
+      '<div class="topbar-stats"><button class="' + (devToolsState.section === "maps" ? "secondary-button" : "primary-button") + '" type="button" data-action="dev-section-maps">Maps</button><button class="' + (devToolsState.section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button><button class="' + (devToolsState.section === "arenas" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-arenas">Arenas</button><button class="' + (devToolsState.section === "trainers" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-trainers">Trainers</button><button class="' + (devToolsState.section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button><button class="' + (devToolsState.section === "characters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-characters">Characters</button><button class="secondary-button" type="button" data-action="back-to-title">Back</button><button class="secondary-button" type="button" data-action="load-folder">Load Project Folder</button></div>',
       '</header>',
       '<section class="dev-screen-layout">',
       '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>Arenas</h2><button class="secondary-button" type="button" data-action="add-arena">Add Arena</button></div><ul class="compact-list dev-map-list">' + (arenaItems || "<li>No arenas yet.</li>") + '</ul></aside>',
@@ -8946,6 +9254,90 @@
       '<section class="panel-block dev-preview-controls"><div class="section-heading"><h2>Arena Tools</h2></div><p>Edit arena leader and crest metadata in-memory, then export <code>arenas.json</code> into <code>data/</code> and rebuild local content before reloading the game.</p><div class="title-actions"><button class="secondary-button" type="button" data-action="export-arenas-json">Export arenas.json</button></div></section>',
       arenaEditor,
       '</section>',
+      '</section>',
+      '</main>',
+    ].join("");
+
+    return null;
+  }
+
+  function renderTrainerDevToolsScreen(root, content, devToolsState) {
+    const trainers = ensureTrainerCatalog(content);
+    syncTrainerDevSelection(content, devToolsState);
+    const selectedTrainer = trainers.find(function (entry) {
+      return entry.id === devToolsState.selectedTrainerId;
+    }) || trainers[0] || null;
+
+    const trainerItems = trainers.map(function (entry) {
+      const selected = entry.id === devToolsState.selectedTrainerId ? " compact-list-selected" : "";
+      return '<li class="' + selected.trim() + '"><button type="button" class="link-button" data-dev-select-trainer="' + entry.id + '"><strong>' + escapeHtml(entry.name || entry.id) + '</strong><span>' + escapeHtml(entry.id) + ' · ' + escapeHtml(entry.title || "Trainer") + "</span></button></li>";
+    }).join("");
+
+    const poolEditor = selectedTrainer
+      ? (selectedTrainer.pool || []).map(function (member, poolIndex) {
+          const memberSpecies = getSpecies(content, member.speciesId);
+          const speciesOptions = content.monsters.species.map(function (species) {
+            const selected = member.speciesId === species.id ? " selected" : "";
+            return '<option value="' + escapeHtml(species.id) + '"' + selected + ">" + escapeHtml(species.name) + "</option>";
+          }).join("");
+          const variantOptions = (memberSpecies?.variants || []).map(function (variant) {
+            const selected = (member.variantId || "default") === variant.id ? " selected" : "";
+            return '<option value="' + escapeHtml(variant.id) + '"' + selected + ">" + escapeHtml(formatMonsterVariantLabel(variant, variant.id)) + "</option>";
+          }).join("");
+          return '<li><div class="form-grid"><label class="input-group"><span>Species</span><select data-pool-index="' + poolIndex + '" data-dev-trainer-pool-field="speciesId">' + speciesOptions + '</select></label><label class="input-group"><span>Variant</span><select data-pool-index="' + poolIndex + '" data-dev-trainer-pool-field="variantId">' + variantOptions + '</select></label><div class="title-actions"><button class="secondary-button" type="button" data-action="delete-trainer-pool-member" data-pool-index="' + poolIndex + '">Delete</button></div></div></li>';
+        }).join("")
+      : "";
+    const teamEditor = selectedTrainer
+      ? (selectedTrainer.team || []).map(function (member, teamIndex) {
+          const memberSpecies = getSpecies(content, member.speciesId);
+          const speciesOptions = content.monsters.species.map(function (species) {
+            const selected = member.speciesId === species.id ? " selected" : "";
+            return '<option value="' + escapeHtml(species.id) + '"' + selected + ">" + escapeHtml(species.name) + "</option>";
+          }).join("");
+          const variantOptions = (memberSpecies?.variants || []).map(function (variant) {
+            const selected = (member.variantId || "default") === variant.id ? " selected" : "";
+            return '<option value="' + escapeHtml(variant.id) + '"' + selected + ">" + escapeHtml(formatMonsterVariantLabel(variant, variant.id)) + "</option>";
+          }).join("");
+          return '<li><div class="form-grid"><label class="input-group"><span>Species</span><select data-team-index="' + teamIndex + '" data-dev-trainer-team-field="speciesId">' + speciesOptions + '</select></label><label class="input-group"><span>Variant</span><select data-team-index="' + teamIndex + '" data-dev-trainer-team-field="variantId">' + variantOptions + '</select></label><label class="input-group"><span>Level</span><input type="number" min="1" step="1" data-team-index="' + teamIndex + '" data-dev-trainer-team-field="level" value="' + Number(member.level || 1) + '" /></label><div class="title-actions"><button class="secondary-button" type="button" data-action="delete-trainer-team-member" data-team-index="' + teamIndex + '">Delete</button></div></div></li>';
+        }).join("")
+      : "";
+    const teamPreview = selectedTrainer
+      ? (selectedTrainer.team || []).map(function (member) {
+          const species = getSpecies(content, member.speciesId);
+          const variant = getSpeciesVariant(species, member.variantId || "default");
+          return "<li><span>" + escapeHtml(species?.name || member.speciesId || "Unassigned") + " - " + escapeHtml(formatMonsterVariantLabel(variant, member.variantId || "default")) + "</span><strong>Lv " + Number(member.level || 1) + "</strong></li>";
+        }).join("")
+      : "";
+    const trainerEditor = selectedTrainer
+      ? [
+          '<section class="panel-block dev-editor-panel">',
+          '<div class="section-heading"><h2>Trainer Settings</h2><div class="topbar-stats"><button class="secondary-button" type="button" data-action="duplicate-trainer">Duplicate</button><button class="secondary-button" type="button" data-action="delete-trainer">Delete</button></div></div>',
+          '<div class="form-grid">',
+          '<label class="input-group"><span>Trainer ID</span><input data-dev-trainer-field="id" value="' + escapeHtml(selectedTrainer.id || "") + '" /></label>',
+          '<label class="input-group"><span>Name</span><input data-dev-trainer-field="name" value="' + escapeHtml(selectedTrainer.name || "") + '" /></label>',
+          '<label class="input-group"><span>Title</span><input data-dev-trainer-field="title" value="' + escapeHtml(selectedTrainer.title || "") + '" /></label>',
+          '<label class="input-group"><span>Recommended Level</span><input type="number" step="1" min="1" data-dev-trainer-field="recommendedLevel" value="' + Number(selectedTrainer.recommendedLevel || 1) + '" /></label>',
+          '<label class="input-group"><span>Party Size</span><input type="number" step="1" min="1" data-dev-trainer-field="partySize" value="' + Number(selectedTrainer.partySize || 1) + '" /></label>',
+          '<label class="input-group"><span>Reward Money</span><input type="number" step="1" min="0" data-dev-trainer-field="rewardMoney" value="' + Number(selectedTrainer.rewardMoney || 0) + '" /></label>',
+          '<label class="input-group dev-input-group-wide"><span>Intro Text</span><textarea rows="3" data-dev-trainer-field="introText">' + escapeHtml(selectedTrainer.introText || "") + '</textarea></label>',
+          '<label class="input-group dev-input-group-wide"><span>Reward Notes</span><textarea rows="3" data-dev-trainer-field="rewardText">' + escapeHtml(selectedTrainer.rewardText || "") + '</textarea></label>',
+          '<label class="input-group dev-input-group-wide"><span>Victory Text</span><textarea rows="3" data-dev-trainer-field="victoryText">' + escapeHtml(selectedTrainer.victoryText || "") + '</textarea></label>',
+          '</div></section>',
+          '<section class="panel-block dev-editor-panel"><div class="section-heading"><h2>Trainer Team</h2><div class="topbar-stats"><button class="secondary-button" type="button" data-action="add-trainer-team-member">Add Team Member</button></div></div>' + ((selectedTrainer.team || []).length ? '<ul class="compact-list">' + teamEditor + '</ul>' : '<p>Add at least one team member to make this trainer battleable.</p>') + '</section>',
+          '<section class="panel-block dev-editor-panel"><div class="section-heading"><h2>Fallback Pool</h2><div class="topbar-stats"><button class="secondary-button" type="button" data-action="add-trainer-pool-member">Add Pool Monster</button></div></div><p class="dev-helper-text">Trainer rematches can expand to the trainer refight party size using this pool.</p>' + ((selectedTrainer.pool || []).length ? '<ul class="compact-list">' + poolEditor + '</ul>' : '<p>No fallback pool monsters configured yet.</p>') + '</section>',
+          '<section class="panel-block"><div class="section-heading"><h2>Preview</h2></div><p><strong>' + escapeHtml(selectedTrainer.title || "Trainer") + " " + escapeHtml(selectedTrainer.name || selectedTrainer.id || "Trainer") + '</strong></p><p>Recommended Level: ' + Number(selectedTrainer.recommendedLevel || 1) + ' · Party Size: ' + Number(selectedTrainer.partySize || 1) + '</p><p>Reward Money: $' + Number(selectedTrainer.rewardMoney || 0) + '</p><p class="dev-helper-text">First battles use the authored team here. Rematches use the trainer refight settings in the in-game Settings panel, capped by crest progression.</p><h3>Configured Team</h3><ul class="compact-list">' + (teamPreview || "<li><span>No team members configured yet.</span></li>") + '</ul></section>',
+        ].join("")
+      : '<section class="panel-block dev-editor-panel"><h2>No Trainer Selected</h2><p>Add a new trainer to begin editing.</p></section>';
+
+    root.innerHTML = [
+      '<main class="dev-screen">',
+      '<header class="game-topbar">',
+      '<div><span class="eyebrow">Dev Tools</span><strong>Trainer Editor</strong></div>',
+      '<div class="topbar-stats"><button class="' + (devToolsState.section === "maps" ? "secondary-button" : "primary-button") + '" type="button" data-action="dev-section-maps">Maps</button><button class="' + (devToolsState.section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button><button class="' + (devToolsState.section === "arenas" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-arenas">Arenas</button><button class="' + (devToolsState.section === "trainers" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-trainers">Trainers</button><button class="' + (devToolsState.section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button><button class="' + (devToolsState.section === "characters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-characters">Characters</button><button class="secondary-button" type="button" data-action="back-to-title">Back</button><button class="secondary-button" type="button" data-action="load-folder">Load Project Folder</button></div>',
+      '</header>',
+      '<section class="dev-screen-layout">',
+      '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>Trainers</h2><button class="secondary-button" type="button" data-action="add-trainer">Add Trainer</button></div><ul class="compact-list dev-map-list">' + (trainerItems || "<li>No trainers yet.</li>") + '</ul></aside>',
+      '<section class="dev-main"><section class="panel-block dev-preview-controls"><div class="section-heading"><h2>Trainer Tools</h2></div><p>Edit trainer rosters in-memory, then export <code>trainers.json</code> into <code>data/</code> and rebuild local content before reloading the game.</p><div class="title-actions"><button class="secondary-button" type="button" data-action="export-trainers-json">Export trainers.json</button></div></section>' + trainerEditor + '</section>',
       '</section>',
       '</main>',
     ].join("");
@@ -9044,7 +9436,7 @@
       '<main class="dev-screen">',
       '<header class="game-topbar">',
       '<div><span class="eyebrow">Dev Tools</span><strong>Town Editor</strong></div>',
-      '<div class="topbar-stats"><button class="' + (devToolsState.section === "maps" ? "secondary-button" : "primary-button") + '" type="button" data-action="dev-section-maps">Maps</button><button class="' + (devToolsState.section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button><button class="' + (devToolsState.section === "arenas" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-arenas">Arenas</button><button class="' + (devToolsState.section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button><button class="' + (devToolsState.section === "characters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-characters">Characters</button><button class="secondary-button" type="button" data-action="back-to-title">Back</button><button class="secondary-button" type="button" data-action="load-folder">Load Project Folder</button></div>',
+      '<div class="topbar-stats"><button class="' + (devToolsState.section === "maps" ? "secondary-button" : "primary-button") + '" type="button" data-action="dev-section-maps">Maps</button><button class="' + (devToolsState.section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button><button class="' + (devToolsState.section === "arenas" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-arenas">Arenas</button><button class="' + (devToolsState.section === "trainers" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-trainers">Trainers</button><button class="' + (devToolsState.section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button><button class="' + (devToolsState.section === "characters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-characters">Characters</button><button class="secondary-button" type="button" data-action="back-to-title">Back</button><button class="secondary-button" type="button" data-action="load-folder">Load Project Folder</button></div>',
       "</header>",
       '<section class="dev-screen-layout">',
       '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>Towns</h2></div><ul class="compact-list dev-map-list">' + (townList || "<li>No town maps available.</li>") + "</ul></aside>",
@@ -9121,12 +9513,23 @@
     }).join("");
     const selectedRowOffset = getCharacterRowOffset(devToolsState, selectedRow);
     const selectedFrameOffset = getCharacterFrameOffset(devToolsState, selectedRow, selectedFrame);
+    const crestLevelCaps = ensureDevToolsCrestLevelCapSettings(devToolsState, content);
+    const crestLevelCapMarkup = crestLevelCaps.map(function (entry, index) {
+      return '<section class="panel-block dev-editor-panel">' +
+        '<div class="section-heading"><h3>Tier ' + (index + 1) + '</h3><div class="topbar-stats"><button class="secondary-button" type="button" data-action="delete-crest-level-cap" data-crest-cap-index="' + index + '"' + (crestLevelCaps.length <= 1 ? " disabled" : "") + '>Delete</button></div></div>' +
+        '<div class="form-grid">' +
+        '<label class="input-group"><span>Crests Min</span><input type="number" min="0" step="1" data-dev-character-field="crestLevelCapMin:' + index + '" value="' + Number(entry.crestMin) + '" /></label>' +
+        '<label class="input-group"><span>Crests Max</span><input type="number" min="0" step="1" data-dev-character-field="crestLevelCapMax:' + index + '" value="' + Number(entry.crestMax) + '" /></label>' +
+        '<label class="input-group"><span>Level Cap</span><input type="number" min="1" step="1" data-dev-character-field="crestLevelCapLevel:' + index + '" value="' + Number(entry.levelCap) + '" /></label>' +
+        '</div>' +
+      '</section>';
+    }).join("");
 
     root.innerHTML = [
       '<main class="dev-screen">',
       '<header class="game-topbar">',
       '<div><span class="eyebrow">Dev Tools</span><strong>Sprite Sheet Checker</strong></div>',
-      '<div class="topbar-stats"><button class="' + (devToolsState.section === "maps" ? "secondary-button" : "primary-button") + '" type="button" data-action="dev-section-maps">Maps</button><button class="' + (devToolsState.section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button><button class="' + (devToolsState.section === "arenas" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-arenas">Arenas</button><button class="' + (devToolsState.section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button><button class="' + (devToolsState.section === "characters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-characters">Characters</button><button class="secondary-button" type="button" data-action="back-to-title">Back</button><button class="secondary-button" type="button" data-action="load-folder">Load Project Folder</button></div>',
+      '<div class="topbar-stats"><button class="' + (devToolsState.section === "maps" ? "secondary-button" : "primary-button") + '" type="button" data-action="dev-section-maps">Maps</button><button class="' + (devToolsState.section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button><button class="' + (devToolsState.section === "arenas" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-arenas">Arenas</button><button class="' + (devToolsState.section === "trainers" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-trainers">Trainers</button><button class="' + (devToolsState.section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button><button class="' + (devToolsState.section === "characters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-characters">Characters</button><button class="secondary-button" type="button" data-action="back-to-title">Back</button><button class="secondary-button" type="button" data-action="load-folder">Load Project Folder</button></div>',
       '</header>',
       '<section class="dev-screen-layout">',
       '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>Sprite Sheets</h2></div><div class="dev-sheet-group-wrap">' + sidebarItems + '</div></aside>',
@@ -9142,6 +9545,9 @@
       '<p class="dev-helper-text">' + (isMonsterSheet
         ? 'This width becomes the default render size for monster sheets across the game. Individual monster sheets can still override it below.'
         : 'These values are global defaults for all player character sheets and are saved to <code>settings.json</code>, not to one sheet.') + '</p>',
+      '<div class="section-heading"><h2>Crest Progression Level Caps</h2><div class="topbar-stats"><button class="secondary-button" type="button" data-action="add-crest-level-cap">Add Tier</button></div></div>',
+      crestLevelCapMarkup,
+      '<p class="dev-helper-text">These tiers control the player wild/refight level cap based on earned crests, and the default cap range used for arena refights. They are saved to <code>settings.json</code>.</p>',
       '<div class="title-actions"><button class="secondary-button" type="button" data-action="export-settings-json">Export settings.json</button></div>',
       '</section>',
       '<section class="panel-block dev-editor-panel">',
@@ -9680,6 +10086,10 @@
       return renderArenaDevToolsScreen(root, content, devToolsState);
     }
 
+    if (devToolsState.section === "trainers") {
+      return renderTrainerDevToolsScreen(root, content, devToolsState);
+    }
+
     if (devToolsState.section === "monsters") {
       return renderMonsterDevToolsScreen(root, content, devToolsState);
     }
@@ -9974,6 +10384,9 @@
     root.querySelector('[data-action="dev-section-arenas"]')?.addEventListener("click", function () {
       app.setDevSection("arenas");
     });
+    root.querySelector('[data-action="dev-section-trainers"]')?.addEventListener("click", function () {
+      app.setDevSection("trainers");
+    });
     root.querySelector('[data-action="dev-section-monsters"]')?.addEventListener("click", function () {
       app.setDevSection("monsters");
     });
@@ -9988,6 +10401,14 @@
     });
     root.querySelector('[data-action="resync-character-sheets"]')?.addEventListener("click", function () {
       app.resyncCharacterSheetsFromFolder();
+    });
+    root.querySelector('[data-action="add-crest-level-cap"]')?.addEventListener("click", function () {
+      app.addCrestLevelCap();
+    });
+    root.querySelectorAll('[data-action="delete-crest-level-cap"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.deleteCrestLevelCap(Number(button.getAttribute("data-crest-cap-index") || 0));
+      });
     });
 
     root.querySelector('[data-action="monster-mode-species"]')?.addEventListener("click", function () {
@@ -10092,6 +10513,34 @@
     });
     root.querySelector('[data-action="export-arenas-json"]')?.addEventListener("click", function () {
       app.exportArenasJson();
+    });
+    root.querySelector('[data-action="add-trainer"]')?.addEventListener("click", function () {
+      app.addTrainer();
+    });
+    root.querySelector('[data-action="duplicate-trainer"]')?.addEventListener("click", function () {
+      app.duplicateTrainer();
+    });
+    root.querySelector('[data-action="delete-trainer"]')?.addEventListener("click", function () {
+      app.deleteTrainer();
+    });
+    root.querySelector('[data-action="export-trainers-json"]')?.addEventListener("click", function () {
+      app.exportTrainersJson();
+    });
+    root.querySelector('[data-action="add-trainer-team-member"]')?.addEventListener("click", function () {
+      app.addTrainerTeamMember();
+    });
+    root.querySelector('[data-action="add-trainer-pool-member"]')?.addEventListener("click", function () {
+      app.addTrainerPoolMember();
+    });
+    root.querySelectorAll('[data-action="delete-trainer-team-member"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.deleteTrainerTeamMember(Number(button.getAttribute("data-team-index")));
+      });
+    });
+    root.querySelectorAll('[data-action="delete-trainer-pool-member"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.deleteTrainerPoolMember(Number(button.getAttribute("data-pool-index")));
+      });
     });
     root.querySelector('[data-action="add-arena-team-member"]')?.addEventListener("click", function () {
       app.addArenaTeamMember();
@@ -10231,6 +10680,11 @@
     root.querySelectorAll("[data-dev-select-arena]").forEach(function (button) {
       button.addEventListener("click", function () {
         app.selectArena(button.getAttribute("data-dev-select-arena"));
+      });
+    });
+    root.querySelectorAll("[data-dev-select-trainer]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.selectTrainer(button.getAttribute("data-dev-select-trainer"));
       });
     });
     root.querySelectorAll("[data-dev-select-character-sheet]").forEach(function (button) {
@@ -10524,6 +10978,50 @@
         );
       });
     });
+    root.querySelectorAll("[data-dev-trainer-field]").forEach(function (field) {
+      const useDeferredRender = isDeferredDevTextField(field);
+      const eventName = field.tagName === "SELECT" ? "change" : "input";
+      field.addEventListener(eventName, function () {
+        app.updateTrainerField(field.getAttribute("data-dev-trainer-field"), field.value, !useDeferredRender);
+        if (useDeferredRender) {
+          app.clearDeferredRender();
+        }
+      });
+      if (useDeferredRender) {
+        field.addEventListener("change", function () {
+          app.updateTrainerField(field.getAttribute("data-dev-trainer-field"), field.value);
+        });
+      }
+    });
+    root.querySelectorAll("[data-dev-trainer-team-field]").forEach(function (field) {
+      const eventName = field.tagName === "SELECT" ? "change" : "input";
+      field.addEventListener(eventName, function () {
+        app.updateTrainerTeamMember(
+          Number(field.getAttribute("data-team-index")),
+          field.getAttribute("data-dev-trainer-team-field"),
+          field.value,
+          field.tagName === "SELECT"
+        );
+      });
+      if (field.tagName !== "SELECT") {
+        field.addEventListener("change", function () {
+          app.updateTrainerTeamMember(
+            Number(field.getAttribute("data-team-index")),
+            field.getAttribute("data-dev-trainer-team-field"),
+            field.value
+          );
+        });
+      }
+    });
+    root.querySelectorAll("[data-dev-trainer-pool-field]").forEach(function (field) {
+      field.addEventListener("change", function () {
+        app.updateTrainerPoolMember(
+          Number(field.getAttribute("data-pool-index")),
+          field.getAttribute("data-dev-trainer-pool-field"),
+          field.value
+        );
+      });
+    });
     root.querySelectorAll("[data-dev-interaction-field]").forEach(function (field) {
       const useDeferredRender = isDeferredDevTextField(field);
       const eventName = field.tagName === "SELECT" ? "change" : "input";
@@ -10725,6 +11223,12 @@
           return;
         }
 
+        const trainerEl = target.closest("[data-dev-select-trainer]");
+        if (trainerEl instanceof HTMLElement) {
+          app.selectTrainer(trainerEl.getAttribute("data-dev-select-trainer"));
+          return;
+        }
+
         const transitionEl = target.closest("[data-dev-select-transition]");
         if (transitionEl instanceof HTMLElement) {
           app.selectTransition(transitionEl.getAttribute("data-dev-select-transition"));
@@ -10812,6 +11316,7 @@
           return content.mapMetadata[mapId]?.isTown;
         }) || "",
         selectedArenaId: ensureArenaCatalog(content)[0]?.id || "",
+        selectedTrainerId: ensureTrainerCatalog(content)[0]?.id || "",
         selectedTransitionId: "",
         selectedSpawnId: "",
         selectedInteractionId: "",
@@ -10828,6 +11333,9 @@
         playerSpriteRenderWidth: content.settings?.defaults?.playerSpriteRenderWidth || PLAYER_RENDER_WIDTH,
         monsterSpriteRenderWidth: content.settings?.defaults?.monsterSpriteRenderWidth || MONSTER_RENDER_WIDTH,
         playerSpriteAnchorOffsetY: content.settings?.defaults?.playerSpriteAnchorOffsetY || PLAYER_SPRITE_ANCHOR_OFFSET_Y,
+        crestLevelCaps: ensureGlobalCrestLevelCapSettings(content).map(function (entry) {
+          return Object.assign({}, entry);
+        }),
         characterSheetOffsetX: 0,
         characterSheetOffsetY: 0,
         characterSheetKind: getSpriteSheetKind(getCharacterSheetConfig(content, CHARACTER_SHEET_OPTIONS[0]?.id || "")),
@@ -11025,7 +11533,7 @@
           return;
         }
 
-        if (key === "zoom" || key === "walkSpeed" || key === "partySize" || key === "arenaLeaderPartySize") {
+        if (key === "zoom" || key === "walkSpeed" || key === "partySize" || key === "arenaLeaderPartySize" || key === "trainerRefightPartySize") {
           this.state.settings[key] = Number(rawValue || 0);
         } else if (key === "wildMonsterMaxLevel") {
           this.state.settings[key] = Math.max(1, Math.min(getCurrentPlayerLevelCap(this.state), Number(rawValue || 1)));
@@ -11038,6 +11546,12 @@
           const nextRange = getRefightArenaLeaderLevelRange(this.state);
           this.state.settings.arenaLeaderMinLevel = nextRange.min;
           this.state.settings.arenaLeaderMaxLevel = nextRange.max;
+        } else if (key === "trainerRefightMinLevel" || key === "trainerRefightMaxLevel") {
+          const crestCap = getCurrentPlayerLevelCap(this.state);
+          this.state.settings[key] = Math.max(1, Math.min(crestCap, Number(rawValue || 1)));
+          const nextRange = getTrainerRefightLevelRange(this.state);
+          this.state.settings.trainerRefightMinLevel = nextRange.min;
+          this.state.settings.trainerRefightMaxLevel = nextRange.max;
         } else if (key === "shareExperience" || key === "encounterPreview") {
           this.state.settings[key] = rawValue === "true";
         } else {
@@ -11638,9 +12152,11 @@
           this.content = nextContent;
           syncMonsterDevSelection(this.content, this.devTools);
           syncArenaDevSelection(this.content, this.devTools);
+          syncTrainerDevSelection(this.content, this.devTools);
           this.devTools.selectedMapId = Object.keys(nextContent.maps)[0] || "";
           this.devTools.selectedTownMapId = Object.keys(nextContent.maps).find((mapId) => nextContent.mapMetadata[mapId]?.isTown) || "";
           this.devTools.selectedArenaId = ensureArenaCatalog(nextContent)[0]?.id || "";
+          this.devTools.selectedTrainerId = ensureTrainerCatalog(nextContent)[0]?.id || "";
           this.devTools.selectedTransitionId = nextContent.mapMetadata[this.devTools.selectedMapId]?.transitions?.[0]?.id || "";
           this.devTools.selectedSpawnId = getEditableVisibleSpawns(nextContent.mapMetadata[this.devTools.selectedMapId])[0]?.id || "";
           this.devTools.selectedInteractionId = getEditableInteractions(nextContent.mapMetadata[this.devTools.selectedMapId])[0]?.id || "";
@@ -11767,6 +12283,10 @@
         this.devTools.selectedArenaId = arenaId;
         this.render();
       },
+      selectTrainer: function (trainerId) {
+        this.devTools.selectedTrainerId = trainerId;
+        this.render();
+      },
       setDevSection: function (section) {
         this.devTools.section = section;
         if (section === "towns" && !this.devTools.selectedTownMapId) {
@@ -11774,6 +12294,9 @@
         }
         if (section === "arenas") {
           syncArenaDevSelection(this.content, this.devTools);
+        }
+        if (section === "trainers") {
+          syncTrainerDevSelection(this.content, this.devTools);
         }
         syncMonsterDevSelection(this.content, this.devTools);
         applyCharacterSheetToDevTools(this.content, this.devTools, this.devTools.selectedCharacterSheetId);
@@ -11835,11 +12358,28 @@
           this.devTools.characterSheetFrameOffsets[this.devTools.characterSheetSelectedRow][this.devTools.characterSheetSelectedFrame].height = Number(rawValue || 0);
         } else if (field === "previewScale") {
           this.devTools.characterSheetPreviewScale = Math.max(0.5, Number(rawValue || 0.5));
+        } else if (field.indexOf("crestLevelCap") === 0) {
+          const fieldParts = field.split(":");
+          const crestField = fieldParts[0];
+          const crestIndex = Math.max(0, Number(fieldParts[1] || 0));
+          ensureDevToolsCrestLevelCapSettings(this.devTools, this.content);
+          const entry = this.devTools.crestLevelCaps[crestIndex];
+          if (entry) {
+            if (crestField === "crestLevelCapMin") {
+              entry.crestMin = Math.max(0, Number(rawValue || 0));
+            } else if (crestField === "crestLevelCapMax") {
+              entry.crestMax = Math.max(0, Number(rawValue || 0));
+            } else if (crestField === "crestLevelCapLevel") {
+              entry.levelCap = Math.max(1, Number(rawValue || 1));
+            }
+            this.devTools.crestLevelCaps[crestIndex] = normalizeCrestLevelCapEntry(entry, DEFAULT_CREST_LEVEL_CAPS[crestIndex] || DEFAULT_CREST_LEVEL_CAPS[DEFAULT_CREST_LEVEL_CAPS.length - 1]);
+          }
         }
 
         ensureCharacterDevSelection(this.devTools, this.content);
         syncDevToolsPlayerSpriteSettings(this.content, this.devTools);
         syncDevToolsMonsterSpriteSettings(this.content, this.devTools);
+        syncDevToolsCrestLevelCapSettings(this.content, this.devTools);
         syncDevToolsCharacterSheet(this.content, this.devTools);
         if (shouldRender !== false) {
           this.render();
@@ -12832,6 +13372,25 @@
           this.render();
         }
       },
+      updateTrainerField: function (path, rawValue, shouldRender) {
+        const trainer = ensureTrainerCatalog(this.content).find((entry) => entry.id === this.devTools.selectedTrainerId);
+        if (!trainer) {
+          return;
+        }
+
+        const previousId = trainer.id;
+        const numericFields = new Set(["recommendedLevel", "partySize", "rewardMoney"]);
+        const value = numericFields.has(path) ? Number(rawValue || 0) : rawValue;
+        trainer[path] = value;
+        if (path === "id") {
+          replaceTrainerReferences(this.content, previousId, rawValue);
+          this.devTools.selectedTrainerId = rawValue;
+        }
+
+        if (shouldRender !== false) {
+          this.render();
+        }
+      },
       toggleSpeciesSkill: function (skillId, checked) {
         const species = this.content.monsters.species.find((entry) => entry.id === this.devTools.selectedSpeciesId);
         if (!species) {
@@ -12910,6 +13469,7 @@
       exportSettingsJson: function () {
         syncDevToolsPlayerSpriteSettings(this.content, this.devTools);
         syncDevToolsMonsterSpriteSettings(this.content, this.devTools);
+        syncDevToolsCrestLevelCapSettings(this.content, this.devTools);
         const payload = {
           defaults: Object.assign({}, this.content.settings?.defaults || fallbackContent.settings.defaults),
           allowedZoomLevels: this.content.settings?.allowedZoomLevels || fallbackContent.settings.allowedZoomLevels,
@@ -12925,6 +13485,145 @@
         URL.revokeObjectURL(url);
         this.state.message = "Exported settings.json.";
         if (this.state.screen === "world") {
+          this.render();
+        }
+      },
+      exportTrainersJson: function () {
+        const payload = {
+          trainers: ensureTrainerCatalog(this.content),
+        };
+
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = "trainers.json";
+        anchor.click();
+        URL.revokeObjectURL(url);
+        this.state.message = "Exported trainers.json.";
+        if (this.state.screen === "world") {
+          this.render();
+        }
+      },
+      addCrestLevelCap: function () {
+        const caps = ensureDevToolsCrestLevelCapSettings(this.devTools, this.content);
+        const lastEntry = caps[caps.length - 1] || DEFAULT_CREST_LEVEL_CAPS[0];
+        const nextMin = Math.max(0, Number(lastEntry.crestMax || lastEntry.crestMin || 0) + 1);
+        caps.push({
+          crestMin: nextMin,
+          crestMax: nextMin + 1,
+          levelCap: Math.max(1, Number(lastEntry.levelCap || DEFAULT_CREST_LEVEL_CAPS[0].levelCap)),
+        });
+        syncDevToolsCrestLevelCapSettings(this.content, this.devTools);
+        this.render();
+      },
+      deleteCrestLevelCap: function (capIndex) {
+        const caps = ensureDevToolsCrestLevelCapSettings(this.devTools, this.content);
+        if (caps.length <= 1 || !caps[capIndex]) {
+          return;
+        }
+        caps.splice(capIndex, 1);
+        syncDevToolsCrestLevelCapSettings(this.content, this.devTools);
+        this.render();
+      },
+      addTrainer: function () {
+        const trainers = ensureTrainerCatalog(this.content);
+        const next = createEmptyTrainer(trainers.length + 1);
+        next.team.push(createEmptyTrainerTeamMember(this.content, next));
+        trainers.push(next);
+        this.devTools.selectedTrainerId = next.id;
+        this.render();
+      },
+      duplicateTrainer: function () {
+        const trainers = ensureTrainerCatalog(this.content);
+        const current = trainers.find((entry) => entry.id === this.devTools.selectedTrainerId);
+        if (!current) {
+          return;
+        }
+        const duplicate = JSON.parse(JSON.stringify(current));
+        duplicate.id = (current.id || "trainer") + "-copy";
+        duplicate.name = current.name ? current.name + " Copy" : "Copied Trainer";
+        trainers.push(duplicate);
+        this.devTools.selectedTrainerId = duplicate.id;
+        this.render();
+      },
+      deleteTrainer: function () {
+        const trainers = ensureTrainerCatalog(this.content);
+        const targetId = this.devTools.selectedTrainerId;
+        replaceTrainerReferences(this.content, targetId, "");
+        this.content.trainers.trainers = trainers.filter(function (entry) {
+          return entry.id !== targetId;
+        });
+        syncTrainerDevSelection(this.content, this.devTools);
+        this.render();
+      },
+      addTrainerTeamMember: function () {
+        const trainer = ensureTrainerCatalog(this.content).find((entry) => entry.id === this.devTools.selectedTrainerId);
+        if (!trainer) {
+          return;
+        }
+        if (!Array.isArray(trainer.team)) {
+          trainer.team = [];
+        }
+        trainer.team.push(createEmptyTrainerTeamMember(this.content, trainer));
+        trainer.partySize = Math.max(Number(trainer.partySize || 1), trainer.team.length);
+        this.render();
+      },
+      addTrainerPoolMember: function () {
+        const trainer = ensureTrainerCatalog(this.content).find((entry) => entry.id === this.devTools.selectedTrainerId);
+        if (!trainer) {
+          return;
+        }
+        if (!Array.isArray(trainer.pool)) {
+          trainer.pool = [];
+        }
+        trainer.pool.push(createEmptyTrainerPoolMember(this.content));
+        this.render();
+      },
+      deleteTrainerTeamMember: function (teamIndex) {
+        const trainer = ensureTrainerCatalog(this.content).find((entry) => entry.id === this.devTools.selectedTrainerId);
+        if (!trainer || !Array.isArray(trainer.team) || !trainer.team[teamIndex]) {
+          return;
+        }
+        trainer.team.splice(teamIndex, 1);
+        trainer.partySize = Math.max(1, Math.min(Number(trainer.partySize || 1), trainer.team.length || 1));
+        this.render();
+      },
+      deleteTrainerPoolMember: function (poolIndex) {
+        const trainer = ensureTrainerCatalog(this.content).find((entry) => entry.id === this.devTools.selectedTrainerId);
+        if (!trainer || !Array.isArray(trainer.pool) || !trainer.pool[poolIndex]) {
+          return;
+        }
+        trainer.pool.splice(poolIndex, 1);
+        this.render();
+      },
+      updateTrainerTeamMember: function (teamIndex, field, rawValue, shouldRender) {
+        const trainer = ensureTrainerCatalog(this.content).find((entry) => entry.id === this.devTools.selectedTrainerId);
+        const member = trainer?.team?.[teamIndex];
+        if (!member) {
+          return;
+        }
+        member[field] = field === "level" ? Math.max(1, Number(rawValue || 1)) : rawValue;
+        if (field === "speciesId") {
+          const species = getSpecies(this.content, rawValue);
+          member.variantId = getSpeciesVariant(species, member.variantId)?.id || species?.variants?.[0]?.id || "default";
+        }
+        if (shouldRender !== false) {
+          this.render();
+        }
+      },
+      updateTrainerPoolMember: function (poolIndex, field, rawValue, shouldRender) {
+        const trainer = ensureTrainerCatalog(this.content).find((entry) => entry.id === this.devTools.selectedTrainerId);
+        const member = trainer?.pool?.[poolIndex];
+        if (!member) {
+          return;
+        }
+        member[field] = rawValue;
+        if (field === "speciesId") {
+          const species = getSpecies(this.content, rawValue);
+          member.variantId = getSpeciesVariant(species, member.variantId)?.id || species?.variants?.[0]?.id || "default";
+        }
+        if (shouldRender !== false) {
           this.render();
         }
       },

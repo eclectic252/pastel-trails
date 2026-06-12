@@ -11,6 +11,26 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       "arenaLeaderMinLevel": 1,
       "arenaLeaderMaxLevel": 10,
       "arenaLeaderPartySize": 3,
+      "trainerRefightMinLevel": 1,
+      "trainerRefightMaxLevel": 5,
+      "trainerRefightPartySize": 2,
+      "crestLevelCaps": [
+        {
+          "crestMin": 0,
+          "crestMax": 2,
+          "levelCap": 5
+        },
+        {
+          "crestMin": 3,
+          "crestMax": 4,
+          "levelCap": 10
+        },
+        {
+          "crestMin": 5,
+          "crestMax": 99,
+          "levelCap": 15
+        }
+      ],
       "shareExperience": true,
       "mapDetails": true,
       "encounterPreview": false,

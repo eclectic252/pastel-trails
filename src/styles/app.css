@@ -1844,6 +1844,25 @@ button {
   justify-content: center;
 }
 
+.battle-trainer-intro-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.battle-battler-trainer-intro,
+.battle-battler-enemy-intro {
+  transition: none;
+}
+
+.battle-trainer-sheet-sprite {
+  width: 144px;
+  height: 144px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
 .battle-battler-fallback {
   color: #7b5b4e;
   font-weight: 700;
