@@ -9,6 +9,13 @@
   const ELEMENTAL_AFFINITIES = ["Air", "Fire", "Earth", "Water", "Light", "Dark"];
   const SKILL_ELEMENTS = ["Neutral"].concat(ELEMENTAL_AFFINITIES);
   const BATTLE_MODIFIER_STATS = ["attack", "defense", "speed", "accuracy"];
+  const MONSTER_STAT_KEYS = ["hp", "attack", "defense", "speed"];
+  const MONSTER_STAT_LABELS = {
+    hp: "Health",
+    attack: "Attack",
+    defense: "Defense",
+    speed: "Speed",
+  };
   const PLAYER_RADIUS = 16;
   const PLAYER_HITBOX = { width: 28, height: 28 };
   const PLAYER_SPRITE_SHEET = "assets/Characters/Boardwalk girl sprite/boardwalk girlcheckbackground_transparent.png";
@@ -30,6 +37,12 @@
   const MONSTER_WALK_STEP_MIN = 1;
   const MONSTER_WALK_STEP_MAX = 3;
   const MONSTER_WALK_PAUSE_MS = 900;
+  const NPC_MOVEMENT_MODES = ["still", "look", "wander"];
+  const NPC_LOOK_MIN_MS = 900;
+  const NPC_LOOK_MAX_MS = 2200;
+  const NPC_DEFAULT_LOOK_SPEED = 1;
+  const NPC_WALK_PAUSE_MS = 700;
+  const NPC_DEFAULT_MOVE_SPEED = 72;
   const OVERWORLD_LABEL_STYLE = {
     background: "rgba(252, 246, 232, 0.96)",
     border: "rgba(126, 90, 63, 0.95)",
@@ -102,8 +115,9 @@
         encounterPreview: false,
         encounterPreviewMode: "available",
         arenaLeaderMinLevel: 1,
-        arenaLeaderMaxLevel: 10,
+        arenaLeaderMaxLevel: 5,
         arenaLeaderPartySize: 3,
+        wildMonsterMaxLevel: 5,
         battleModel: {
           skillAttackScale: 0.6,
           skillDefenseScale: 0.35,
@@ -1071,9 +1085,152 @@
     const threshold = getMonsterXpThreshold(monster);
     const xp = Math.max(0, Number(monster?.xp || 0));
     return {
-      current: xp % threshold,
+      current: Math.min(threshold, xp),
       threshold,
-      percent: Math.max(0, Math.min(100, ((xp % threshold) / threshold) * 100)),
+      percent: Math.max(0, Math.min(100, (xp / threshold) * 100)),
+    };
+  }
+
+  function getTotalMonsterStatPointsForLevel(level) {
+    return Math.max(0, Math.max(1, Number(level || 1)) - 1);
+  }
+
+  function getMonsterStatPointBudget(monster) {
+    return getTotalMonsterStatPointsForLevel(monster?.level || 1) + Math.max(0, Number(monster?.bonusStatPoints || 0));
+  }
+
+  function getSpentMonsterStatPoints(monster) {
+    return MONSTER_STAT_KEYS.reduce(function (sum, stat) {
+      return sum + Math.max(0, Number(monster?.statPoints?.[stat] || 0));
+    }, 0);
+  }
+
+  function getAvailableMonsterStatPoints(monster) {
+    return Math.max(0, getMonsterStatPointBudget(monster) - getSpentMonsterStatPoints(monster));
+  }
+
+  function buildRandomMonsterStatPoints(level) {
+    const totalPoints = getTotalMonsterStatPointsForLevel(level);
+    const points = Object.fromEntries(MONSTER_STAT_KEYS.map(function (stat) {
+      return [stat, 0];
+    }));
+
+    for (let index = 0; index < totalPoints; index += 1) {
+      const pickedStat = MONSTER_STAT_KEYS[Math.floor(Math.random() * MONSTER_STAT_KEYS.length)] || MONSTER_STAT_KEYS[0];
+      points[pickedStat] += 1;
+    }
+
+    return points;
+  }
+
+  function inferMonsterStatPointsFromStats(monster, species) {
+    const points = Object.fromEntries(MONSTER_STAT_KEYS.map(function (stat) {
+      return [stat, 0];
+    }));
+
+    if (!monster?.stats || !species?.baseStats) {
+      return points;
+    }
+
+    MONSTER_STAT_KEYS.forEach(function (stat) {
+      const statDiff = Math.max(0, Number(monster.stats?.[stat] || 0) - Number(species.baseStats?.[stat] || 0));
+      points[stat] = statDiff;
+    });
+
+    return points;
+  }
+
+  function ensureMonsterStatPointState(monster, species, options) {
+    if (!monster || typeof monster !== "object") {
+      return monster;
+    }
+
+    const sourcePoints = options?.randomize
+      ? buildRandomMonsterStatPoints(monster.level || 1)
+      : (monster.statPoints && typeof monster.statPoints === "object"
+          ? monster.statPoints
+          : ((options?.inferFromStats !== false && species)
+              ? inferMonsterStatPointsFromStats(monster, species)
+              : {}));
+
+    const normalizedPoints = {};
+    MONSTER_STAT_KEYS.forEach(function (stat) {
+      normalizedPoints[stat] = Math.max(0, Number(sourcePoints?.[stat] || 0));
+    });
+    monster.statPoints = normalizedPoints;
+
+    const spentPoints = getSpentMonsterStatPoints(monster);
+    const levelBudget = getTotalMonsterStatPointsForLevel(monster.level || 1);
+    const legacyBonus = Math.max(0, spentPoints - levelBudget);
+    monster.bonusStatPoints = Math.max(legacyBonus, Number(monster.bonusStatPoints || 0));
+    return monster;
+  }
+
+  function recalculateMonsterStats(monster, species, options) {
+    if (!monster || !species?.baseStats) {
+      return monster;
+    }
+
+    ensureMonsterStatPointState(monster, species, options);
+    const previousMaxHp = Math.max(1, Number(monster.stats?.hp || species.baseStats.hp || 1));
+    const previousCurrentHp = Math.max(0, Number(monster.currentHp ?? previousMaxHp));
+    const nextStats = {};
+
+    MONSTER_STAT_KEYS.forEach(function (stat) {
+      nextStats[stat] = Math.max(1, Number(species.baseStats?.[stat] || 1) + Math.max(0, Number(monster.statPoints?.[stat] || 0)));
+    });
+
+    monster.stats = nextStats;
+    monster.maxHp = nextStats.hp;
+
+    if (options?.healToFull) {
+      monster.currentHp = nextStats.hp;
+    } else if (options?.preserveHpByMaxDelta) {
+      monster.currentHp = Math.max(0, Math.min(nextStats.hp, previousCurrentHp + (nextStats.hp - previousMaxHp)));
+    } else {
+      monster.currentHp = Math.max(0, Math.min(nextStats.hp, previousCurrentHp));
+    }
+
+    return monster;
+  }
+
+  function grantMonsterXp(state, content, monster, amount, options) {
+    if (!monster || Number(amount || 0) <= 0) {
+      return { gained: 0, leveledUp: false, levelsGained: 0 };
+    }
+
+    const species = getSpecies(content, monster.speciesId);
+    if (!species) {
+      return { gained: 0, leveledUp: false, levelsGained: 0 };
+    }
+
+    monster.xp = Math.max(0, Number(monster.xp || 0) + Number(amount || 0));
+    let levelsGained = 0;
+
+    while (monster.xp >= getMonsterXpThreshold(monster)) {
+      monster.xp -= getMonsterXpThreshold(monster);
+      monster.level = Math.max(1, Number(monster.level || 1) + 1);
+      levelsGained += 1;
+    }
+
+    recalculateMonsterStats(monster, species, { preserveHpByMaxDelta: true });
+    if (levelsGained > 0) {
+      const speciesName = species.name || monster.speciesId || "Monster";
+      const availablePoints = getAvailableMonsterStatPoints(monster);
+      const levelMessage = speciesName + " leveled up to Lv " + Number(monster.level || 1) + ".";
+      if (state.battle && options?.showBattleLog !== false) {
+        addBattleLogEntry(state, levelMessage);
+        addBattleLogEntry(state, speciesName + " has " + availablePoints + " stat point" + (availablePoints === 1 ? "" : "s") + " available.");
+      }
+      if (!options?.suppressStateMessage) {
+        state.message = levelMessage;
+      }
+    }
+
+    return {
+      gained: Number(amount || 0),
+      leveledUp: levelsGained > 0,
+      levelsGained,
     };
   }
 
@@ -1398,16 +1555,28 @@
       instanceId: window.crypto?.randomUUID ? window.crypto.randomUUID() : String(Date.now() + Math.random()),
       speciesId: species.id,
       variantId: resolvedVariant?.id || species.variants?.[0]?.id || "default",
-      level,
-      xp: 0,
-      stats: Object.assign({}, species.baseStats),
-      currentHp: species.baseStats.hp,
+      level: Math.max(1, Number(level || 1)),
+      xp: Math.max(0, Number(options?.xp || 0)),
       skills: Array.isArray(options?.skills) && options.skills.length
         ? Array.from(new Set(options.skills.filter(function (skillId) {
             return getSpeciesSkillPool(species).includes(skillId);
           })))
         : getDefaultMonsterSkills(species),
     };
+    if (options?.bonusStatPoints !== undefined) {
+      monster.bonusStatPoints = Math.max(0, Number(options.bonusStatPoints || 0));
+    }
+    if (options?.statPoints && typeof options.statPoints === "object") {
+      monster.statPoints = Object.assign({}, options.statPoints);
+    }
+    ensureMonsterStatPointState(monster, species, {
+      randomize: options?.randomizeStatPoints === true,
+      inferFromStats: options?.inferStatPointsFromStats,
+    });
+    recalculateMonsterStats(monster, species, { healToFull: true });
+    if (options?.currentHp !== undefined) {
+      monster.currentHp = Math.max(0, Math.min(monster.stats.hp, Number(options.currentHp || 0)));
+    }
     ensureElementalAffinityState(monster, { primaryElement: options?.primaryElement || options?.elementalAffinity });
     if (options?.elementalAffinityPoints && typeof options.elementalAffinityPoints === "object") {
       ELEMENTAL_AFFINITIES.forEach(function (element) {
@@ -2218,6 +2387,43 @@
     ].join("");
   }
 
+  function renderMonsterStatsPanel(content, monster, options) {
+    if (!monster) {
+      return "";
+    }
+
+    const species = getSpecies(content, monster.speciesId);
+    ensureMonsterStatPointState(monster, species);
+    recalculateMonsterStats(monster, species);
+    const availablePoints = getAvailableMonsterStatPoints(monster);
+    const spentPoints = getSpentMonsterStatPoints(monster);
+    const totalPoints = getMonsterStatPointBudget(monster);
+    const location = options?.collection === "bank" ? "Bank" : "Party";
+    const controls = MONSTER_STAT_KEYS.map(function (stat) {
+      const currentPoints = Math.max(0, Number(monster.statPoints?.[stat] || 0));
+      const baseValue = Math.max(1, Number(species?.baseStats?.[stat] || 1));
+      const totalValue = Math.max(1, Number(monster.stats?.[stat] || baseValue));
+      return [
+        '<div class="monster-affinity-row">',
+        '<span class="monster-affinity-element">' + escapeHtml(MONSTER_STAT_LABELS[stat] || stat) + " " + totalValue + ' <small>(base ' + baseValue + ')</small></span>',
+        '<strong class="monster-affinity-value">' + currentPoints + "</strong>",
+        '<div class="monster-affinity-controls">' +
+          '<button class="secondary-button monster-affinity-spend-button" type="button" data-adjust-monster-stat="' + escapeHtml(location.toLowerCase()) + '" data-monster-index="' + Number(options?.index || 0) + '" data-stat-key="' + escapeHtml(stat) + '" data-stat-delta="-1"' + (currentPoints <= 0 ? " disabled" : "") + '>-</button>' +
+          '<button class="secondary-button monster-affinity-spend-button" type="button" data-adjust-monster-stat="' + escapeHtml(location.toLowerCase()) + '" data-monster-index="' + Number(options?.index || 0) + '" data-stat-key="' + escapeHtml(stat) + '" data-stat-delta="1"' + (availablePoints <= 0 ? " disabled" : "") + '>+</button>' +
+        "</div>",
+        "</div>",
+      ].join("");
+    }).join("");
+
+    return [
+      '<section class="monster-moves-panel monster-affinity-panel">',
+      '<div class="monster-affinity-panel-topline"><strong>Stats</strong><span>' + spentPoints + "/" + totalPoints + ' spent · ' + availablePoints + ' available</span></div>',
+      '<div class="monster-affinity-grid">' + controls + "</div>",
+      '<p class="monster-moves-note">Base stats are this species at level 1. Each level grants 1 stat point to spend on Health, Attack, Defense, or Speed.</p>',
+      "</section>",
+    ].join("");
+  }
+
   function renderMonsterRosterCard(content, monster, options) {
     if (!monster) {
       return "";
@@ -2225,11 +2431,15 @@
 
     ensureElementalAffinityState(monster);
     const species = getSpecies(content, monster.speciesId);
+    ensureMonsterStatPointState(monster, species);
+    recalculateMonsterStats(monster, species);
     const variant = getSpeciesVariant(species, monster.variantId || "default");
     const currentHp = Math.max(0, Number(monster.currentHp || 0));
     const maxHp = Math.max(1, Number(monster.stats?.hp || species?.baseStats?.hp || 1));
     const hpPercent = Math.max(0, Math.min(100, (currentHp / maxHp) * 100));
     const xp = getMonsterXpProgress(monster);
+    const spentStatPoints = getSpentMonsterStatPoints(monster);
+    const totalStatPoints = getMonsterStatPointBudget(monster);
     const spentAffinityPoints = getSpentElementalAffinityPoints(monster);
     const totalAffinityPoints = getTotalElementalAffinityPointsForLevel(monster.level || 1);
     const affinitySummary = getMonsterAffinitySummaryLabel(monster);
@@ -2243,10 +2453,14 @@
     const affinityTarget = options?.affinityOpen
       ? renderMonsterAffinityPanel(content, monster, { collection, index })
       : "";
+    const statTarget = options?.statsOpen
+      ? renderMonsterStatsPanel(content, monster, { collection, index })
+      : "";
 
     const actionButtons = isParty
       ? [
           '<button class="secondary-button monster-card-action' + (options?.movesOpen ? " monster-card-action-active" : "") + '" type="button" data-action="toggle-monster-moves" data-monster-collection="party" data-monster-index="' + index + '">Moves</button>',
+          '<button class="secondary-button monster-card-action' + (options?.statsOpen ? " monster-card-action-active" : "") + '" type="button" data-action="toggle-monster-stats" data-monster-collection="party" data-monster-index="' + index + '">Stats ' + spentStatPoints + "/" + totalStatPoints + "</button>",
           '<button class="secondary-button monster-card-action' + (options?.affinityOpen ? " monster-card-action-active" : "") + '" type="button" data-action="toggle-monster-affinity" data-monster-collection="party" data-monster-index="' + index + '">Affinity ' + spentAffinityPoints + "/" + totalAffinityPoints + "</button>",
           '<button class="secondary-button monster-card-action" type="button" data-action="set-party-lead" data-monster-index="' + index + '"' + (isLead ? " disabled" : "") + ">Lead</button>",
           '<button class="secondary-button monster-card-action" type="button" data-action="move-party-to-bank" data-monster-index="' + index + '"' + (statefulDisablePartyBankButton(options) ? " disabled" : "") + '>Bank</button>',
@@ -2255,6 +2469,7 @@
         ].join("")
       : [
           '<button class="secondary-button monster-card-action' + (options?.movesOpen ? " monster-card-action-active" : "") + '" type="button" data-action="toggle-monster-moves" data-monster-collection="bank" data-monster-index="' + index + '">Moves</button>',
+          '<button class="secondary-button monster-card-action' + (options?.statsOpen ? " monster-card-action-active" : "") + '" type="button" data-action="toggle-monster-stats" data-monster-collection="bank" data-monster-index="' + index + '">Stats ' + spentStatPoints + "/" + totalStatPoints + "</button>",
           '<button class="secondary-button monster-card-action' + (options?.affinityOpen ? " monster-card-action-active" : "") + '" type="button" data-action="toggle-monster-affinity" data-monster-collection="bank" data-monster-index="' + index + '">Affinity ' + spentAffinityPoints + "/" + totalAffinityPoints + "</button>",
           '<button class="secondary-button monster-card-action" type="button" data-action="withdraw-bank-monster" data-monster-index="' + index + '"' + (Number(options?.partyCount || 0) >= Number(options?.partyLimit || 0) ? " disabled" : "") + '>Withdraw</button>',
         ].join("");
@@ -2271,6 +2486,7 @@
       "</div>",
       '<div class="monster-roster-actions">' + actionButtons + "</div>",
       moveTarget,
+      statTarget,
       affinityTarget,
       "</article>",
     ].join("");
@@ -2753,13 +2969,16 @@
     return normalized[normalized.length - 1];
   }
 
-  function rollSpawnLevel(spawn) {
+  function rollSpawnLevel(spawn, options) {
     const minLevel = Math.max(1, Number(spawn.levelMin || spawn.level || 1));
     const maxLevel = Math.max(minLevel, Number(spawn.levelMax || minLevel));
-    return minLevel + Math.floor(Math.random() * (maxLevel - minLevel + 1));
+    const cap = Math.max(1, Number(options?.maxLevelCap || maxLevel));
+    const resolvedMax = Math.max(1, Math.min(maxLevel, cap));
+    const resolvedMin = Math.min(minLevel, resolvedMax);
+    return resolvedMin + Math.floor(Math.random() * (resolvedMax - resolvedMin + 1));
   }
 
-  function createWildMonsterFromSpawn(content, spawn, index) {
+  function createWildMonsterFromSpawn(content, spawn, index, options) {
     const spawnChance = Math.max(0, Math.min(100, Number(spawn.spawnChance ?? 100)));
     if (Math.random() * 100 > spawnChance) {
       return null;
@@ -2778,7 +2997,7 @@
       id: sourceSpawnId,
       speciesId: species.id,
       variantId,
-      level: rollSpawnLevel(spawn),
+      level: rollSpawnLevel(spawn, options),
       x: Number(spawn.x || 0),
       y: Number(spawn.y || 0),
       homeX: Number(spawn.x || 0),
@@ -2797,6 +3016,8 @@
       spawnConfig: JSON.parse(JSON.stringify(spawn)),
     };
     wildMonster.skills = buildWildMonsterSkills(content, species, wildMonster.level);
+    ensureMonsterStatPointState(wildMonster, species, { randomize: true });
+    recalculateMonsterStats(wildMonster, species, { healToFull: true });
     ensureElementalAffinityState(wildMonster);
     return wildMonster;
   }
@@ -2819,6 +3040,142 @@
     }
 
     return mapMeta.npcs;
+  }
+
+  function getNormalizedNpcMovementMode(npc) {
+    const mode = String(npc?.movementMode || "").trim().toLowerCase();
+    return NPC_MOVEMENT_MODES.includes(mode) ? mode : "still";
+  }
+
+  function getNpcMoveRadius(npc) {
+    return Math.max(0, Number(npc?.moveRadius || 0));
+  }
+
+  function getNpcMoveSpeed(npc) {
+    return Math.max(0, Number(npc?.moveSpeed || NPC_DEFAULT_MOVE_SPEED));
+  }
+
+  function getNpcLookSpeed(npc) {
+    return Math.max(0.1, Number(npc?.lookSpeed || NPC_DEFAULT_LOOK_SPEED));
+  }
+
+  function getRandomNpcLookDelay(npc) {
+    const lookSpeed = getNpcLookSpeed(npc);
+    const minDelay = Math.max(120, Math.round(NPC_LOOK_MIN_MS / lookSpeed));
+    const maxDelay = Math.max(minDelay, Math.round(NPC_LOOK_MAX_MS / lookSpeed));
+    return minDelay + Math.floor(Math.random() * (maxDelay - minDelay + 1));
+  }
+
+  function getNpcById(content, mapId, npcId) {
+    return getEditableNpcs(content.mapMetadata[mapId] || {}).find(function (npc) {
+      return npc.id === npcId;
+    }) || null;
+  }
+
+  function createNpcRuntimeState(npc) {
+    return {
+      id: npc.id,
+      x: Number(npc.x || 0),
+      y: Number(npc.y || 0),
+      homeX: Number(npc.x || 0),
+      homeY: Number(npc.y || 0),
+      facing: ["down", "left", "right", "up"].includes(npc?.facing) ? npc.facing : "down",
+      isWalking: false,
+      walkTargetX: Number(npc.x || 0),
+      walkTargetY: Number(npc.y || 0),
+      nextBehaviorAt: Date.now() + getRandomNpcLookDelay(npc),
+      frameIndex: 0,
+      frameTime: 0,
+    };
+  }
+
+  function syncNpcRuntimeWithDefinition(runtime, npc) {
+    runtime.id = npc.id;
+    runtime.homeX = Number(npc.x || 0);
+    runtime.homeY = Number(npc.y || 0);
+    if (!Number.isFinite(runtime.x)) {
+      runtime.x = runtime.homeX;
+    }
+    if (!Number.isFinite(runtime.y)) {
+      runtime.y = runtime.homeY;
+    }
+    if (!["down", "left", "right", "up"].includes(runtime.facing)) {
+      runtime.facing = ["down", "left", "right", "up"].includes(npc?.facing) ? npc.facing : "down";
+    }
+    if (!Number.isFinite(runtime.walkTargetX)) {
+      runtime.walkTargetX = runtime.x;
+    }
+    if (!Number.isFinite(runtime.walkTargetY)) {
+      runtime.walkTargetY = runtime.y;
+    }
+    runtime.frameIndex = Math.max(0, Number(runtime.frameIndex || 0));
+    runtime.frameTime = Math.max(0, Number(runtime.frameTime || 0));
+    runtime.nextBehaviorAt = Number.isFinite(runtime.nextBehaviorAt) ? runtime.nextBehaviorAt : (Date.now() + getRandomNpcLookDelay(npc));
+    runtime.isWalking = Boolean(runtime.isWalking);
+    return runtime;
+  }
+
+  function ensureWorldNpcRuntimeState(state, content, mapId) {
+    if (!state.world) {
+      return [];
+    }
+
+    const resolvedMapId = mapId || state.world.currentMapId;
+    const mapMeta = content.mapMetadata[resolvedMapId] || {};
+    const authoredNpcs = getEditableNpcs(mapMeta);
+    if (!state.world.npcRuntimeByMap || typeof state.world.npcRuntimeByMap !== "object") {
+      state.world.npcRuntimeByMap = {};
+    }
+
+    const existingEntries = Array.isArray(state.world.npcRuntimeByMap[resolvedMapId])
+      ? state.world.npcRuntimeByMap[resolvedMapId]
+      : [];
+    const runtimeById = new Map(existingEntries.map(function (entry) {
+      return [entry.id, entry];
+    }));
+    const nextEntries = authoredNpcs.map(function (npc) {
+      const runtime = runtimeById.get(npc.id) || createNpcRuntimeState(npc);
+      return syncNpcRuntimeWithDefinition(runtime, npc);
+    });
+    state.world.npcRuntimeByMap[resolvedMapId] = nextEntries;
+    return nextEntries;
+  }
+
+  function getNpcRuntimeState(state, content, mapId, npcId) {
+    return ensureWorldNpcRuntimeState(state, content, mapId).find(function (entry) {
+      return entry.id === npcId;
+    }) || null;
+  }
+
+  function getRuntimeNpcView(state, content, mapId, npc) {
+    const runtime = getNpcRuntimeState(state, content, mapId, npc?.id || "");
+    if (!runtime || !npc) {
+      return npc;
+    }
+    return Object.assign({}, npc, {
+      x: runtime.x,
+      y: runtime.y,
+      facing: runtime.facing,
+      _runtime: runtime,
+    });
+  }
+
+  function resetNpcRuntimeState(state, content, mapId, npc) {
+    const runtime = getNpcRuntimeState(state, content, mapId, npc?.id || "");
+    if (!runtime || !npc) {
+      return;
+    }
+    runtime.x = Number(npc.x || 0);
+    runtime.y = Number(npc.y || 0);
+    runtime.homeX = Number(npc.x || 0);
+    runtime.homeY = Number(npc.y || 0);
+    runtime.walkTargetX = runtime.x;
+    runtime.walkTargetY = runtime.y;
+    runtime.facing = ["down", "left", "right", "up"].includes(npc?.facing) ? npc.facing : "down";
+    runtime.isWalking = false;
+    runtime.frameIndex = 0;
+    runtime.frameTime = 0;
+    runtime.nextBehaviorAt = Date.now() + getRandomNpcLookDelay(npc);
   }
 
   function createDefaultInteraction(index) {
@@ -2851,6 +3208,10 @@
       sheetId: defaultSheet?.id || "",
       facing: "down",
       interactionRadius: 88,
+      movementMode: "still",
+      moveRadius: 0,
+      lookSpeed: NPC_DEFAULT_LOOK_SPEED,
+      moveSpeed: NPC_DEFAULT_MOVE_SPEED,
       data: {
         trainerId: "",
       },
@@ -2891,12 +3252,6 @@
     }) || null;
   }
 
-  function getNpcById(content, mapId, npcId) {
-    return getEditableNpcs(content.mapMetadata[mapId] || {}).find(function (npc) {
-      return npc.id === npcId;
-    }) || null;
-  }
-
   function getActiveMapInteraction(state, content) {
     if (state.screen !== "world" || state.battle || state.interaction) {
       return null;
@@ -2913,8 +3268,9 @@
     let best = null;
 
     npcs.forEach(function (npc) {
-      const radius = Math.max(24, Number(npc.interactionRadius || INTERACTION_PROMPT_RADIUS));
-      const distance = Math.hypot(Number(npc.x || 0) - state.world.position.x, Number(npc.y || 0) - state.world.position.y);
+      const runtimeNpc = getRuntimeNpcView(state, content, state.world.currentMapId, npc);
+      const radius = Math.max(24, Number(runtimeNpc.interactionRadius || INTERACTION_PROMPT_RADIUS));
+      const distance = Math.hypot(Number(runtimeNpc.x || 0) - state.world.position.x, Number(runtimeNpc.y || 0) - state.world.position.y);
       if (distance > radius) {
         return;
       }
@@ -2922,7 +3278,7 @@
       if (!best || distance < best.distance) {
         best = {
           kind: "npc",
-          npc,
+          npc: runtimeNpc,
           distance,
           prompt: buildNpcPrompt(npc),
         };
@@ -2979,6 +3335,41 @@
     return content.towns.towns.find(function (entry) {
       return entry.mapId === mapId;
     }) || null;
+  }
+
+  function getCollectedCrestCount(state) {
+    return Array.from(new Set(ensureArenaProgress(state).earnedCrests || [])).length;
+  }
+
+  function getLevelCapForCrestCount(crestCount) {
+    const count = Math.max(0, Number(crestCount || 0));
+    if (count >= 5) {
+      return 15;
+    }
+    if (count >= 3) {
+      return 10;
+    }
+    return 5;
+  }
+
+  function getCurrentPlayerLevelCap(state) {
+    return getLevelCapForCrestCount(getCollectedCrestCount(state));
+  }
+
+  function getConfiguredWildMonsterMaxLevel(state) {
+    const crestCap = getCurrentPlayerLevelCap(state);
+    const requested = Math.max(1, Number(state?.settings?.wildMonsterMaxLevel || crestCap));
+    return Math.min(crestCap, requested);
+  }
+
+  function normalizeCrestScaledWorldSettings(state) {
+    if (!state?.settings) {
+      return;
+    }
+    const refightRange = getRefightArenaLeaderLevelRange(state);
+    state.settings.arenaLeaderMinLevel = refightRange.min;
+    state.settings.arenaLeaderMaxLevel = refightRange.max;
+    state.settings.wildMonsterMaxLevel = getConfiguredWildMonsterMaxLevel(state);
   }
 
   function ensureArenaCatalog(content) {
@@ -3039,14 +3430,67 @@
     });
   }
 
+  function ensureTrainerCatalog(content) {
+    if (!content.trainers || !Array.isArray(content.trainers.trainers)) {
+      content.trainers = { trainers: [] };
+    }
+
+    content.trainers.trainers.forEach(function (trainer) {
+      if (!Array.isArray(trainer.team)) {
+        trainer.team = [];
+      }
+      trainer.rewardMoney = Math.max(0, Number(trainer.rewardMoney || 0));
+      if (typeof trainer.name !== "string") {
+        trainer.name = trainer.id || "Trainer";
+      }
+      if (typeof trainer.title !== "string") {
+        trainer.title = "Trainer";
+      }
+      if (typeof trainer.introText !== "string") {
+        trainer.introText = "";
+      }
+      if (typeof trainer.rewardText !== "string") {
+        trainer.rewardText = "";
+      }
+      if (typeof trainer.victoryText !== "string") {
+        trainer.victoryText = "";
+      }
+    });
+
+    return content.trainers.trainers;
+  }
+
+  function getTrainer(content, trainerId) {
+    return ensureTrainerCatalog(content).find(function (trainer) {
+      return trainer.id === trainerId;
+    }) || null;
+  }
+
+  function buildTrainerBattleRoster(content, trainer) {
+    return (trainer?.team || []).map(function (member) {
+      return resolveArenaRosterMember(content, member);
+    }).filter(Boolean).map(function (member) {
+      const nextMember = Object.assign({}, member);
+      nextMember.level = Math.max(1, Number(member.level || 1));
+      return nextMember;
+    });
+  }
+
   function normalizeArenaLeaderLevelRange(settings) {
     const min = Math.max(1, Number(settings?.arenaLeaderMinLevel || 1));
     const max = Math.max(1, Number(settings?.arenaLeaderMaxLevel || 100));
     return min <= max ? { min, max } : { min: max, max: min };
   }
 
-  function rollArenaLeaderLevel(settings, fallbackLevel) {
-    const range = normalizeArenaLeaderLevelRange(settings);
+  function getRefightArenaLeaderLevelRange(state) {
+    const crestCap = getCurrentPlayerLevelCap(state);
+    const requested = normalizeArenaLeaderLevelRange(state.settings || {});
+    const max = Math.max(1, Math.min(crestCap, requested.max));
+    const min = Math.max(1, Math.min(requested.min, max));
+    return { min, max, crestCap };
+  }
+
+  function rollArenaLeaderLevel(range, fallbackLevel) {
     if (range.min === range.max) {
       return range.min;
     }
@@ -3056,27 +3500,37 @@
 
   function buildArenaBattleRoster(state, content, arena) {
     ensureArenaPools(content);
+    const progress = ensureArenaProgress(state);
+    const crestId = arena?.crestId || "";
+    const isRefight = Boolean((arena?.id && progress.clearedArenaIds.includes(arena.id)) || (crestId && progress.earnedCrests.includes(crestId)));
     const authoredTeam = (arena?.team || []).map(function (member) {
       return resolveArenaRosterMember(content, member);
     }).filter(Boolean);
     const fallbackPool = (arena?.pool || []).map(function (member) {
       return resolveArenaRosterMember(content, member);
     }).filter(Boolean);
-    const requestedSize = Math.max(1, Number(state.settings?.arenaLeaderPartySize || authoredTeam.length || 1));
+    const requestedSize = isRefight
+      ? Math.max(1, Number(state.settings?.arenaLeaderPartySize || authoredTeam.length || 1))
+      : Math.max(1, Number(arena?.partySize || authoredTeam.length || 1));
     const roster = authoredTeam.slice(0, requestedSize);
+    const refightRange = getRefightArenaLeaderLevelRange(state);
 
     while (roster.length < requestedSize && fallbackPool.length) {
       const picked = fallbackPool[Math.floor(Math.random() * fallbackPool.length)];
       roster.push({
         speciesId: picked.speciesId,
         variantId: picked.variantId || "default",
-        level: rollArenaLeaderLevel(state.settings, arena?.recommendedLevel || 5),
+        level: isRefight
+          ? rollArenaLeaderLevel(refightRange, arena?.recommendedLevel || 5)
+          : Math.max(1, Number(arena?.recommendedLevel || picked.level || 5)),
       });
     }
 
     return roster.map(function (member) {
       const nextMember = Object.assign({}, member);
-      nextMember.level = rollArenaLeaderLevel(state.settings, member.level || arena?.recommendedLevel || 5);
+      nextMember.level = isRefight
+        ? rollArenaLeaderLevel(refightRange, member.level || arena?.recommendedLevel || 5)
+        : Math.max(1, Number(member.level || arena?.recommendedLevel || 5));
       return nextMember;
     });
   }
@@ -3217,25 +3671,26 @@
   function openNpcInteraction(state, content, npc) {
     const label = npc.label || npc.id || "NPC";
     const trainerId = npc.data?.trainerId || "";
-    const trainer = trainerId
-      ? (content.trainers?.trainers || []).find(function (entry) {
-          return entry.id === trainerId;
-        }) || null
-      : null;
+    const trainer = trainerId ? getTrainer(content, trainerId) : null;
 
     if (npc.type === "trainer") {
-      const text = npc.text || (trainer
-        ? (trainer.name || label) + " is ready for a battle once trainer encounters are connected."
-        : "This trainer battle is not wired up yet, but this NPC is ready for it.");
+      const text = npc.text || trainer?.introText || ((trainer?.name || label) + " wants to battle.");
       const pages = splitDialoguePages(text);
       state.message = "You approached " + label + ".";
       state.interaction = {
         id: npc.id,
-        type: "npc-trainer",
+        type: "trainer-battle",
         title: label,
         text,
         pages,
         pageIndex: 0,
+        trainerId,
+        trainerName: trainer?.name || label,
+        trainerTitle: trainer?.title || "Trainer",
+        rewardMoney: Math.max(0, Number(trainer?.rewardMoney || 0)),
+        rewardText: trainer?.rewardText || "",
+        teamSize: Array.isArray(trainer?.team) ? trainer.team.length : 0,
+        trainerMissing: !trainer,
       };
       return;
     }
@@ -3253,7 +3708,7 @@
     };
   }
 
-  function createWildMonstersForMap(content, mapId, position) {
+  function createWildMonstersForMap(content, mapId, position, options) {
     const mapMeta = content.mapMetadata[mapId];
     if (mapMeta?.safezone || mapMeta?.isTown) {
       return [];
@@ -3262,7 +3717,7 @@
     const visibleSpawns = getEditableVisibleSpawns(mapMeta);
     if (visibleSpawns.length) {
       return visibleSpawns.map(function (spawn, index) {
-        return createWildMonsterFromSpawn(content, spawn, index);
+        return createWildMonsterFromSpawn(content, spawn, index, options);
       }).filter(Boolean);
     }
 
@@ -3323,6 +3778,7 @@
       lastTownId: starterTown.id,
       transitionCooldownUntil: 0,
       wildMonsters: [],
+      npcRuntimeByMap: {},
       playerVisual: {
         facing: "down",
         isMoving: false,
@@ -3331,7 +3787,10 @@
       },
     };
 
-    world.wildMonsters = createWildMonstersForMap(content, world.currentMapId, world.position);
+    world.wildMonsters = createWildMonstersForMap(content, world.currentMapId, world.position, {
+      maxLevelCap: getConfiguredWildMonsterMaxLevel({ settings: content.settings?.defaults || {}, arenaProgress: { earnedCrests: [] } }),
+    });
+    ensureWorldNpcRuntimeState({ world }, content, world.currentMapId);
     const initialCameraTarget = {
       screen: "world",
       settings: Object.assign({}, content.settings.defaults),
@@ -3362,6 +3821,9 @@
       ],
       ui: {
         activePanel: "",
+        monsterMovesTarget: null,
+        monsterStatsTarget: null,
+        monsterAffinityTarget: null,
       },
       arenaProgress: {
         clearedArenaIds: [],
@@ -3374,6 +3836,7 @@
         : "Welcome to " + starterTown.name + ". Walk into a visible wild monster to start a battle.",
     };
     ensurePlayerSkillProgressState(state, content);
+    normalizeCrestScaledWorldSettings(state);
     return state;
   }
 
@@ -3393,6 +3856,9 @@
       inventory: save.inventory || [],
       ui: {
         activePanel: "",
+        monsterMovesTarget: null,
+        monsterStatsTarget: null,
+        monsterAffinityTarget: null,
       },
       arenaProgress: save.arenaProgress || {
         clearedArenaIds: [],
@@ -3404,23 +3870,36 @@
     };
 
     state.party.forEach(function (monster) {
+      const species = getSpecies(content, monster.speciesId);
+      ensureMonsterStatPointState(monster, species);
+      recalculateMonsterStats(monster, species);
       ensureElementalAffinityState(monster);
     });
     state.bank.forEach(function (monster) {
+      const species = getSpecies(content, monster.speciesId);
+      ensureMonsterStatPointState(monster, species);
+      recalculateMonsterStats(monster, species);
       ensureElementalAffinityState(monster);
     });
     (state.world.wildMonsters || []).forEach(function (monster) {
+      const species = getSpecies(content, monster.speciesId);
+      ensureMonsterStatPointState(monster, species);
+      recalculateMonsterStats(monster, species, { healToFull: true });
       ensureElementalAffinityState(monster);
     });
 
     if (!Array.isArray(state.world.wildMonsters) || !state.world.wildMonsters.length) {
-      state.world.wildMonsters = createWildMonstersForMap(content, state.world.currentMapId, state.world.position);
+      state.world.wildMonsters = createWildMonstersForMap(content, state.world.currentMapId, state.world.position, {
+        maxLevelCap: getConfiguredWildMonsterMaxLevel(state),
+      });
     }
+    ensureWorldNpcRuntimeState(state, content, state.world.currentMapId);
 
     if (typeof state.world.transitionCooldownUntil !== "number") {
       state.world.transitionCooldownUntil = 0;
     }
 
+    normalizeCrestScaledWorldSettings(state);
     ensurePlayerVisualState(state);
     ensureWorldCameraState(state, content);
     ensureArenaProgress(state);
@@ -3462,7 +3941,7 @@
 
   function ensureWorldUiState(state) {
     if (!state.ui) {
-      state.ui = { activePanel: "", encounterPreviewExpanded: true, monsterMovesTarget: null, monsterAffinityTarget: null, selectedCharacterCrestId: "" };
+      state.ui = { activePanel: "", encounterPreviewExpanded: true, monsterMovesTarget: null, monsterStatsTarget: null, monsterAffinityTarget: null, selectedCharacterCrestId: "" };
     }
 
     if (typeof state.ui.activePanel !== "string") {
@@ -3495,6 +3974,16 @@
       )
     ) {
       state.ui.monsterAffinityTarget = null;
+    }
+
+    if (
+      state.ui.monsterStatsTarget !== null
+      && (
+        typeof state.ui.monsterStatsTarget !== "object"
+        || !["party", "bank"].includes(state.ui.monsterStatsTarget.collection)
+      )
+    ) {
+      state.ui.monsterStatsTarget = null;
     }
 
     return state.ui;
@@ -3797,17 +4286,16 @@
 
     const species = getSpecies(content, wildMonster.speciesId);
     const mapLabel = content.mapMetadata[state.world.currentMapId]?.displayName || state.world.currentMapId;
-    const enemy = {
-      wildMonsterId: wildMonster.id,
-      speciesId: wildMonster.speciesId,
-      variantId: wildMonster.variantId || "default",
-      name: species.name,
-      level: wildMonster.level,
-      stats: Object.assign({}, species.baseStats),
-      currentHp: species.baseStats.hp,
-      maxHp: species.baseStats.hp,
+    const enemy = createMonsterInstance(species, wildMonster.level, wildMonster.variantId || "default", {
+      xp: wildMonster.xp,
+      statPoints: wildMonster.statPoints,
+      bonusStatPoints: wildMonster.bonusStatPoints,
+      primaryElement: wildMonster.primaryElementalAffinity,
+      elementalAffinityPoints: wildMonster.elementalAffinityPoints,
       skills: Array.isArray(wildMonster.skills) ? wildMonster.skills.slice() : getDefaultMonsterSkills(species),
-    };
+    });
+    enemy.wildMonsterId = wildMonster.id;
+    enemy.name = species.name;
     ensureElementalAffinityState(enemy, {
       primaryElement: wildMonster.primaryElementalAffinity,
     });
@@ -3834,10 +4322,12 @@
     wildMonster.respawnsAt = Date.now() + ((Number(wildMonster.respawnSeconds || 120) * 1000) || WILD_RESPAWN_MS);
   }
 
-  function grantVictoryRewards(state) {
+  function grantVictoryRewards(state, content) {
     const activeMonster = state.party[0];
-    activeMonster.xp += 5;
-    state.player.money += 12;
+    grantMonsterXp(state, content, activeMonster, 5, {
+      showBattleLog: true,
+      suppressStateMessage: true,
+    });
   }
 
   function grantBattleVictorySkillXp(state, content, monster) {
@@ -3858,15 +4348,15 @@
 
     const level = Math.max(1, Number(member.level || 1));
     const variant = getSpeciesVariantFlexible(species, member.variantId || "");
-    const enemy = {
-      speciesId: species.id,
-      variantId: variant?.id || "default",
-      name: species.name,
-      level,
-      stats: Object.assign({}, species.baseStats),
-      currentHp: species.baseStats.hp,
-      maxHp: species.baseStats.hp,
-    };
+    const enemy = createMonsterInstance(species, level, variant?.id || "default", {
+      statPoints: member?.statPoints,
+      bonusStatPoints: member?.bonusStatPoints,
+      randomizeStatPoints: !member?.statPoints,
+      primaryElement: member?.primaryElementalAffinity,
+      elementalAffinityPoints: member?.elementalAffinityPoints,
+      skills: Array.isArray(member?.skills) ? member.skills : undefined,
+    });
+    enemy.name = species.name;
     ensureElementalAffinityState(enemy, {
       primaryElement: member?.primaryElementalAffinity,
     });
@@ -3904,6 +4394,39 @@
       outcome: null,
     };
     state.message = "Arena battle started at " + (arena.name || interaction.label || "the arena") + ".";
+  }
+
+  function startTrainerBattle(state, content, trainer, npc) {
+    clearAllBattleTemporaryState(state);
+    const roster = buildTrainerBattleRoster(content, trainer);
+    const team = roster.map(function (member) {
+      return createBattleEnemyFromArenaTeamMember(content, member);
+    }).filter(Boolean);
+
+    if (!team.length) {
+      state.message = "This trainer does not have a team configured yet.";
+      return;
+    }
+
+    state.interaction = null;
+    state.battle = {
+      type: "trainer",
+      battleSource: "npc-trainer",
+      opponentName: trainer.name || npc.label || "Trainer",
+      opponentTitle: trainer.title || "Trainer",
+      trainerId: trainer.id || npc.id || "",
+      rewardMoney: Math.max(0, Number(trainer.rewardMoney || 0)),
+      rewardText: trainer.rewardText || "",
+      victoryText: trainer.victoryText || "",
+      enemyQueue: team,
+      enemyIndex: 0,
+      enemy: team[0],
+      playerIndex: 0,
+      log: [(trainer.title || "Trainer") + " " + (trainer.name || npc.label || "Trainer") + " challenges you to a battle."],
+      menu: "root",
+      outcome: null,
+    };
+    state.message = (trainer.name || npc.label || "Trainer") + " challenged you to a battle.";
   }
 
   function getSkillHitChance(monster, skill) {
@@ -4082,7 +4605,7 @@
         addBattleLogEntry(state, (state.battle.opponentTitle || "Leader") + " " + (state.battle.opponentName || "Trainer") + " sent out " + nextEnemy.name + ".");
       } else {
         state.battle.outcome = "victory";
-        rewardArenaVictory(state, state.battle);
+        rewardArenaVictory(state, content, state.battle);
         grantBattleVictorySkillXp(state, content, activeMonster);
         const rewardParts = [];
         if (state.battle.crestName) {
@@ -4091,23 +4614,33 @@
         if (Number(state.battle.rewardMoney || 0) > 0) {
           rewardParts.push("$" + Number(state.battle.rewardMoney || 0));
         }
-        state.message = rewardParts.length
-          ? "Victory. You earned " + rewardParts.join(" and ") + "."
-          : "Victory. You cleared the arena challenge.";
+        if (rewardParts.length) {
+          state.message = "Victory. You earned " + rewardParts.join(" and ") + ".";
+        } else if (state.battle.battleSource === "npc-trainer") {
+          state.message = "Victory. You defeated " + (state.battle.opponentName || "the trainer") + ".";
+        } else {
+          state.message = "Victory. You cleared the arena challenge.";
+        }
+        if (state.battle.battleSource === "npc-trainer" && state.battle.victoryText) {
+          addBattleLogEntry(state, state.battle.victoryText);
+        }
       }
     } else {
       state.battle.outcome = "victory";
       markWildMonsterDefeated(state, enemy.wildMonsterId);
-      grantVictoryRewards(state);
+      grantVictoryRewards(state, content);
       grantBattleVictorySkillXp(state, content, activeMonster);
-      state.message = "Victory. Your party earned 5 XP and $12.";
+      state.message = "Victory. Your party earned 5 XP.";
     }
   }
 
-  function rewardArenaVictory(state, battle) {
+  function rewardArenaVictory(state, content, battle) {
     const progress = ensureArenaProgress(state);
     const activeMonster = state.party[0];
-    activeMonster.xp += 10;
+    grantMonsterXp(state, content, activeMonster, 10, {
+      showBattleLog: true,
+      suppressStateMessage: true,
+    });
     state.player.money += Number(battle.rewardMoney || 0);
 
     if (battle.arenaId && !progress.clearedArenaIds.includes(battle.arenaId)) {
@@ -4117,6 +4650,8 @@
     if (battle.crestId && !progress.earnedCrests.includes(battle.crestId)) {
       progress.earnedCrests.push(battle.crestId);
     }
+
+    normalizeCrestScaledWorldSettings(state);
   }
 
   function returnToTown(state, content) {
@@ -4126,7 +4661,10 @@
 
     state.world.currentMapId = town.mapId;
     state.world.position = { x: town.spawn.x, y: town.spawn.y };
-    state.world.wildMonsters = createWildMonstersForMap(content, town.mapId, state.world.position);
+    state.world.wildMonsters = createWildMonstersForMap(content, town.mapId, state.world.position, {
+      maxLevelCap: getConfiguredWildMonsterMaxLevel(state),
+    });
+    ensureWorldNpcRuntimeState(state, content, town.mapId);
     syncCameraToPlayer(state, content);
   }
 
@@ -4341,6 +4879,9 @@
     if (Math.random() <= catchChance) {
       const captured = createMonsterInstance(species, enemy.level, enemy.variantId, {
         primaryElement: enemy.primaryElementalAffinity,
+        elementalAffinityPoints: enemy.elementalAffinityPoints,
+        statPoints: enemy.statPoints,
+        bonusStatPoints: enemy.bonusStatPoints,
         skills: enemy.skills,
       });
       state.registry.seen = Array.from(new Set(state.registry.seen.concat(species.id)));
@@ -4387,6 +4928,9 @@
     if (Math.random() <= befriendChance) {
       const befriended = createMonsterInstance(species, enemy.level, enemy.variantId, {
         primaryElement: enemy.primaryElementalAffinity,
+        elementalAffinityPoints: enemy.elementalAffinityPoints,
+        statPoints: enemy.statPoints,
+        bonusStatPoints: enemy.bonusStatPoints,
         skills: enemy.skills,
       });
       state.registry.seen = Array.from(new Set(state.registry.seen.concat(species.id)));
@@ -4554,11 +5098,19 @@
           levelMin: monster.level,
           levelMax: monster.level,
           respawnSeconds: monster.respawnSeconds || 120,
-        }, 0);
+        }, 0, {
+          maxLevelCap: getConfiguredWildMonsterMaxLevel(state),
+        });
 
         if (rerolled) {
           monster.speciesId = rerolled.speciesId;
           monster.level = rerolled.level;
+          monster.xp = rerolled.xp;
+          monster.statPoints = Object.assign({}, rerolled.statPoints || {});
+          monster.bonusStatPoints = Math.max(0, Number(rerolled.bonusStatPoints || 0));
+          monster.stats = Object.assign({}, rerolled.stats || {});
+          monster.currentHp = Number(rerolled.currentHp || rerolled.stats?.hp || 1);
+          monster.maxHp = Number(rerolled.maxHp || rerolled.stats?.hp || 1);
           monster.x = rerolled.x;
           monster.y = rerolled.y;
           monster.homeX = rerolled.homeX;
@@ -4693,6 +5245,168 @@
     });
   }
 
+  function pickNpcFacing(runtime, preferredFacing) {
+    const directions = ["down", "left", "right", "up"];
+    if (preferredFacing && directions.includes(preferredFacing)) {
+      runtime.facing = preferredFacing;
+      return;
+    }
+    runtime.facing = directions[Math.floor(Math.random() * directions.length)] || "down";
+  }
+
+  function pickNpcWalkTarget(runtime, npc) {
+    const range = getNpcMoveRadius(npc);
+    if (!range) {
+      runtime.walkTargetX = runtime.homeX;
+      runtime.walkTargetY = runtime.homeY;
+      runtime.nextBehaviorAt = Date.now() + getRandomNpcLookDelay(npc);
+      return;
+    }
+
+    const originX = Number(runtime.x ?? runtime.homeX ?? 0);
+    const originY = Number(runtime.y ?? runtime.homeY ?? 0);
+    const homeX = Number(runtime.homeX ?? originX);
+    const homeY = Number(runtime.homeY ?? originY);
+    const stepDistance = MONSTER_WALK_STEP_PX * (1 + Math.floor(Math.random() * 2));
+    const directions = [
+      { facing: "up", dx: 0, dy: -stepDistance },
+      { facing: "down", dx: 0, dy: stepDistance },
+      { facing: "left", dx: -stepDistance, dy: 0 },
+      { facing: "right", dx: stepDistance, dy: 0 },
+    ];
+    const validDirections = directions.filter(function (direction) {
+      const targetX = originX + direction.dx;
+      const targetY = originY + direction.dy;
+      return Math.hypot(targetX - homeX, targetY - homeY) <= range + 1;
+    });
+    const choice = (validDirections.length ? validDirections : directions)[Math.floor(Math.random() * (validDirections.length ? validDirections.length : directions.length))] || directions[0];
+
+    runtime.walkTargetX = originX + choice.dx;
+    runtime.walkTargetY = originY + choice.dy;
+    runtime.facing = choice.facing;
+    runtime.nextBehaviorAt = 0;
+  }
+
+  function moveNpcs(state, content, deltaMs) {
+    if (!state.world?.currentMapId) {
+      return;
+    }
+
+    const map = content.maps[state.world.currentMapId];
+    if (!map) {
+      return;
+    }
+
+    const npcs = getEditableNpcs(content.mapMetadata[state.world.currentMapId] || {});
+    const runtimeEntries = ensureWorldNpcRuntimeState(state, content, state.world.currentMapId);
+    const runtimeById = new Map(runtimeEntries.map(function (entry) {
+      return [entry.id, entry];
+    }));
+    const now = Date.now();
+
+    npcs.forEach(function (npc) {
+      const runtime = runtimeById.get(npc.id);
+      if (!runtime) {
+        return;
+      }
+
+      syncNpcRuntimeWithDefinition(runtime, npc);
+      const movementMode = getNormalizedNpcMovementMode(npc);
+      const moveRadius = getNpcMoveRadius(npc);
+      const moveSpeed = getNpcMoveSpeed(npc);
+
+      if (movementMode === "still") {
+        runtime.x = runtime.homeX;
+        runtime.y = runtime.homeY;
+        runtime.isWalking = false;
+        runtime.frameIndex = 0;
+        runtime.frameTime = 0;
+        return;
+      }
+
+      if (movementMode === "look") {
+        runtime.x = runtime.homeX;
+        runtime.y = runtime.homeY;
+        runtime.isWalking = false;
+        runtime.frameIndex = 0;
+        runtime.frameTime = 0;
+        if (runtime.nextBehaviorAt <= now) {
+          pickNpcFacing(runtime);
+          runtime.nextBehaviorAt = now + getRandomNpcLookDelay(npc);
+        }
+        return;
+      }
+
+      if (!moveRadius || moveSpeed <= 0) {
+        runtime.x = runtime.homeX;
+        runtime.y = runtime.homeY;
+        runtime.isWalking = false;
+        runtime.frameIndex = 0;
+        runtime.frameTime = 0;
+        if (runtime.nextBehaviorAt <= now) {
+          pickNpcFacing(runtime);
+          runtime.nextBehaviorAt = now + getRandomNpcLookDelay(npc);
+        }
+        return;
+      }
+
+      if (runtime.nextBehaviorAt && runtime.nextBehaviorAt > now) {
+        runtime.isWalking = false;
+        runtime.frameIndex = 0;
+        runtime.frameTime = 0;
+        return;
+      }
+
+      if (!Number.isFinite(runtime.walkTargetX) || !Number.isFinite(runtime.walkTargetY) || Math.hypot(runtime.walkTargetX - runtime.x, runtime.walkTargetY - runtime.y) < 4) {
+        pickNpcWalkTarget(runtime, npc);
+      }
+
+      const dx = Number(runtime.walkTargetX || runtime.homeX) - runtime.x;
+      const dy = Number(runtime.walkTargetY || runtime.homeY) - runtime.y;
+      const movingHorizontally = Math.abs(dx) > Math.abs(dy);
+      runtime.facing = movingHorizontally
+        ? (dx < 0 ? "left" : "right")
+        : (dy < 0 ? "up" : "down");
+      const distance = movingHorizontally ? Math.abs(dx) : Math.abs(dy);
+
+      if (distance < 4) {
+        runtime.x = Number(runtime.walkTargetX || runtime.x || 0);
+        runtime.y = Number(runtime.walkTargetY || runtime.y || 0);
+        runtime.isWalking = false;
+        runtime.frameIndex = 0;
+        runtime.frameTime = 0;
+        runtime.nextBehaviorAt = now + NPC_WALK_PAUSE_MS + Math.floor(Math.random() * 500);
+        return;
+      }
+
+      const step = moveSpeed * (deltaMs / 1000);
+      const appliedStep = Math.min(step, distance);
+      const moveX = movingHorizontally ? Math.sign(dx) * appliedStep : 0;
+      const moveY = movingHorizontally ? 0 : Math.sign(dy) * appliedStep;
+      const resolved = tryMoveAlongAxis(map, runtime.x, runtime.y, runtime.x + moveX, runtime.y + moveY);
+      const nextX = resolved.x;
+      const nextY = resolved.y;
+      const homeDistance = Math.hypot(nextX - runtime.homeX, nextY - runtime.homeY);
+
+      if (homeDistance <= moveRadius + 2 && (Math.abs(nextX - runtime.x) > 0.01 || Math.abs(nextY - runtime.y) > 0.01)) {
+        runtime.x = nextX;
+        runtime.y = nextY;
+        runtime.isWalking = true;
+        runtime.frameTime += deltaMs;
+        while (runtime.frameTime >= PLAYER_WALK_ANIMATION_MS.horizontal) {
+          runtime.frameTime -= PLAYER_WALK_ANIMATION_MS.horizontal;
+          runtime.frameIndex = (runtime.frameIndex + 1) % 4;
+        }
+      } else {
+        runtime.isWalking = false;
+        runtime.frameIndex = 0;
+        runtime.frameTime = 0;
+        runtime.nextBehaviorAt = now + 250;
+        pickNpcWalkTarget(runtime, npc);
+      }
+    });
+  }
+
   function clampPlayerToMap(state, content) {
     const map = content.maps[state.world.currentMapId];
     const maxX = map.mapWidth * map.tileSize - PLAYER_RADIUS;
@@ -4730,7 +5444,10 @@
       y: transition.targetSpawn.y,
     };
     state.world.transitionCooldownUntil = Date.now() + TRANSITION_COOLDOWN_MS;
-    state.world.wildMonsters = createWildMonstersForMap(content, targetMapId, state.world.position);
+    state.world.wildMonsters = createWildMonstersForMap(content, targetMapId, state.world.position, {
+      maxLevelCap: getConfiguredWildMonsterMaxLevel(state),
+    });
+    ensureWorldNpcRuntimeState(state, content, targetMapId);
     syncCameraToPlayer(state, content);
 
     if (targetMeta?.isTown) {
@@ -5380,11 +6097,12 @@
       up: 3,
     };
     const rowIndex = rowByFacing[npc?.facing] ?? 0;
+    const frameIndex = Math.max(0, Math.min((runtimeCharacterConfig.characterSheetColumns || 4) - 1, Number(npc?._runtime?.isWalking ? npc?._runtime?.frameIndex || 0 : 0)));
     const sourceRect = getCharacterFrameSourceRect(
       runtimeCharacterConfig,
       image,
       Math.max(0, Math.min((runtimeCharacterConfig.characterSheetRows || 1) - 1, rowIndex)),
-      0
+      frameIndex
     );
     const zoomScale = viewportMetrics.zoomScale;
     const spriteSize = getEffectiveRenderWidthForSheet(content, sheet) * zoomScale;
@@ -5507,7 +6225,7 @@
     });
 
     getEditableNpcs(content.mapMetadata[state.world.currentMapId] || {}).forEach(function (npc) {
-      drawNpcSprite(ctx, npc, content, camera, viewportMetrics);
+      drawNpcSprite(ctx, getRuntimeNpcView(state, content, state.world.currentMapId, npc), content, camera, viewportMetrics);
     });
 
     drawPlayerSprite(ctx, state, content, camera, viewportMetrics);
@@ -5564,7 +6282,7 @@
   }
 
   function isNpcDialogueInteraction(interaction) {
-    return interaction?.type === "npc" || interaction?.type === "npc-trainer";
+    return interaction?.type === "npc";
   }
 
   function prefersTouchUi() {
@@ -6042,8 +6760,41 @@
       return "";
     }
 
-    if (state.interaction.type === "npc" || state.interaction.type === "npc-trainer") {
+    if (state.interaction.type === "npc") {
       return "";
+    }
+
+    if (state.interaction.type === "trainer-battle") {
+      const missingTrainer = state.interaction.trainerMissing;
+      const actionRow = missingTrainer
+        ? '<div class="battle-actions"><button class="primary-button" type="button" data-action="close-interaction">Close</button></div>'
+        : '<div class="battle-actions"><button class="primary-button" type="button" data-action="start-trainer-battle">Battle</button><button class="secondary-button" type="button" data-action="close-interaction">Not Now</button></div>';
+      const rewardCopy = Number(state.interaction.rewardMoney || 0) > 0
+        ? "$" + Number(state.interaction.rewardMoney || 0)
+        : "No money";
+
+      return [
+        '<div class="battle-overlay">',
+        '<section class="battle-modal world-panel-modal">',
+        '<div class="battle-headings">',
+        '<div><span class="eyebrow">Trainer</span><h2>' + escapeHtml(state.interaction.title) + "</h2><p>" + escapeHtml((state.interaction.trainerTitle || "Trainer") + " " + (state.interaction.trainerName || state.interaction.title || "Trainer")) + "</p></div>",
+        "</div>",
+        '<div class="world-panel-body">' +
+          '<div class="battle-log"><p>' + escapeHtml(state.interaction.text || "") + '</p>' +
+          (missingTrainer ? '<p>This NPC is marked as a trainer, but its `trainerId` is missing or invalid.</p>' : "") +
+          '</div>' +
+          '<div class="panel-block">' +
+            "<p><strong>Trainer:</strong> " + escapeHtml(state.interaction.trainerName || state.interaction.title || "Trainer") + "</p>" +
+            "<p><strong>Title:</strong> " + escapeHtml(state.interaction.trainerTitle || "Trainer") + "</p>" +
+            "<p><strong>Party Size:</strong> " + escapeHtml(String(Number(state.interaction.teamSize || 0))) + "</p>" +
+            "<p><strong>Prize Money:</strong> " + escapeHtml(rewardCopy) + "</p>" +
+            (state.interaction.rewardText ? "<p><strong>Reward Notes:</strong> " + escapeHtml(state.interaction.rewardText) + "</p>" : "") +
+          "</div>" +
+        "</div>",
+        actionRow,
+        "</section>",
+        "</div>",
+      ].join("");
     }
 
     if (state.interaction.type === "healing-center") {
@@ -6236,6 +6987,7 @@
       }).join("") + "</ul>";
     } else if (panel === "monsters") {
       const movesTarget = ui.monsterMovesTarget;
+      const statsTarget = ui.monsterStatsTarget;
       const partyCards = state.party.length
         ? state.party.map(function (monster, index) {
             return renderMonsterRosterCard(content, monster, {
@@ -6244,6 +6996,7 @@
               partyCount: state.party.length,
               partyLimit: state.settings.partySize,
               movesOpen: movesTarget?.collection === "party" && Number(movesTarget?.index) === index,
+              statsOpen: statsTarget?.collection === "party" && Number(statsTarget?.index) === index,
               affinityOpen: ui.monsterAffinityTarget?.collection === "party" && Number(ui.monsterAffinityTarget?.index) === index,
             });
           }).join("")
@@ -6256,6 +7009,7 @@
               partyCount: state.party.length,
               partyLimit: state.settings.partySize,
               movesOpen: movesTarget?.collection === "bank" && Number(movesTarget?.index) === index,
+              statsOpen: statsTarget?.collection === "bank" && Number(statsTarget?.index) === index,
               affinityOpen: ui.monsterAffinityTarget?.collection === "bank" && Number(ui.monsterAffinityTarget?.index) === index,
             });
           }).join("")
@@ -6332,6 +7086,9 @@
         const selected = Number(state.settings.walkSpeed || 260) === Number(option.value) ? " selected" : "";
         return '<option value="' + option.value + '"' + selected + ">" + option.label + "</option>";
       }).join("");
+      const crestCount = getCollectedCrestCount(state);
+      const crestLevelCap = getCurrentPlayerLevelCap(state);
+      const refightRange = getRefightArenaLeaderLevelRange(state);
       panelBody = [
         '<section class="panel-block"><div class="section-heading"><h3>Now Playing</h3></div><p>' + escapeHtml(state.message || "Exploring the world.") + '</p><p><strong>Location:</strong> ' + escapeHtml(content.mapMetadata[state.world.currentMapId]?.displayName || state.world.currentMapId || "Unknown") + '</p><p><strong>Money:</strong> $' + Number(state.player.money || 0) + '</p><p><strong>Party Lead:</strong> ' + escapeHtml(activeSpecies?.name || activeMonster?.speciesId || "Unknown") + (activeMonster ? (" Lv " + Number(activeMonster.level || 1) + " · HP " + Number(activeMonster.currentHp || 0) + "/" + Number(activeMonster.stats?.hp || 0)) : "") + '</p><p><strong>Save Slots:</strong> ' + saveSlots.length + " stored locally in this browser.</p></section>",
         '<section class="panel-block"><div class="section-heading"><h3>Player Settings</h3></div><div class="form-grid">' +
@@ -6343,15 +7100,18 @@
         '<label class="input-group"><span>Encounter Preview Mode</span><select data-world-setting="encounterPreviewMode"><option value="available"' + (state.settings.encounterPreviewMode === "available" || !state.settings.encounterPreviewMode ? " selected" : "") + '>Show Available</option><option value="current"' + (state.settings.encounterPreviewMode === "current" ? " selected" : "") + '>Show Current Encounters</option><option value="available-current"' + (state.settings.encounterPreviewMode === "available-current" ? " selected" : "") + '>Show Available And Current</option></select></label>' +
         '<label class="input-group"><span>Map Zoom</span><select data-world-setting="zoom">' + zoomOptions + "</select></label>" +
         '<label class="input-group"><span>Walk Speed</span><select data-world-setting="walkSpeed">' + walkSpeedOptions + "</select></label>" +
+        '<label class="input-group"><span>Wild Monster Max Level</span><input type="number" min="1" max="' + crestLevelCap + '" data-world-setting="wildMonsterMaxLevel" value="' + Number(getConfiguredWildMonsterMaxLevel(state)) + '" /></label>' +
+        '<p class="dev-helper-text">With ' + crestCount + ' crest' + (crestCount === 1 ? '' : 's') + ', your current wild/arena refight level cap is <strong>' + crestLevelCap + '</strong>.</p>' +
         '</div></section>',
         '<section class="panel-block"><div class="section-heading"><h3>Party Settings</h3></div><div class="form-grid">' +
         '<label class="input-group"><span>Party Size</span><input type="number" min="1" max="12" data-world-setting="partySize" value="' + Number(state.settings.partySize) + '" /></label>' +
         '<label class="input-group"><span>Share Experience</span><select data-world-setting="shareExperience"><option value="true"' + (state.settings.shareExperience ? " selected" : "") + '>Yes</option><option value="false"' + (!state.settings.shareExperience ? " selected" : "") + '>No</option></select></label>' +
         '</div></section>',
         '<section class="panel-block"><div class="section-heading"><h3>Arena Settings</h3></div><div class="form-grid">' +
-        '<label class="input-group"><span>Arena Leader Min Level</span><input type="number" min="1" max="999" data-world-setting="arenaLeaderMinLevel" value="' + Number(state.settings.arenaLeaderMinLevel || 1) + '" /></label>' +
-        '<label class="input-group"><span>Arena Leader Max Level</span><input type="number" min="1" max="999" data-world-setting="arenaLeaderMaxLevel" value="' + Number(state.settings.arenaLeaderMaxLevel || 100) + '" /></label>' +
+        '<label class="input-group"><span>Arena Leader Min Level</span><input type="number" min="1" max="' + crestLevelCap + '" data-world-setting="arenaLeaderMinLevel" value="' + Number(refightRange.min) + '" /></label>' +
+        '<label class="input-group"><span>Arena Leader Max Level</span><input type="number" min="1" max="' + crestLevelCap + '" data-world-setting="arenaLeaderMaxLevel" value="' + Number(refightRange.max) + '" /></label>' +
         '<label class="input-group"><span>Arena Leader Party Size</span><input type="number" min="1" max="12" data-world-setting="arenaLeaderPartySize" value="' + Number(state.settings.arenaLeaderPartySize || 6) + '" /></label>' +
+        '<p class="dev-helper-text">Arena leader settings apply to refights only. Uncollected crests still use each arena&apos;s authored team levels and party size.</p>' +
         '</div></section>',
         '<div class="title-actions"><button class="secondary-button" type="button" data-action="save">Save Game</button><button class="secondary-button" type="button" data-action="title">Return To Title</button></div>',
       ].join("");
@@ -6576,6 +7336,10 @@
           '<label class="input-group"><span>X</span><input type="number" step="1" data-dev-npc-field="x" value="' + Number(selectedNpc.x || 0) + '" /></label>',
           '<label class="input-group"><span>Y</span><input type="number" step="1" data-dev-npc-field="y" value="' + Number(selectedNpc.y || 0) + '" /></label>',
           '<label class="input-group"><span>Facing</span><select data-dev-npc-field="facing"><option value="down"' + (selectedNpc.facing === "down" || !selectedNpc.facing ? " selected" : "") + '>Down</option><option value="left"' + (selectedNpc.facing === "left" ? " selected" : "") + '>Left</option><option value="right"' + (selectedNpc.facing === "right" ? " selected" : "") + '>Right</option><option value="up"' + (selectedNpc.facing === "up" ? " selected" : "") + '>Up</option></select></label>',
+          '<label class="input-group"><span>Movement</span><select data-dev-npc-field="movementMode"><option value="still"' + (getNormalizedNpcMovementMode(selectedNpc) === "still" ? " selected" : "") + '>Stand Still</option><option value="look"' + (getNormalizedNpcMovementMode(selectedNpc) === "look" ? " selected" : "") + '>Look Around</option><option value="wander"' + (getNormalizedNpcMovementMode(selectedNpc) === "wander" ? " selected" : "") + '>Walk Around</option></select></label>',
+          '<label class="input-group"><span>Walk Radius</span><input type="number" min="0" step="1" data-dev-npc-field="moveRadius" value="' + Number(selectedNpc.moveRadius || 0) + '" /></label>',
+          '<label class="input-group"><span>Look Speed</span><input type="number" min="0.1" step="0.1" data-dev-npc-field="lookSpeed" value="' + Number(selectedNpc.lookSpeed || NPC_DEFAULT_LOOK_SPEED) + '" /></label>',
+          '<label class="input-group"><span>Walk Speed</span><input type="number" min="0" step="1" data-dev-npc-field="moveSpeed" value="' + Number(selectedNpc.moveSpeed || NPC_DEFAULT_MOVE_SPEED) + '" /></label>',
           '<label class="input-group"><span>Interaction Radius</span><input type="number" min="24" step="1" data-dev-npc-field="interactionRadius" value="' + Number(selectedNpc.interactionRadius || INTERACTION_PROMPT_RADIUS) + '" /></label>',
           '<label class="input-group"><span>Trainer ID</span><input data-dev-npc-field="data.trainerId" value="' + escapeHtml(selectedNpc.data?.trainerId || "") + '" /></label>',
           '<label class="input-group dev-input-group-wide"><span>Text</span><textarea rows="4" data-dev-npc-field="text">' + escapeHtml(selectedNpc.text || "") + '</textarea></label>',
@@ -8166,7 +8930,7 @@
               ? '<ul class="compact-list">' + poolEditor + "</ul>"
               : '<p>No fallback pool monsters configured yet.</p>') +
           "</section>",
-          '<section class="panel-block"><div class="section-heading"><h2>Preview</h2></div><div class="arena-crest-preview">' + renderArenaCrestMarkup(content, selectedArena, "arena-crest-image arena-crest-image-large") + '<div><p><strong>' + escapeHtml(selectedArena.name || selectedArena.id) + '</strong></p><p>' + escapeHtml((selectedArena.leaderTitle || "Leader") + " " + (selectedArena.leaderName || "TBD")) + '</p><p>Crest: ' + escapeHtml(selectedArena.crestName || selectedArena.crestId || "Unassigned") + '</p></div></div><p>Recommended Level: ' + escapeHtml(String(selectedArena.recommendedLevel || "TBD")) + ' · Party Size: ' + escapeHtml(String(selectedArena.partySize || "TBD")) + '</p><p>Reward Money: $' + escapeHtml(String(Number(selectedArena.rewardMoney || 0))) + '</p><p>' + escapeHtml(selectedArena.description || "No arena description yet.") + '</p><h3>Configured Team</h3><ul class="compact-list">' + (teamPreview || "<li><span>No team members configured yet.</span></li>") + "</ul><h3>Fallback Pool</h3><ul class=\"compact-list\">" + ((selectedArena.pool || []).map(function (member) { const species = getSpecies(content, member.speciesId); const variant = getSpeciesVariant(species, member.variantId || "default"); return "<li><span>" + escapeHtml(species?.name || member.speciesId || "Unassigned") + " - " + escapeHtml(variant?.id || member.variantId || "default") + "</span><strong>Pool</strong></li>"; }).join("") || "<li><span>No pool monsters configured yet.</span></li>") + "</ul></section>",
+          '<section class="panel-block"><div class="section-heading"><h2>Preview</h2></div><div class="arena-crest-preview">' + renderArenaCrestMarkup(content, selectedArena, "arena-crest-image arena-crest-image-large") + '<div><p><strong>' + escapeHtml(selectedArena.name || selectedArena.id) + '</strong></p><p>' + escapeHtml((selectedArena.leaderTitle || "Leader") + " " + (selectedArena.leaderName || "TBD")) + '</p><p>Crest: ' + escapeHtml(selectedArena.crestName || selectedArena.crestId || "Unassigned") + '</p></div></div><p>Recommended Level: ' + escapeHtml(String(selectedArena.recommendedLevel || "TBD")) + ' · Party Size: ' + escapeHtml(String(selectedArena.partySize || "TBD")) + '</p><p>Reward Money: $' + escapeHtml(String(Number(selectedArena.rewardMoney || 0))) + '</p><p>' + escapeHtml(selectedArena.description || "No arena description yet.") + '</p><p class="dev-helper-text">Uncollected arenas use the authored team levels here. Refights use the player arena settings, capped by crests: 0-2 = Lv 5, 3-4 = Lv 10, 5+ = Lv 15.</p><h3>Configured Team</h3><ul class="compact-list">' + (teamPreview || "<li><span>No team members configured yet.</span></li>") + "</ul><h3>Fallback Pool</h3><ul class=\"compact-list\">" + ((selectedArena.pool || []).map(function (member) { const species = getSpecies(content, member.speciesId); const variant = getSpeciesVariant(species, member.variantId || "default"); return "<li><span>" + escapeHtml(species?.name || member.speciesId || "Unassigned") + " - " + escapeHtml(variant?.id || member.variantId || "default") + "</span><strong>Pool</strong></li>"; }).join("") || "<li><span>No pool monsters configured yet.</span></li>") + "</ul></section>",
         ].join("")
       : '<section class="panel-block dev-editor-panel"><h2>No Arena Selected</h2><p>Add a new arena to begin editing.</p></section>';
 
@@ -9030,6 +9794,9 @@
     root.querySelector('[data-action="start-arena-battle"]')?.addEventListener("click", function () {
       app.startArenaBattleFromInteraction();
     });
+    root.querySelector('[data-action="start-trainer-battle"]')?.addEventListener("click", function () {
+      app.startTrainerBattleFromInteraction();
+    });
 
     root.querySelectorAll("[data-open-panel]").forEach(function (button) {
       button.addEventListener("click", function () {
@@ -9063,9 +9830,27 @@
         );
       });
     });
+    root.querySelectorAll("[data-adjust-monster-stat]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.adjustMonsterStatPoint(
+          button.getAttribute("data-adjust-monster-stat"),
+          Number(button.getAttribute("data-monster-index") || 0),
+          button.getAttribute("data-stat-key") || "",
+          Number(button.getAttribute("data-stat-delta") || 0)
+        );
+      });
+    });
     root.querySelectorAll('[data-action="toggle-monster-moves"]').forEach(function (button) {
       button.addEventListener("click", function () {
         app.toggleMonsterMovesPanel(
+          button.getAttribute("data-monster-collection") || "party",
+          Number(button.getAttribute("data-monster-index") || 0)
+        );
+      });
+    });
+    root.querySelectorAll('[data-action="toggle-monster-stats"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.toggleMonsterStatsPanel(
           button.getAttribute("data-monster-collection") || "party",
           Number(button.getAttribute("data-monster-index") || 0)
         );
@@ -10067,6 +10852,9 @@
           main: { left: 0, top: 0 },
           sidebarList: { left: 0, top: 0 },
         },
+        worldPanelScroll: {
+          body: { left: 0, top: 0 },
+        },
         drag: null,
       },
       lastFrameAt: null,
@@ -10098,6 +10886,18 @@
 
         window.clearTimeout(this.deferredRenderTimer);
         this.deferredRenderTimer = null;
+      },
+      captureWorldPanelScroll: function () {
+        if (!this.devTools.worldPanelScroll) {
+          this.devTools.worldPanelScroll = {
+            body: { left: 0, top: 0 },
+          };
+        }
+
+        this.devTools.worldPanelScroll.body = captureScrollState(root.querySelector(".world-panel-body"));
+      },
+      restoreWorldPanelScroll: function () {
+        restoreScrollState(root.querySelector(".world-panel-body"), this.devTools.worldPanelScroll?.body);
       },
       showDevTools: function (mapId) {
         this.devTools.open = true;
@@ -10225,13 +11025,25 @@
           return;
         }
 
-        if (key === "zoom" || key === "walkSpeed" || key === "partySize" || key === "arenaLeaderMinLevel" || key === "arenaLeaderMaxLevel" || key === "arenaLeaderPartySize") {
+        if (key === "zoom" || key === "walkSpeed" || key === "partySize" || key === "arenaLeaderPartySize") {
           this.state.settings[key] = Number(rawValue || 0);
+        } else if (key === "wildMonsterMaxLevel") {
+          this.state.settings[key] = Math.max(1, Math.min(getCurrentPlayerLevelCap(this.state), Number(rawValue || 1)));
+          this.state.world.wildMonsters = createWildMonstersForMap(this.content, this.state.world.currentMapId, this.state.world.position, {
+            maxLevelCap: getConfiguredWildMonsterMaxLevel(this.state),
+          });
+        } else if (key === "arenaLeaderMinLevel" || key === "arenaLeaderMaxLevel") {
+          const crestCap = getCurrentPlayerLevelCap(this.state);
+          this.state.settings[key] = Math.max(1, Math.min(crestCap, Number(rawValue || 1)));
+          const nextRange = getRefightArenaLeaderLevelRange(this.state);
+          this.state.settings.arenaLeaderMinLevel = nextRange.min;
+          this.state.settings.arenaLeaderMaxLevel = nextRange.max;
         } else if (key === "shareExperience" || key === "encounterPreview") {
           this.state.settings[key] = rawValue === "true";
         } else {
           this.state.settings[key] = rawValue;
         }
+        normalizeCrestScaledWorldSettings(this.state);
         this.render();
       },
       updateWorldPlayerField: function (key, rawValue) {
@@ -10273,6 +11085,34 @@
           : " refunded 1 " + element + " affinity point.");
         this.render();
       },
+      adjustMonsterStatPoint: function (collection, index, statKey, delta) {
+        if (this.state.screen !== "world" || !MONSTER_STAT_KEYS.includes(statKey) || ![-1, 1].includes(Number(delta))) {
+          return;
+        }
+
+        const source = collection === "bank" ? this.state.bank : this.state.party;
+        const monster = source?.[index];
+        const species = getSpecies(this.content, monster?.speciesId);
+        if (!monster || !species) {
+          return;
+        }
+
+        ensureMonsterStatPointState(monster, species);
+        const currentPoints = Math.max(0, Number(monster.statPoints?.[statKey] || 0));
+        if (Number(delta) > 0 && getAvailableMonsterStatPoints(monster) <= 0) {
+          return;
+        }
+        if (Number(delta) < 0 && currentPoints <= 0) {
+          return;
+        }
+
+        monster.statPoints[statKey] = Math.max(0, currentPoints + Number(delta));
+        recalculateMonsterStats(monster, species, { preserveHpByMaxDelta: true });
+        this.state.message = (species.name || "Monster") + (Number(delta) > 0
+          ? " gained +1 " + (MONSTER_STAT_LABELS[statKey] || statKey) + "."
+          : " refunded 1 " + (MONSTER_STAT_LABELS[statKey] || statKey) + " point.");
+        this.render();
+      },
       toggleMonsterMovesPanel: function (collection, index) {
         if (this.state.screen !== "world") {
           return;
@@ -10283,6 +11123,19 @@
           ui.monsterMovesTarget = null;
         } else {
           ui.monsterMovesTarget = { collection, index };
+        }
+        this.render();
+      },
+      toggleMonsterStatsPanel: function (collection, index) {
+        if (this.state.screen !== "world") {
+          return;
+        }
+
+        const ui = ensureWorldUiState(this.state);
+        if (ui.monsterStatsTarget?.collection === collection && Number(ui.monsterStatsTarget?.index) === index) {
+          ui.monsterStatsTarget = null;
+        } else {
+          ui.monsterStatsTarget = { collection, index };
         }
         this.render();
       },
@@ -10322,6 +11175,13 @@
               ? ui.monsterAffinityTarget.index + 1
               : ui.monsterAffinityTarget.index;
         }
+        if (ui.monsterStatsTarget?.collection === "party") {
+          ui.monsterStatsTarget.index = ui.monsterStatsTarget.index === index
+            ? 0
+            : ui.monsterStatsTarget.index < index
+              ? ui.monsterStatsTarget.index + 1
+              : ui.monsterStatsTarget.index;
+        }
         this.render();
       },
       movePartyMonster: function (index, direction) {
@@ -10352,6 +11212,13 @@
             ui.monsterAffinityTarget.index = index;
           }
         }
+        if (ui.monsterStatsTarget?.collection === "party") {
+          if (ui.monsterStatsTarget.index === index) {
+            ui.monsterStatsTarget.index = nextIndex;
+          } else if (ui.monsterStatsTarget.index === nextIndex) {
+            ui.monsterStatsTarget.index = index;
+          }
+        }
         this.render();
       },
       movePartyMonsterToBank: function (index) {
@@ -10363,6 +11230,7 @@
         this.state.bank.push(moved);
         const ui = ensureWorldUiState(this.state);
         ui.monsterMovesTarget = null;
+        ui.monsterStatsTarget = null;
         ui.monsterAffinityTarget = null;
         this.state.message = (getSpecies(this.content, moved.speciesId)?.name || "Monster") + " was moved to the bank.";
         this.render();
@@ -10479,6 +11347,7 @@
         this.state.party.push(moved);
         const ui = ensureWorldUiState(this.state);
         ui.monsterMovesTarget = null;
+        ui.monsterStatsTarget = null;
         ui.monsterAffinityTarget = null;
         this.state.message = (getSpecies(this.content, moved.speciesId)?.name || "Monster") + " joined your party.";
         this.render();
@@ -10727,6 +11596,30 @@
         }
 
         startArenaBattle(this.state, this.content, arena, interaction);
+        this.render();
+      },
+      startTrainerBattleFromInteraction: function () {
+        if (this.state.screen !== "world" || !this.state.interaction || this.state.interaction.type !== "trainer-battle") {
+          return;
+        }
+
+        const npc = getNpcById(this.content, this.state.world.currentMapId, this.state.interaction.id);
+        if (!npc) {
+          this.state.interaction = null;
+          this.render();
+          return;
+        }
+
+        const trainer = this.state.interaction.trainerId
+          ? getTrainer(this.content, this.state.interaction.trainerId)
+          : null;
+        if (!trainer) {
+          this.state.message = "This trainer NPC is not linked to a valid trainer record yet.";
+          this.render();
+          return;
+        }
+
+        startTrainerBattle(this.state, this.content, trainer, npc);
         this.render();
       },
       loadProjectFolder: async function (keepDevTools) {
@@ -11702,7 +12595,7 @@
           return;
         }
 
-        const stringFields = new Set(["id", "type", "label", "text", "sheetId", "facing", "data.trainerId"]);
+        const stringFields = new Set(["id", "type", "label", "text", "sheetId", "facing", "movementMode", "data.trainerId"]);
         const value = stringFields.has(path) ? rawValue : Number(rawValue || 0);
 
         if (path.includes(".")) {
@@ -11720,6 +12613,10 @@
           if (path === "id") {
             this.devTools.selectedNpcId = rawValue;
           }
+        }
+
+        if (["x", "y", "facing", "movementMode", "moveRadius", "lookSpeed", "moveSpeed", "id"].includes(path)) {
+          resetNpcRuntimeState(this.state, this.content, this.devTools.selectedMapId, npc);
         }
 
         if (shouldRender !== false) {
@@ -12272,6 +13169,7 @@
           }
           npc.x = Math.max(0, Math.round(point.worldX / tileSize) * tileSize + tileSize / 2);
           npc.y = Math.max(0, Math.round(point.worldY / tileSize) * tileSize + tileSize / 2);
+          resetNpcRuntimeState(this.state, this.content, mapId, npc);
           this.state.message = "Moved NPC " + npc.id + " to " + npc.x + ", " + npc.y + ".";
         } else {
           const mapMeta = this.content.mapMetadata[mapId];
@@ -12401,6 +13299,7 @@
         const hadBattle = Boolean(this.state.battle);
         updateRespawns(this.state, this.content);
         moveWildMonsters(this.state, this.content, deltaMs);
+        moveNpcs(this.state, this.content, deltaMs);
         movePlayer(this.state, this.content, deltaMs);
         updateCamera(this.state, this.content, deltaMs);
         const nextUiSignature = getWorldUiSignature(this.state, this.content);
@@ -12423,9 +13322,13 @@
         }
 
         const shouldPreserveDevScroll = this.state.screen === "dev-tools";
+        const shouldPreserveWorldPanelScroll = this.state.screen === "world" && Boolean(ensureWorldUiState(this.state).activePanel);
         const focusState = captureFocusableState(root);
         if (shouldPreserveDevScroll) {
           this.captureDevPreviewScroll();
+        }
+        if (shouldPreserveWorldPanelScroll) {
+          this.captureWorldPanelScroll();
         }
 
         if (this.state.screen === "title") {
@@ -12472,6 +13375,9 @@
         safeDrawAvatarPreviewCanvases(root, this.content);
         attachInputHandlers(root, this);
         restoreFocusableState(root, focusState);
+        if (shouldPreserveWorldPanelScroll) {
+          this.restoreWorldPanelScroll();
+        }
       },
     };
 

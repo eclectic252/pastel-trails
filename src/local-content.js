@@ -2118,7 +2118,24 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
     ]
   },
   "trainers": {
-    "trainers": []
+    "trainers": [
+      {
+        "id": "route-2-scout-mira",
+        "name": "Mira",
+        "title": "Scout",
+        "introText": "Route 2 is where trainers learn to keep their monsters sharp. Show me what your team can do.",
+        "rewardMoney": 24,
+        "rewardText": "Win to earn prize money from Scout Mira.",
+        "victoryText": "Nice battle. Your team looked ready for the next route.",
+        "team": [
+          {
+            "speciesId": "Owlet",
+            "variantId": "owlet-default",
+            "level": 4
+          }
+        ]
+      }
+    ]
   },
   "characterSheets": {
     "sheets": [
@@ -5495,10 +5512,14 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       "assets/Monsters/Fluffram/fluffram_pink.png",
       "assets/Monsters/Fluffram/fluffram_snow.png",
       "assets/Monsters/Fluffram/fluffram_water.png",
+      "assets/Monsters/Kelpar/kelpar_dark.png",
       "assets/Monsters/Kelpar/kelpar_default.png",
       "assets/Monsters/Kelpar/kelpar_electric.png",
       "assets/Monsters/Kelpar/kelpar_fire.png",
+      "assets/Monsters/Kelpar/kelpar_galaxy.png",
       "assets/Monsters/Kelpar/kelpar_grass.png",
+      "assets/Monsters/Kelpar/kelpar_lavender.png",
+      "assets/Monsters/Kelpar/kelpar_pink.png",
       "assets/Monsters/Kelpar/kelpar_snow.png",
       "assets/Monsters/Kelpar/kelpar_water.png",
       "assets/Monsters/Owlet/owlet_dark.png",
@@ -46507,17 +46528,19 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       "npcs": [
         {
           "id": "npc-1",
-          "type": "dialogue",
+          "type": "trainer",
           "x": 1216,
           "y": 448,
-          "label": "New NPC",
-          "text": "Hello there!",
+          "label": "Scout Mira",
+          "text": "Think your monsters are ready for the road ahead?",
           "sheetId": "assets-characters-boardwalk-girl-sprite-bouganvillea2-walksheet-v1-transparent",
           "facing": "down",
           "interactionRadius": 88,
           "data": {
-            "trainerId": ""
-          }
+            "trainerId": "route-2-scout-mira"
+          },
+          "lookSpeed": 1.5,
+          "movementMode": "look"
         }
       ],
       "mapMonstersPanel": []
@@ -46688,7 +46711,22 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         }
       ],
       "trainers": [],
-      "npcs": [],
+      "npcs": [
+        {
+          "id": "npc-1",
+          "type": "trainer",
+          "x": 960,
+          "y": 2368,
+          "label": "Cowboy Roy",
+          "text": "Hello there!",
+          "sheetId": "assets-characters-boardwalk-girl-sprite-western-red-shirt-walksheet-v1-transparent",
+          "facing": "down",
+          "interactionRadius": 88,
+          "data": {
+            "trainerId": ""
+          }
+        }
+      ],
       "mapMonstersPanel": []
     }
   }

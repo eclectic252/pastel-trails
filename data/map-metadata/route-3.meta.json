@@ -164,6 +164,21 @@
     }
   ],
   "trainers": [],
-  "npcs": [],
+  "npcs": [
+    {
+      "id": "npc-1",
+      "type": "trainer",
+      "x": 960,
+      "y": 2368,
+      "label": "Cowboy Roy",
+      "text": "Hello there!",
+      "sheetId": "assets-characters-boardwalk-girl-sprite-western-red-shirt-walksheet-v1-transparent",
+      "facing": "down",
+      "interactionRadius": 88,
+      "data": {
+        "trainerId": ""
+      }
+    }
+  ],
   "mapMonstersPanel": []
 }

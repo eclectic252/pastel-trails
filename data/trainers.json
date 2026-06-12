@@ -1,3 +1,20 @@
 {
-  "trainers": []
+  "trainers": [
+    {
+      "id": "route-2-scout-mira",
+      "name": "Mira",
+      "title": "Scout",
+      "introText": "Route 2 is where trainers learn to keep their monsters sharp. Show me what your team can do.",
+      "rewardMoney": 24,
+      "rewardText": "Win to earn prize money from Scout Mira.",
+      "victoryText": "Nice battle. Your team looked ready for the next route.",
+      "team": [
+        {
+          "speciesId": "Owlet",
+          "variantId": "owlet-default",
+          "level": 4
+        }
+      ]
+    }
+  ]
 }

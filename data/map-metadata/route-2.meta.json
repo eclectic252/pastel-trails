@@ -121,17 +121,19 @@
   "npcs": [
     {
       "id": "npc-1",
-      "type": "dialogue",
+      "type": "trainer",
       "x": 1216,
       "y": 448,
-      "label": "New NPC",
-      "text": "Hello there!",
+      "label": "Scout Mira",
+      "text": "Think your monsters are ready for the road ahead?",
       "sheetId": "assets-characters-boardwalk-girl-sprite-bouganvillea2-walksheet-v1-transparent",
       "facing": "down",
       "interactionRadius": 88,
       "data": {
-        "trainerId": ""
-      }
+        "trainerId": "route-2-scout-mira"
+      },
+      "lookSpeed": 1.5,
+      "movementMode": "look"
     }
   ],
   "mapMonstersPanel": []
