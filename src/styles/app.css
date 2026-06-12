@@ -1603,6 +1603,7 @@ button {
   min-height: 170px;
   border-radius: var(--radius-md);
   background: #f8f8fb;
+  overflow-y: auto;
 }
 
 .battle-topbar {
@@ -1804,6 +1805,7 @@ button {
   position: absolute;
   display: grid;
   place-items: center;
+  transition: transform 300ms ease;
 }
 
 .battle-battler-enemy {
@@ -1814,6 +1816,14 @@ button {
 .battle-battler-player {
   right: 8%;
   bottom: 10%;
+}
+
+.battle-battler-lunge-enemy {
+  transform: translate(20px, 10px);
+}
+
+.battle-battler-lunge-player {
+  transform: translate(-20px, -10px);
 }
 
 .battle-battler-sprite,
@@ -1867,6 +1877,7 @@ button {
   height: 100%;
   border-radius: 999px;
   background: linear-gradient(180deg, #88d86f, #49a04a);
+  transition: width 180ms linear;
 }
 
 .battle-monster-card-enemy {
@@ -1913,7 +1924,7 @@ button {
 .battle-log-command {
   margin-top: 0;
   min-height: 180px;
-  align-content: start;
+  align-content: end;
   background: rgba(255, 248, 239, 0.98);
   border: 0;
   border-right: 2px solid rgba(175, 141, 120, 0.5);

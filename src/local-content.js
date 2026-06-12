@@ -149,6 +149,98 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "statusEffects": [],
         "power": 10,
         "description": ""
+      },
+      {
+        "id": "skill-4",
+        "name": "Dust Stun",
+        "kind": "attack",
+        "element": "Air",
+        "maxLevel": 1,
+        "levelOverrides": [],
+        "accuracy": 100,
+        "unlockRequirements": {
+          "arenaClears": [],
+          "requiredSkillLevels": []
+        },
+        "statModifiers": {
+          "self": [
+            {
+              "type": "modify",
+              "stat": "attack",
+              "amount": 1,
+              "label": "",
+              "showLabel": true
+            }
+          ],
+          "foe": [
+            {
+              "type": "modify",
+              "stat": "attack",
+              "amount": -1,
+              "label": "Stun",
+              "showLabel": true
+            }
+          ]
+        },
+        "statusEffects": [],
+        "power": 0,
+        "description": ""
+      },
+      {
+        "id": "skill-5",
+        "name": "Wind Guard",
+        "kind": "attack",
+        "element": "Air",
+        "maxLevel": 1,
+        "levelOverrides": [],
+        "accuracy": 100,
+        "unlockRequirements": {
+          "arenaClears": [],
+          "requiredSkillLevels": []
+        },
+        "statModifiers": {
+          "self": [
+            {
+              "type": "modify",
+              "stat": "speed",
+              "amount": 1,
+              "label": "",
+              "showLabel": true
+            }
+          ],
+          "foe": []
+        },
+        "statusEffects": [],
+        "power": 0,
+        "description": ""
+      },
+      {
+        "id": "skill-6",
+        "name": "Terra Spike",
+        "kind": "attack",
+        "element": "Earth",
+        "maxLevel": 1,
+        "levelOverrides": [],
+        "accuracy": 100,
+        "unlockRequirements": {
+          "arenaClears": [],
+          "requiredSkillLevels": []
+        },
+        "statModifiers": {
+          "self": [],
+          "foe": [
+            {
+              "type": "modify",
+              "stat": "defense",
+              "amount": -1,
+              "label": "",
+              "showLabel": true
+            }
+          ]
+        },
+        "statusEffects": [],
+        "power": 0,
+        "description": ""
       }
     ]
   },
@@ -168,7 +260,10 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "skills": [
           "basic-attack",
           "skill-2",
-          "skill-3"
+          "skill-3",
+          "skill-4",
+          "skill-5",
+          "skill-6"
         ],
         "variants": [
           {
@@ -428,7 +523,10 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "skills": [
           "basic-attack",
           "skill-3",
-          "skill-2"
+          "skill-2",
+          "skill-6",
+          "skill-5",
+          "skill-4"
         ],
         "variants": [
           {
@@ -441,7 +539,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               "frame": 0
             },
             "overworld": {
-              "displayMode": "",
+              "displayMode": "portrait",
               "sheetId": "",
               "row": 0,
               "idleFrame": 0,
@@ -688,7 +786,10 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "skills": [
           "basic-attack",
           "skill-2",
-          "skill-3"
+          "skill-3",
+          "skill-6",
+          "skill-5",
+          "skill-4"
         ],
         "variants": [
           {
@@ -899,7 +1000,10 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "skills": [
           "basic-attack",
           "skill-2",
-          "skill-3"
+          "skill-3",
+          "skill-4",
+          "skill-5",
+          "skill-6"
         ],
         "variants": [
           {
@@ -1167,7 +1271,10 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "skills": [
           "basic-attack",
           "skill-2",
-          "skill-3"
+          "skill-3",
+          "skill-6",
+          "skill-5",
+          "skill-4"
         ],
         "variants": [
           {
@@ -1436,7 +1543,10 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "skills": [
           "basic-attack",
           "skill-2",
-          "skill-3"
+          "skill-3",
+          "skill-4",
+          "skill-5",
+          "skill-6"
         ],
         "variants": [
           {
@@ -1551,7 +1661,10 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "skills": [
           "basic-attack",
           "skill-2",
-          "skill-3"
+          "skill-3",
+          "skill-6",
+          "skill-5",
+          "skill-4"
         ],
         "variants": [
           {
@@ -2275,7 +2388,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           },
           {
             "x": 0,
-            "y": 0
+            "y": 51
           },
           {
             "x": 0,
@@ -2315,25 +2428,25 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           ],
           [
             {
-              "x": 0,
+              "x": 69,
               "y": 0,
               "width": 0,
               "height": 0
             },
             {
-              "x": 0,
+              "x": 26,
               "y": 0,
               "width": 0,
               "height": 0
             },
             {
-              "x": 0,
+              "x": -38,
               "y": 0,
               "width": 0,
               "height": 0
             },
             {
-              "x": 0,
+              "x": -91,
               "y": 0,
               "width": 0,
               "height": 0
@@ -5351,8 +5464,10 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       "assets/Monsters/Fluffram/fluffram_water.png",
       "assets/Monsters/Kelpar/kelpar_default.png",
       "assets/Monsters/Kelpar/kelpar_electric.png",
+      "assets/Monsters/Kelpar/kelpar_fire.png",
       "assets/Monsters/Kelpar/kelpar_grass.png",
       "assets/Monsters/Kelpar/kelpar_snow.png",
+      "assets/Monsters/Kelpar/kelpar_water.png",
       "assets/Monsters/Owlet/owlet_dark.png",
       "assets/Monsters/Owlet/owlet_default.png",
       "assets/Monsters/Owlet/owlet_electric.png",

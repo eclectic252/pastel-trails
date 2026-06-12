@@ -1548,6 +1548,206 @@
     return selected ? getEffectiveSkillAtLevel(selected, 1) : null;
   }
 
+  function addBattleLogEntry(state, entry) {
+    if (!state?.battle) {
+      return;
+    }
+    const next = String(entry || "").trim();
+    if (!next) {
+      return;
+    }
+    state.battle.log.push(next);
+  }
+
+  function addBattleLogEntries(state, entries) {
+    if (!state?.battle || !Array.isArray(entries) || !entries.length) {
+      return;
+    }
+    entries.forEach(function (entry) {
+      addBattleLogEntry(state, entry);
+    });
+  }
+
+  function getBattleStatLabel(stat) {
+    return {
+      attack: "Attack",
+      defense: "Defense",
+      speed: "Speed",
+      accuracy: "Accuracy",
+      all: "all stats",
+    }[stat] || "Stat";
+  }
+
+  function isDamagingBattleSkill(skill) {
+    if (!skill) {
+      return true;
+    }
+    return Number(skill.power || 0) > 0;
+  }
+
+  function formatBattleSkillPhrase(skill) {
+    return skill?.name || "its move";
+  }
+
+  function buildBattleAnimationEvents(options) {
+    const events = [];
+    const beatDelay = Math.max(0, Number(options?.beatDelay ?? 370));
+    const turnDelay = Math.max(0, Number(options?.turnDelay ?? 0));
+    if (options?.actor) {
+      events.push({ type: "lunge", actor: options.actor, duration: 360 });
+    }
+    if (options?.message) {
+      events.push({ type: "log", message: options.message, duration: 180 });
+      events.push({ type: "pause", duration: beatDelay });
+    }
+    if (options?.hpTarget) {
+      events.push({
+        type: "hp",
+        target: options.hpTarget,
+        from: Number(options.hpFrom || 0),
+        to: Number(options.hpTo || 0),
+        duration: 720,
+      });
+      events.push({ type: "pause", duration: beatDelay });
+    }
+    (options?.extraMessages || []).forEach(function (message) {
+      events.push({ type: "log", message, duration: 180 });
+      events.push({ type: "pause", duration: beatDelay });
+    });
+    if (typeof options?.callback === "function") {
+      events.push({ type: "callback", callback: options.callback, duration: 1 });
+    }
+    if (turnDelay > 0) {
+      events.push({ type: "pause", duration: turnDelay });
+    }
+    return events;
+  }
+
+  function ensureBattleAnimationState(state) {
+    if (!state?.battle) {
+      return null;
+    }
+
+    if (!state.battle.animation || typeof state.battle.animation !== "object") {
+      const playerMonster = state.party?.[state.battle.playerIndex] || null;
+      const enemy = state.battle.enemy || null;
+      state.battle.animation = {
+        queue: [],
+        current: null,
+        actorPose: "",
+        displayedHp: {
+          player: Number(playerMonster?.currentHp || 0),
+          enemy: Number(enemy?.currentHp || 0),
+        },
+        autoScrollLog: true,
+      };
+    }
+
+    const animation = state.battle.animation;
+    if (!Array.isArray(animation.queue)) {
+      animation.queue = [];
+    }
+    if (!animation.displayedHp || typeof animation.displayedHp !== "object") {
+      animation.displayedHp = {};
+    }
+    const playerMonster = state.party?.[state.battle.playerIndex] || null;
+    const enemy = state.battle.enemy || null;
+    if (typeof animation.displayedHp.player !== "number") {
+      animation.displayedHp.player = Number(playerMonster?.currentHp || 0);
+    }
+    if (typeof animation.displayedHp.enemy !== "number") {
+      animation.displayedHp.enemy = Number(enemy?.currentHp || 0);
+    }
+    if (typeof animation.autoScrollLog !== "boolean") {
+      animation.autoScrollLog = true;
+    }
+    return animation;
+  }
+
+  function battleHasPendingAnimation(state) {
+    const animation = ensureBattleAnimationState(state);
+    return !!(animation && (animation.current || animation.queue.length));
+  }
+
+  function queueBattleAnimationEvents(state, events) {
+    const animation = ensureBattleAnimationState(state);
+    if (!animation || !Array.isArray(events) || !events.length) {
+      return;
+    }
+    events.forEach(function (event) {
+      animation.queue.push(event);
+    });
+  }
+
+  function updateBattleAnimation(state, deltaMs) {
+    const animation = ensureBattleAnimationState(state);
+    if (!animation) {
+      return false;
+    }
+
+    let changed = false;
+    const startNextEvent = function () {
+      if (animation.current || !animation.queue.length) {
+        return;
+      }
+      animation.current = Object.assign({ elapsed: 0 }, animation.queue.shift());
+      changed = true;
+      if (animation.current.type === "log") {
+        addBattleLogEntry(state, animation.current.message);
+      } else if (animation.current.type === "callback") {
+        if (typeof animation.current.callback === "function") {
+          animation.current.callback();
+        }
+      } else if (animation.current.type === "lunge") {
+        animation.actorPose = animation.current.actor || "";
+        const playerMonster = state.party?.[state.battle.playerIndex] || null;
+        const enemy = state.battle.enemy || null;
+        if (animation.actorPose === "player" && playerMonster) {
+          playerMonster._battlePose = "lunge";
+        } else if (animation.actorPose === "enemy" && enemy) {
+          enemy._battlePose = "lunge";
+        }
+      }
+    };
+
+    startNextEvent();
+    if (!animation.current) {
+      return changed;
+    }
+
+    animation.current.elapsed += deltaMs;
+    if (animation.current.type === "hp") {
+      const duration = Math.max(1, Number(animation.current.duration || 1));
+      const progress = Math.max(0, Math.min(1, animation.current.elapsed / duration));
+      const from = Number(animation.current.from || 0);
+      const to = Number(animation.current.to || 0);
+      animation.displayedHp[animation.current.target] = Math.round(from + (to - from) * progress);
+      changed = true;
+    }
+
+    const duration = Math.max(1, Number(animation.current.duration || 1));
+    if (animation.current.elapsed >= duration) {
+      if (animation.current.type === "lunge") {
+        const playerMonster = state.party?.[state.battle.playerIndex] || null;
+        const enemy = state.battle.enemy || null;
+        if (playerMonster && playerMonster._battlePose) {
+          delete playerMonster._battlePose;
+        }
+        if (enemy && enemy._battlePose) {
+          delete enemy._battlePose;
+        }
+        animation.actorPose = "";
+      } else if (animation.current.type === "hp") {
+        animation.displayedHp[animation.current.target] = Number(animation.current.to || 0);
+      }
+      animation.current = null;
+      changed = true;
+      startNextEvent();
+    }
+
+    return changed;
+  }
+
   function getPlayerSkillProgressEntries(state) {
     if (!state.player) {
       state.player = {};
@@ -1729,7 +1929,7 @@
 
     ensurePlayerSkillProgressState(state, content);
     if (levelsGained > 0 && state.battle && options?.showBattleLog !== false) {
-      state.battle.log.unshift(skill.name + " leveled up to Lv " + getPlayerSkillLevel(state, content, skillId) + ".");
+      addBattleLogEntry(state, skill.name + " leveled up to Lv " + getPlayerSkillLevel(state, content, skillId) + ".");
     }
     return {
       gained,
@@ -3059,42 +3259,7 @@
       }).filter(Boolean);
     }
 
-    const playerSpawn = position;
-    const speciesPool = content.monsters.species;
-    const emberfox = speciesPool[0];
-    const secondSpecies = speciesPool[1] || speciesPool[0];
-
-    return [
-      {
-        id: "wild-1",
-        speciesId: emberfox.id,
-        variantId: getSpeciesVariant(emberfox, "")?.id || "default",
-        level: 3,
-        skills: buildWildMonsterSkills(content, emberfox, 3),
-        x: playerSpawn.x + 160,
-        y: playerSpawn.y + 48,
-        active: true,
-        respawnsAt: null,
-        label: "Curious wild " + emberfox.name,
-        sourceSpawnId: "wild-1",
-      },
-      {
-        id: "wild-2",
-        speciesId: secondSpecies.id,
-        variantId: getSpeciesVariant(secondSpecies, "")?.id || "default",
-        level: 4,
-        skills: buildWildMonsterSkills(content, secondSpecies, 4),
-        x: playerSpawn.x + 320,
-        y: playerSpawn.y + 200,
-        active: true,
-        respawnsAt: null,
-        label: "Prototype wild " + secondSpecies.name,
-        sourceSpawnId: "wild-2",
-      },
-    ].map(function (monster) {
-      ensureElementalAffinityState(monster);
-      return monster;
-    });
+    return [];
   }
 
   function buildStarterVariantSelections(content) {
@@ -3801,17 +3966,27 @@
     ensureSkillEffectCollections(skill);
     const userName = getBattlerDisplayName(content, user);
     const targetName = getBattlerDisplayName(content, target);
+    const skillName = formatBattleSkillPhrase(skill);
+    const entries = [];
 
     (skill.statModifiers?.self || []).forEach(function (effect) {
       applySkillModifierEffect(user, effect);
-      if (effect.label) {
-        state.battle.log.unshift(userName + " gained " + effect.label + ".");
+      if (effect.type === "cleanse-negative") {
+        entries.push(userName + " reduced negative " + getBattleStatLabel(effect.stat) + " modifiers with " + skillName + ".");
+      } else if (Number(effect.amount || 0) > 0) {
+        entries.push(userName + " increased " + getBattleStatLabel(effect.stat) + " with " + skillName + ".");
+      } else if (Number(effect.amount || 0) < 0) {
+        entries.push(userName + " decreased " + getBattleStatLabel(effect.stat) + " with " + skillName + ".");
       }
     });
     (skill.statModifiers?.foe || []).forEach(function (effect) {
       applySkillModifierEffect(target, effect);
-      if (effect.label) {
-        state.battle.log.unshift(targetName + " was affected by " + effect.label + ".");
+      if (effect.type === "cleanse-negative") {
+        entries.push(userName + " reduced " + targetName + "'s negative " + getBattleStatLabel(effect.stat) + " modifiers with " + skillName + ".");
+      } else if (Number(effect.amount || 0) > 0) {
+        entries.push(userName + " increased " + targetName + "'s " + getBattleStatLabel(effect.stat) + " with " + skillName + ".");
+      } else if (Number(effect.amount || 0) < 0) {
+        entries.push(userName + " decreased " + targetName + "'s " + getBattleStatLabel(effect.stat) + " with " + skillName + ".");
       }
     });
     (skill.statusEffects || []).forEach(function (effect) {
@@ -3821,8 +3996,9 @@
       const recipient = effect.target === "self" ? user : target;
       const recipientName = recipient === user ? userName : targetName;
       const applied = applySkillStatusEffect(recipient, effect);
-      state.battle.log.unshift(recipientName + " was afflicted with " + (applied.label || applied.type) + ".");
+      entries.push(recipientName + " was afflicted with " + (applied.label || applied.type) + " from " + skillName + ".");
     });
+    return entries;
   }
 
   function processPreTurnStatuses(state, content, battler) {
@@ -3840,14 +4016,14 @@
     if (roll < 1 / 3) {
       const selfDamage = Math.max(1, Math.round(Number(confusion.power || 4) + getEffectiveBattleStat(battler, "attack", { battleModel }) * 0.25));
       battler.currentHp = Math.max(0, Number(battler.currentHp || 0) - selfDamage);
-      state.battle.log.unshift(name + " hurt itself in confusion for " + selfDamage + " damage.");
+      addBattleLogEntry(state, name + " hurt itself in confusion for " + selfDamage + " damage.");
       return { canAct: false, selfDamage: true };
     }
     if (roll < 2 / 3) {
-      state.battle.log.unshift(name + " was confused and could not act.");
+      addBattleLogEntry(state, name + " was confused and could not act.");
       return { canAct: false };
     }
-    state.battle.log.unshift(name + " fought through the confusion.");
+    addBattleLogEntry(state, name + " fought through the confusion.");
     return { canAct: true };
   }
 
@@ -3860,39 +4036,43 @@
       if (status.type === "burn" && Math.random() * 100 <= Number(status.tickChance || 0)) {
         const burnDamage = Math.max(1, Number(status.power || 1));
         battler.currentHp = Math.max(0, Number(battler.currentHp || 0) - burnDamage);
-        state.battle.log.unshift(name + " suffered " + burnDamage + " burn damage.");
+        addBattleLogEntry(state, name + " suffered " + burnDamage + " burn damage.");
       }
 
       status.duration = Math.max(0, Number(status.duration || 0) - 1);
       if (status.duration > 0) {
         nextStatuses.push(status);
       } else {
-        state.battle.log.unshift((status.label || status.type) + " wore off " + name + ".");
+        addBattleLogEntry(state, (status.label || status.type) + " wore off " + name + ".");
       }
     });
 
     temp.statuses = nextStatuses;
   }
 
-  function handlePlayerDefeat(state, content, playerMonster) {
+  function handlePlayerDefeat(state, content, playerMonster, options) {
     state.battle.outcome = "defeat";
-    state.battle.log.unshift("Your " + getBattlerDisplayName(content, playerMonster) + " fainted.");
+    if (!options?.skipLog) {
+      addBattleLogEntry(state, "Your " + getBattlerDisplayName(content, playerMonster) + " fainted.");
+    }
     playerMonster.currentHp = playerMonster.stats.hp;
     returnToTown(state, content);
     state.message = "You blacked out and returned to " + content.mapMetadata[state.world.currentMapId].displayName + ".";
   }
 
-  function handleEnemyDefeat(state, content, enemy) {
+  function handleEnemyDefeat(state, content, enemy, options) {
     const enemySpecies = getSpecies(content, enemy.speciesId);
     const activeMonster = state.party[state.battle.playerIndex] || state.party[0] || null;
-    state.battle.log.unshift(enemySpecies.name + " fainted.");
+    if (!options?.skipLog) {
+      addBattleLogEntry(state, enemySpecies.name + " fainted.");
+    }
     if (state.battle.type === "trainer") {
       const nextEnemyIndex = Number(state.battle.enemyIndex || 0) + 1;
       const nextEnemy = state.battle.enemyQueue?.[nextEnemyIndex];
       if (nextEnemy) {
         state.battle.enemyIndex = nextEnemyIndex;
         state.battle.enemy = nextEnemy;
-        state.battle.log.unshift((state.battle.opponentTitle || "Leader") + " " + (state.battle.opponentName || "Trainer") + " sent out " + nextEnemy.name + ".");
+        addBattleLogEntry(state, (state.battle.opponentTitle || "Leader") + " " + (state.battle.opponentName || "Trainer") + " sent out " + nextEnemy.name + ".");
       } else {
         state.battle.outcome = "victory";
         rewardArenaVictory(state, state.battle);
@@ -3985,7 +4165,11 @@
 
         const hitChance = selectedSkill ? getSkillHitChance(playerMonster, selectedSkill) : 100;
         if (selectedSkill && Math.random() * 100 > hitChance) {
-          state.battle.log.unshift(getBattlerDisplayName(content, playerMonster) + " missed.");
+        queueBattleAnimationEvents(state, buildBattleAnimationEvents({
+          actor: "player",
+          message: getBattlerDisplayName(content, playerMonster) + " missed with " + formatBattleSkillPhrase(selectedSkill) + ".",
+          turnDelay: 520,
+        }));
           processEndOfTurnStatuses(state, content, playerMonster);
           if (Number(playerMonster.currentHp || 0) <= 0 && !state.battle.outcome) {
             handlePlayerDefeat(state, content, playerMonster);
@@ -3993,24 +4177,39 @@
           return;
         }
 
-        const skillDealsDamage = !selectedSkill || selectedSkill.kind === "attack" || Number(selectedSkill.power || 0) > 0;
+        const skillDealsDamage = isDamagingBattleSkill(selectedSkill);
+        const enemyHpBefore = Number(enemy.currentHp || 0);
         const damage = calculateDamage(playerMonster, enemyInstance, { skill: selectedSkill, battleModel });
+        let primaryMessage = "";
         if (skillDealsDamage) {
           enemy.currentHp = Math.max(0, enemy.currentHp - damage);
-          const damageSuffix = selectedSkill && normalizeSkillElement(selectedSkill.element) !== "Neutral"
-            ? " with " + normalizeSkillElement(selectedSkill.element) + " power"
-            : "";
-          state.battle.log.unshift(getSpecies(content, playerMonster.speciesId).name + " dealt " + damage + " damage" + damageSuffix + ".");
+          primaryMessage = getSpecies(content, playerMonster.speciesId).name + " dealt " + damage + " damage with " + formatBattleSkillPhrase(selectedSkill) + ".";
         } else {
-          state.battle.log.unshift(getBattlerDisplayName(content, playerMonster) + " used a non-damaging skill.");
+          primaryMessage = getBattlerDisplayName(content, playerMonster) + " used " + formatBattleSkillPhrase(selectedSkill) + ".";
         }
 
-        if (selectedSkill) {
-          processSkillSecondaryEffects(state, content, playerMonster, enemy, selectedSkill);
+        const extraMessages = selectedSkill
+          ? processSkillSecondaryEffects(state, content, playerMonster, enemy, selectedSkill)
+          : [];
+        if (enemy.currentHp <= 0) {
+          extraMessages.push(enemySpecies.name + " fainted.");
         }
+        queueBattleAnimationEvents(state, buildBattleAnimationEvents({
+          actor: "player",
+          message: primaryMessage,
+          hpTarget: skillDealsDamage ? "enemy" : "",
+          hpFrom: enemyHpBefore,
+          hpTo: Number(enemy.currentHp || 0),
+          extraMessages,
+          turnDelay: enemy.currentHp > 0 ? 520 : 0,
+          callback: enemy.currentHp <= 0
+            ? function () {
+                handleEnemyDefeat(state, content, enemy, { skipLog: true });
+              }
+            : null,
+        }));
         if (enemy.currentHp <= 0) {
           skipEnemyTurn = true;
-          handleEnemyDefeat(state, content, enemy);
         }
         processEndOfTurnStatuses(state, content, playerMonster);
         if (Number(playerMonster.currentHp || 0) <= 0 && !state.battle.outcome) {
@@ -4031,11 +4230,12 @@
         }
         const enemySkill = getBattleSkillForEnemy(content, enemy);
         const hitChance = enemySkill ? getSkillHitChance(enemy, enemySkill) : 100;
-        if (enemySkill) {
-          state.battle.log.unshift(enemySpecies.name + " used " + enemySkill.name + ".");
-        }
         if (enemySkill && Math.random() * 100 > hitChance) {
-          state.battle.log.unshift(enemySpecies.name + " missed.");
+        queueBattleAnimationEvents(state, buildBattleAnimationEvents({
+          actor: "enemy",
+          message: enemySpecies.name + " missed with " + formatBattleSkillPhrase(enemySkill) + ".",
+          turnDelay: 520,
+        }));
           processEndOfTurnStatuses(state, content, enemy);
           if (Number(enemy.currentHp || 0) <= 0 && !state.battle.outcome) {
             handleEnemyDefeat(state, content, enemy);
@@ -4043,26 +4243,43 @@
           return;
         }
 
-        const skillDealsDamage = !enemySkill || enemySkill.kind === "attack" || Number(enemySkill.power || 0) > 0;
+        const skillDealsDamage = isDamagingBattleSkill(enemySkill);
+        const playerHpBefore = Number(playerMonster.currentHp || 0);
         const damage = calculateDamage({
           stats: enemy.stats,
           elementalAffinityPoints: enemy.elementalAffinityPoints,
           primaryElementalAffinity: enemy.primaryElementalAffinity,
           _battleTemp: enemy._battleTemp,
         }, playerMonster, { skill: enemySkill, battleModel });
+        let primaryMessage = "";
         if (skillDealsDamage) {
           playerMonster.currentHp = Math.max(0, playerMonster.currentHp - damage);
-          state.battle.log.unshift(enemySpecies.name + " dealt " + damage + " damage.");
+          primaryMessage = enemySpecies.name + " dealt " + damage + " damage with " + formatBattleSkillPhrase(enemySkill) + ".";
         } else {
-          state.battle.log.unshift(enemySpecies.name + " used a non-damaging skill.");
+          primaryMessage = enemySpecies.name + " used " + formatBattleSkillPhrase(enemySkill) + ".";
         }
 
-        if (enemySkill) {
-          processSkillSecondaryEffects(state, content, enemy, playerMonster, enemySkill);
-        }
-
+        const extraMessages = enemySkill
+          ? processSkillSecondaryEffects(state, content, enemy, playerMonster, enemySkill)
+          : [];
         if (playerMonster.currentHp <= 0) {
-          handlePlayerDefeat(state, content, playerMonster);
+          extraMessages.push("Your " + getBattlerDisplayName(content, playerMonster) + " fainted.");
+        }
+        queueBattleAnimationEvents(state, buildBattleAnimationEvents({
+          actor: "enemy",
+          message: primaryMessage,
+          hpTarget: skillDealsDamage ? "player" : "",
+          hpFrom: playerHpBefore,
+          hpTo: Number(playerMonster.currentHp || 0),
+          extraMessages,
+          turnDelay: playerMonster.currentHp > 0 ? 520 : 0,
+          callback: playerMonster.currentHp <= 0
+            ? function () {
+                handlePlayerDefeat(state, content, playerMonster, { skipLog: true });
+              }
+            : null,
+        }));
+        if (playerMonster.currentHp <= 0) {
           return;
         }
 
@@ -4085,15 +4302,10 @@
     });
     const skillLevel = getPlayerSkillLevel(state, content, skillId);
     if (!baseSkill || skillLevel <= 0) {
-      state.battle.log.unshift("That skill is not unlocked for this save yet.");
+      addBattleLogEntry(state, "That skill is not unlocked for this save yet.");
       return;
     }
     const skill = getEffectiveSkillAtLevel(baseSkill, skillLevel);
-
-    const activeMonster = state.party[state.battle.playerIndex];
-    const species = getSpecies(content, activeMonster.speciesId);
-    const elementLabel = normalizeSkillElement(skill.element);
-    state.battle.log.unshift((species?.name || "Your monster") + " used " + skill.name + " Lv " + skillLevel + (elementLabel !== "Neutral" ? " (" + elementLabel + ")" : "") + ".");
 
     grantSkillXp(state, content, skillId, 1, { showBattleLog: true });
     resolveBattleAttack(state, content, { skill });
@@ -4111,7 +4323,7 @@
     });
 
     if (!item) {
-      state.battle.log.unshift("You have no Basic Orbs left.");
+      addBattleLogEntry(state, "You have no Basic Orbs left.");
       return;
     }
 
@@ -4137,11 +4349,11 @@
 
       markWildMonsterDefeated(state, enemy.wildMonsterId);
       state.battle.outcome = "caught";
-      state.battle.log.unshift("Success. You caught " + species.name + ".");
+      addBattleLogEntry(state, "Success. You caught " + species.name + ".");
       return;
     }
 
-    state.battle.log.unshift(species.name + " broke free.");
+    addBattleLogEntry(state, species.name + " broke free.");
     resolveEnemyCounter(state, content);
   }
 
@@ -4157,7 +4369,7 @@
     });
 
     if (!item) {
-      state.battle.log.unshift("You have no Basic Orbs left to support a befriending attempt.");
+      addBattleLogEntry(state, "You have no Basic Orbs left to support a befriending attempt.");
       return;
     }
 
@@ -4183,11 +4395,11 @@
 
       markWildMonsterDefeated(state, enemy.wildMonsterId);
       state.battle.outcome = "caught";
-      state.battle.log.unshift("Success. You befriended " + species.name + ".");
+      addBattleLogEntry(state, "Success. You befriended " + species.name + ".");
       return;
     }
 
-    state.battle.log.unshift(species.name + " was not ready to befriend you yet.");
+    addBattleLogEntry(state, species.name + " was not ready to befriend you yet.");
     resolveEnemyCounter(state, content);
   }
 
@@ -4214,11 +4426,12 @@
 
     const enemySkill = getBattleSkillForEnemy(content, enemy);
     const hitChance = enemySkill ? getSkillHitChance(enemy, enemySkill) : 100;
-    if (enemySkill) {
-      state.battle.log.unshift(enemySpecies.name + " used " + enemySkill.name + ".");
-    }
     if (enemySkill && Math.random() * 100 > hitChance) {
-      state.battle.log.unshift(enemySpecies.name + " missed.");
+    queueBattleAnimationEvents(state, buildBattleAnimationEvents({
+      actor: "enemy",
+      message: enemySpecies.name + " missed with " + formatBattleSkillPhrase(enemySkill) + ".",
+      turnDelay: 520,
+    }));
       processEndOfTurnStatuses(state, content, enemy);
       if (Number(enemy.currentHp || 0) <= 0 && !state.battle.outcome) {
         handleEnemyDefeat(state, content, enemy);
@@ -4226,26 +4439,44 @@
       return;
     }
 
-    const skillDealsDamage = !enemySkill || enemySkill.kind === "attack" || Number(enemySkill.power || 0) > 0;
+    const skillDealsDamage = isDamagingBattleSkill(enemySkill);
+    const playerHpBefore = Number(playerMonster.currentHp || 0);
     const damage = calculateDamage({
       stats: enemy.stats,
       elementalAffinityPoints: enemy.elementalAffinityPoints,
       primaryElementalAffinity: enemy.primaryElementalAffinity,
       _battleTemp: enemy._battleTemp,
     }, playerMonster, { skill: enemySkill });
+    let primaryMessage = "";
     if (skillDealsDamage) {
       playerMonster.currentHp = Math.max(0, playerMonster.currentHp - damage);
-      state.battle.log.unshift(enemySpecies.name + " hit back for " + damage + " damage.");
+      primaryMessage = enemySpecies.name + " dealt " + damage + " damage with " + formatBattleSkillPhrase(enemySkill) + ".";
     } else {
-      state.battle.log.unshift(enemySpecies.name + " used a non-damaging skill.");
+      primaryMessage = enemySpecies.name + " used " + formatBattleSkillPhrase(enemySkill) + ".";
     }
 
-    if (enemySkill) {
-      processSkillSecondaryEffects(state, content, enemy, playerMonster, enemySkill);
+    const extraMessages = enemySkill
+      ? processSkillSecondaryEffects(state, content, enemy, playerMonster, enemySkill)
+      : [];
+    if (playerMonster.currentHp <= 0) {
+      extraMessages.push("Your " + getBattlerDisplayName(content, playerMonster) + " fainted.");
     }
+    queueBattleAnimationEvents(state, buildBattleAnimationEvents({
+      actor: "enemy",
+      message: primaryMessage,
+      hpTarget: skillDealsDamage ? "player" : "",
+      hpFrom: playerHpBefore,
+      hpTo: Number(playerMonster.currentHp || 0),
+      extraMessages,
+      turnDelay: playerMonster.currentHp > 0 ? 520 : 0,
+      callback: playerMonster.currentHp <= 0
+        ? function () {
+            handlePlayerDefeat(state, content, playerMonster, { skipLog: true });
+          }
+        : null,
+    }));
 
     if (playerMonster.currentHp <= 0) {
-      handlePlayerDefeat(state, content, playerMonster);
       return;
     }
 
@@ -4263,11 +4494,11 @@
     if (Math.random() < 0.9) {
       state.battle.outcome = "fled";
       state.message = "You got away safely.";
-      state.battle.log.unshift("You ran away.");
+      addBattleLogEntry(state, "You ran away.");
       return;
     }
 
-    state.battle.log.unshift("Couldn't escape.");
+    addBattleLogEntry(state, "Couldn't escape.");
     resolveEnemyCounter(state, content);
   }
 
@@ -4278,7 +4509,7 @@
 
     const nextIndex = (state.battle.playerIndex + 1) % state.party.length;
     state.battle.playerIndex = nextIndex;
-    state.battle.log.unshift("You swapped to another monster.");
+    addBattleLogEntry(state, "You swapped to another monster.");
     resolveEnemyCounter(state, content);
   }
 
@@ -4292,14 +4523,14 @@
     });
 
     if (!tonic) {
-      state.battle.log.unshift("You are out of Small Tonics.");
+      addBattleLogEntry(state, "You are out of Small Tonics.");
       return;
     }
 
     const active = state.party[state.battle.playerIndex];
     tonic.quantity -= 1;
     active.currentHp = Math.min(active.stats.hp, active.currentHp + 20);
-    state.battle.log.unshift("Your active monster recovered 20 HP.");
+    addBattleLogEntry(state, "Your active monster recovered 20 HP.");
     resolveEnemyCounter(state, content);
   }
 
@@ -5361,7 +5592,7 @@
     const variant = getSpeciesVariant(species, monster.variantId || "default");
     const variantLabel = formatMonsterVariantLabel(variant, monster.variantId || "default");
     const maxHp = Number(options.maxHp || monster.maxHp || monster.stats?.hp || 1);
-    const currentHp = Number(options.currentHp || monster.currentHp || 0);
+    const currentHp = Math.round(Number(options.currentHp ?? monster.currentHp ?? 0));
     const hpPercent = Math.max(0, Math.min(100, (currentHp / Math.max(1, maxHp)) * 100));
     const visual = renderMonsterVariantVisualMarkup(monster.speciesId, variant?.id || monster.variantId || "default", "battle-hud-sprite", "default");
     const labels = getVisibleBattleLabels(monster);
@@ -5436,9 +5667,12 @@
     const species = getSpecies(content, monster.speciesId);
     const variant = getSpeciesVariant(species, monster.variantId || "default");
     const visual = renderMonsterVariantVisualMarkup(monster.speciesId, variant?.id || monster.variantId || "default", "battle-battler-sprite", "default");
+    const poseClass = className && className.includes("player")
+      ? (monster._battlePose === "lunge" ? " battle-battler-lunge-player" : "")
+      : (monster._battlePose === "lunge" ? " battle-battler-lunge-enemy" : "");
 
     return [
-      '<div class="battle-battler ' + className + '">',
+      '<div class="battle-battler ' + className + poseClass + '">',
       '<div class="battle-battler-shadow"></div>',
       visual,
       '</div>',
@@ -5666,6 +5900,7 @@
 
     const activeMonster = state.party[state.battle.playerIndex];
     const enemy = state.battle.enemy;
+    const animation = ensureBattleAnimationState(state);
     const isTrainerBattle = state.battle.type === "trainer";
     const enemySpecies = getSpecies(content, enemy.speciesId);
     const fightType = isTrainerBattle ? (state.battle.opponentTitle || "Arena Leader") : "Wild";
@@ -5709,14 +5944,12 @@
       : "";
     const menu = state.battle.menu || "root";
     const isRootMenu = !state.battle.outcome && menu === "root";
-    let commandCopy = "Choose Fight, Switch, Item, Befriend, or Run.";
     let actionPanel = "";
     let rootActionPanel = "";
 
     if (state.battle.outcome) {
       actionPanel = '<div class="battle-action-grid battle-action-grid-single">' + outcomeButton + "</div>";
     } else if (menu === "fight") {
-      commandCopy = "Choose a skill to use.";
       actionPanel = '<div class="battle-action-grid">' +
         (activeSkills.length ? activeSkills.map(function (skill) {
           const skillElement = normalizeSkillElement(skill.element);
@@ -5727,13 +5960,11 @@
         '<button type="button" class="battle-action-card battle-action-card-secondary" data-battle-action="back-menu"><strong>Back</strong><span>Return to commands</span></button>' +
       "</div>";
     } else if (menu === "switch") {
-      commandCopy = "Choose a party monster to switch into battle.";
       actionPanel = '<div class="battle-action-grid battle-action-grid-single">' +
         partyRoster +
         '<button type="button" class="battle-action-card battle-action-card-secondary" data-battle-action="back-menu"><strong>Back</strong><span>Return to commands</span></button>' +
       "</div>";
     } else if (menu === "item") {
-      commandCopy = "Choose an item to use.";
       actionPanel = '<div class="battle-action-grid">' +
         '<button type="button" class="battle-action-card" data-battle-action="use-tonic"' + (tonicCount <= 0 ? " disabled" : "") + '><strong>Small Tonic</strong><span>x' + tonicCount + " · Recover 20 HP</span></button>" +
         '<button type="button" class="battle-action-card battle-action-card-secondary" data-battle-action="back-menu"><strong>Back</strong><span>Return to commands</span></button>' +
@@ -5757,14 +5988,14 @@
       '<section class="battle-modal">',
       '<section class="battle-topbar">',
       renderBattleMonsterHud(content, enemy, {
-        currentHp: enemy.currentHp,
+        currentHp: animation?.displayedHp?.enemy ?? enemy.currentHp,
         maxHp: enemy.maxHp,
         badgeSide: "left",
         partyPips: enemyPartyPips,
       }) +
       '<div class="battle-fight-pill"><strong>' + escapeHtml(fightType) + '</strong><span>' + escapeHtml(locationLabel) + '</span></div>' +
       renderBattleMonsterHud(content, activeMonster, {
-        currentHp: activeMonster.currentHp,
+        currentHp: animation?.displayedHp?.player ?? activeMonster.currentHp,
         maxHp: activeMonster.stats.hp,
         badgeSide: "right",
         partyPips: playerPartyPips,
@@ -5777,7 +6008,7 @@
         '</div>' +
       '</section>',
       '<section class="battle-command-shell">' +
-        '<div class="battle-log battle-log-command"><p>' + escapeHtml(commandCopy) + '</p>' + state.battle.log.slice(0, 4).map(function (entry) {
+        '<div class="battle-log battle-log-command" data-battle-log-feed>' + state.battle.log.slice(-8).map(function (entry) {
           return "<p>" + entry + "</p>";
         }).join("") + "</div>" +
         '<div class="battle-command-panel' + (isRootMenu ? " battle-command-panel-root" : "") + '">' +
@@ -8705,6 +8936,19 @@
     ].join("");
 
     drawWorld(root.querySelector(".world-canvas"), state, content, devToolsState);
+    syncBattleLogScroll(root, state);
+  }
+
+  function syncBattleLogScroll(root, state) {
+    const logEl = root.querySelector("[data-battle-log-feed]");
+    if (!(logEl instanceof HTMLElement) || !state?.battle) {
+      return;
+    }
+
+    const animation = ensureBattleAnimationState(state);
+    if (!animation || animation.autoScrollLog !== false) {
+      logEl.scrollTop = logEl.scrollHeight;
+    }
   }
 
   function updateLiveWorldUi(root) {
@@ -8872,6 +9116,9 @@
       button.addEventListener("click", function () {
         app.useBattleSkill(button.getAttribute("data-battle-skill"));
       });
+    });
+    root.querySelector("[data-battle-log-feed]")?.addEventListener("scroll", function (event) {
+      app.updateBattleLogScrollPreference(event.currentTarget);
     });
     root.querySelectorAll("[data-battle-swap-to]").forEach(function (button) {
       button.addEventListener("click", function () {
@@ -10338,6 +10585,9 @@
         if (!this.state.battle) {
           return;
         }
+        if (battleHasPendingAnimation(this.state) && action !== "close-battle") {
+          return;
+        }
 
         if (action === "open-fight-menu") {
           this.state.battle.menu = "fight";
@@ -10384,6 +10634,9 @@
         if (!this.state.battle || this.state.battle.outcome) {
           return;
         }
+        if (battleHasPendingAnimation(this.state)) {
+          return;
+        }
 
         useBattleSkill(this.state, this.content, skillId);
         if (this.state.battle) {
@@ -10393,6 +10646,9 @@
       },
       swapBattleMonsterTo: function (partyIndex) {
         if (!this.state.battle || this.state.battle.outcome) {
+          return;
+        }
+        if (battleHasPendingAnimation(this.state)) {
           return;
         }
 
@@ -10406,10 +10662,21 @@
         }
 
         this.state.battle.playerIndex = partyIndex;
-        this.state.battle.log.unshift("You swapped to another monster.");
+        addBattleLogEntry(this.state, "You swapped to another monster.");
         resolveEnemyCounter(this.state, this.content);
         this.state.battle.menu = "root";
         this.render();
+      },
+      updateBattleLogScrollPreference: function (element) {
+        if (!(element instanceof HTMLElement) || !this.state.battle) {
+          return;
+        }
+        const animation = ensureBattleAnimationState(this.state);
+        if (!animation) {
+          return;
+        }
+        const distanceFromBottom = element.scrollHeight - element.scrollTop - element.clientHeight;
+        animation.autoScrollLog = distanceFromBottom < 24;
       },
       startArenaBattleFromInteraction: function () {
         if (this.state.screen !== "world" || !this.state.interaction || this.state.interaction.type !== "arena") {
@@ -12092,6 +12359,13 @@
         }
 
         if (ensureWorldUiState(this.state).activePanel) {
+          return;
+        }
+
+        if (this.state.battle) {
+          if (updateBattleAnimation(this.state, deltaMs)) {
+            this.render();
+          }
           return;
         }
 
