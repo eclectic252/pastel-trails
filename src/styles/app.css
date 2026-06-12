@@ -527,6 +527,12 @@ button {
   min-width: 0;
 }
 
+.save-slot-actions {
+  display: grid;
+  gap: 0.45rem;
+  align-content: start;
+}
+
 .save-avatar-sprite {
   width: 116px;
   height: 116px;

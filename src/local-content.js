@@ -2081,6 +2081,39 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "variantId": "default-grass"
           }
         ]
+      },
+      {
+        "id": "arena-6",
+        "name": "Bougainvillea Arena",
+        "leaderName": "Leader Name",
+        "leaderTitle": "Elizabeth",
+        "crestId": "crest-6",
+        "crestName": "Bougainvillea Crest",
+        "crestImagePath": "",
+        "recommendedLevel": 5,
+        "partySize": 2,
+        "rewardMoney": 50,
+        "rewardText": "",
+        "description": "",
+        "mapId": "",
+        "team": [
+          {
+            "speciesId": "Ruffin",
+            "variantId": "Ruffin-Pink",
+            "level": 5
+          },
+          {
+            "speciesId": "Owlet",
+            "variantId": "owlet-pink",
+            "level": 5
+          }
+        ],
+        "pool": [
+          {
+            "speciesId": "equira",
+            "variantId": "Equira-Fire"
+          }
+        ]
       }
     ]
   },
@@ -45898,7 +45931,38 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           }
         }
       ],
-      "interactions": [],
+      "interactions": [
+        {
+          "id": "interaction-1",
+          "type": "healing-center",
+          "x": 768,
+          "y": 640,
+          "width": 256,
+          "height": 128,
+          "label": "Bougainvillea Town Healing Center",
+          "text": "Add interaction text here.",
+          "data": {
+            "shopId": "",
+            "arenaId": "",
+            "crestId": ""
+          }
+        },
+        {
+          "id": "interaction-2",
+          "type": "arena",
+          "x": 1664,
+          "y": 384,
+          "width": 256,
+          "height": 128,
+          "label": "Bugainvillea Arena",
+          "text": "Add interaction text here.",
+          "data": {
+            "shopId": "",
+            "arenaId": "arena-6",
+            "crestId": ""
+          }
+        }
+      ],
       "spawnZones": [
         {
           "id": "default-zone",
@@ -46004,7 +46068,23 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           }
         }
       ],
-      "interactions": [],
+      "interactions": [
+        {
+          "id": "interaction-1",
+          "type": "arena",
+          "x": 768,
+          "y": 640,
+          "width": 256,
+          "height": 128,
+          "label": "Jasmine Bay Arena",
+          "text": "Add interaction text here.",
+          "data": {
+            "shopId": "",
+            "arenaId": "arena-4",
+            "crestId": ""
+          }
+        }
+      ],
       "spawnZones": [
         {
           "id": "default-zone",

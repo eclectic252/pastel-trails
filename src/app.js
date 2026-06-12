@@ -939,6 +939,13 @@
           storage.setItem(SAVE_INDEX_KEY, JSON.stringify(index));
         }
       },
+      deleteSave: function (slotId) {
+        const index = safeParse(storage.getItem(SAVE_INDEX_KEY), []).filter(function (entry) {
+          return entry !== slotId;
+        });
+        storage.removeItem(SAVE_PREFIX + slotId);
+        storage.setItem(SAVE_INDEX_KEY, JSON.stringify(index));
+      },
     };
   }
 
@@ -4948,7 +4955,13 @@
   }
 
   function isFrontOfPlayerLayer(layerName) {
-    return String(layerName || "").trim().toLowerCase() === "higher decor in front of player";
+    const normalized = String(layerName || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .replace(/\s+/g, " ");
+    return /^higher decor\b/.test(normalized) &&
+      /\bin front of (player|character)\b/.test(normalized);
   }
 
   function createScratchCanvas(width, height) {
@@ -5714,10 +5727,7 @@
               const species = getSpecies(content, monster.speciesId);
               const variant = getSpeciesVariant(species, monster.variantId || "default");
               const label = (species?.name || monster.speciesId || "Unknown") + " (" + formatMonsterVariantLabel(variant, monster.variantId || "default") + ")";
-              const sprite = variant?.sprite || "";
-              const visual = sprite
-                ? '<img class="save-party-icon" src="' + escapeHtml(sprite) + '" alt="' + escapeHtml(label) + '" />'
-                : '<span class="save-party-fallback">' + escapeHtml((species?.name || "?").slice(0, 1)) + "</span>";
+              const visual = renderMonsterVariantVisualMarkup(monster.speciesId, variant?.id || monster.variantId || "default", "save-party-icon", "default");
 
               return '<div class="save-party-member">' +
                 visual +
@@ -5735,7 +5745,7 @@
               (partyMarkup ? '<div class="save-party-strip">' + partyMarkup + "</div>" : "") +
               "</div>" +
               "</button>" +
-              '<button class="secondary-button" type="button" data-action="load-save-slot" data-slot-id="' + escapeHtml(slot.slotId) + '">Load</button>' +
+              '<div class="save-slot-actions"><button class="secondary-button" type="button" data-action="load-save-slot" data-slot-id="' + escapeHtml(slot.slotId) + '">Load</button><button class="secondary-button" type="button" data-action="delete-save-slot" data-slot-id="' + escapeHtml(slot.slotId) + '">Delete</button></div>' +
               "</li>";
           }).join("") + "</ul>"
         : "<p>No saves yet. Start a new game to create one.</p>"),
@@ -5760,6 +5770,11 @@
         onAction("load-save-slot", button.getAttribute("data-slot-id"));
       });
     });
+    root.querySelectorAll('[data-action="delete-save-slot"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        onAction("delete-save-slot", button.getAttribute("data-slot-id"));
+      });
+    });
     root.querySelector('[data-action="load-folder"]')?.addEventListener("click", function () {
       onAction("load-folder");
     });
@@ -5767,6 +5782,7 @@
       onAction("open-dev-tools");
     });
 
+    drawMonsterVariantCanvases(root, content);
     safeDrawAvatarPreviewCanvases(root, content);
   }
 
@@ -10147,6 +10163,18 @@
         this.devTools.open = false;
         this.render();
       },
+      deleteSaveSlot: function (slotId) {
+        const resolvedSlotId = slotId || this.selectedTitleSaveSlotId;
+        if (!resolvedSlotId) {
+          return;
+        }
+
+        this.saveManager.deleteSave(resolvedSlotId);
+        const slots = this.saveManager.listSaves();
+        this.selectedTitleSaveSlotId = slots[0]?.slotId || "";
+        this.titleNotice = "Deleted save slot " + resolvedSlotId + ".";
+        this.showTitle();
+      },
       saveCurrentGame: function () {
         if (this.state.screen !== "world") {
           return;
@@ -12409,6 +12437,7 @@
               this.render();
             }
             if (action === "load-save-slot") this.continueGame(value);
+            if (action === "delete-save-slot") this.deleteSaveSlot(value);
             if (action === "open-dev-tools") this.showDevTools();
             if (action === "load-folder") this.loadProjectFolder();
           }, this.titleNotice);

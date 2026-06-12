@@ -30,7 +30,23 @@
       }
     }
   ],
-  "interactions": [],
+  "interactions": [
+    {
+      "id": "interaction-1",
+      "type": "arena",
+      "x": 768,
+      "y": 640,
+      "width": 256,
+      "height": 128,
+      "label": "Jasmine Bay Arena",
+      "text": "Add interaction text here.",
+      "data": {
+        "shopId": "",
+        "arenaId": "arena-4",
+        "crestId": ""
+      }
+    }
+  ],
   "spawnZones": [
     {
       "id": "default-zone",
@@ -46,5 +62,6 @@
     }
   ],
   "trainers": [],
+  "npcs": [],
   "mapMonstersPanel": []
 }

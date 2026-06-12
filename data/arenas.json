@@ -172,6 +172,39 @@
           "variantId": "default-grass"
         }
       ]
+    },
+    {
+      "id": "arena-6",
+      "name": "Bougainvillea Arena",
+      "leaderName": "Leader Name",
+      "leaderTitle": "Elizabeth",
+      "crestId": "crest-6",
+      "crestName": "Bougainvillea Crest",
+      "crestImagePath": "",
+      "recommendedLevel": 5,
+      "partySize": 2,
+      "rewardMoney": 50,
+      "rewardText": "",
+      "description": "",
+      "mapId": "",
+      "team": [
+        {
+          "speciesId": "Ruffin",
+          "variantId": "Ruffin-Pink",
+          "level": 5
+        },
+        {
+          "speciesId": "Owlet",
+          "variantId": "owlet-pink",
+          "level": 5
+        }
+      ],
+      "pool": [
+        {
+          "speciesId": "equira",
+          "variantId": "Equira-Fire"
+        }
+      ]
     }
   ]
 }
