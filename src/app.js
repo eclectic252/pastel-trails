@@ -86,6 +86,7 @@
   const WILD_RADIUS = 18;
   const WILD_RESPAWN_MS = 120000;
   const TRANSITION_COOLDOWN_MS = 600;
+  const MAX_LEARNED_MONSTER_SKILLS = 4;
 
   const fallbackContent = {
     settings: {
@@ -109,6 +110,9 @@
           basicDefenseDivisor: 2,
           randomVarianceMax: 3,
           affinityDamageBonusPerPointPercent: 1,
+          statModifierPercentPerStage: 12,
+          accuracyModifierPerStage: 5,
+          burnDamagePenaltyPercent: 15,
         },
         devMode: false,
       },
@@ -1045,6 +1049,9 @@
       basicDefenseDivisor: Math.max(1, Number(source.basicDefenseDivisor ?? fallback.basicDefenseDivisor)),
       randomVarianceMax: Math.max(0, Number(source.randomVarianceMax ?? fallback.randomVarianceMax)),
       affinityDamageBonusPerPointPercent: Math.max(0, Number(source.affinityDamageBonusPerPointPercent ?? fallback.affinityDamageBonusPerPointPercent)),
+      statModifierPercentPerStage: Math.max(0, Number(source.statModifierPercentPerStage ?? fallback.statModifierPercentPerStage)),
+      accuracyModifierPerStage: Math.max(0, Number(source.accuracyModifierPerStage ?? fallback.accuracyModifierPerStage)),
+      burnDamagePenaltyPercent: Math.max(0, Number(source.burnDamagePenaltyPercent ?? fallback.burnDamagePenaltyPercent)),
     };
     return defaults.battleModel;
   }
@@ -1388,7 +1395,11 @@
       xp: 0,
       stats: Object.assign({}, species.baseStats),
       currentHp: species.baseStats.hp,
-      skills: getDefaultMonsterSkills(species),
+      skills: Array.isArray(options?.skills) && options.skills.length
+        ? Array.from(new Set(options.skills.filter(function (skillId) {
+            return getSpeciesSkillPool(species).includes(skillId);
+          })))
+        : getDefaultMonsterSkills(species),
     };
     ensureElementalAffinityState(monster, { primaryElement: options?.primaryElement || options?.elementalAffinity });
     if (options?.elementalAffinityPoints && typeof options.elementalAffinityPoints === "object") {
@@ -1446,6 +1457,95 @@
     }
 
     return monster.skills;
+  }
+
+  function getWildMonsterSkillCapacity(level) {
+    const numericLevel = Math.max(1, Number(level || 1));
+    if (numericLevel >= 15) {
+      return 4;
+    }
+    if (numericLevel >= 10) {
+      return 3;
+    }
+    if (numericLevel >= 5) {
+      return 2;
+    }
+    return 1;
+  }
+
+  function getWildSkillGateScore(skill) {
+    ensureSkillEffectCollections(skill);
+    const arenaGatePenalty = Math.max(0, Number(skill.unlockRequirements?.arenaClears?.length || 0)) * 100;
+    const prerequisiteScore = (skill.unlockRequirements?.requiredSkillLevels || []).reduce(function (sum, requirement) {
+      return sum + Math.max(0, Number(requirement.level || 0));
+    }, 0);
+    return arenaGatePenalty + prerequisiteScore;
+  }
+
+  function canWildMonsterLearnSkillAtLevel(skill, level) {
+    ensureSkillEffectCollections(skill);
+    const numericLevel = Math.max(1, Number(level || 1));
+    if ((skill.unlockRequirements?.arenaClears || []).length) {
+      return false;
+    }
+    return (skill.unlockRequirements?.requiredSkillLevels || []).every(function (requirement) {
+      return numericLevel >= Math.max(1, Number(requirement.level || 1));
+    });
+  }
+
+  function buildWildMonsterSkills(content, species, level) {
+    const numericLevel = Math.max(1, Number(level || 1));
+    const capacity = getWildMonsterSkillCapacity(numericLevel);
+    const pool = getSpeciesSkillPool(species).map(function (skillId) {
+      return getSkill(content, skillId);
+    }).filter(Boolean);
+    const defaultSkills = getDefaultMonsterSkills(species);
+    const eligibleSkills = pool.filter(function (skill) {
+      return canWildMonsterLearnSkillAtLevel(skill, numericLevel);
+    }).sort(function (left, right) {
+      const gateDiff = getWildSkillGateScore(left) - getWildSkillGateScore(right);
+      if (gateDiff !== 0) {
+        return gateDiff;
+      }
+      const powerDiff = Number(left.power || 0) - Number(right.power || 0);
+      if (powerDiff !== 0) {
+        return powerDiff;
+      }
+      return String(left.id || "").localeCompare(String(right.id || ""));
+    });
+
+    const nextSkills = [];
+    defaultSkills.forEach(function (skillId) {
+      if (eligibleSkills.some(function (skill) { return skill.id === skillId; }) && !nextSkills.includes(skillId) && nextSkills.length < capacity) {
+        nextSkills.push(skillId);
+      }
+    });
+    eligibleSkills.forEach(function (skill) {
+      if (!nextSkills.includes(skill.id) && nextSkills.length < capacity) {
+        nextSkills.push(skill.id);
+      }
+    });
+
+    if (!nextSkills.length && defaultSkills.length) {
+      return defaultSkills.slice(0, capacity);
+    }
+    return nextSkills.slice(0, capacity);
+  }
+
+  function getBattleSkillForEnemy(content, enemy) {
+    const availableSkills = (enemy?.skills || []).map(function (skillId) {
+      return getSkill(content, skillId);
+    }).filter(Boolean);
+    if (!availableSkills.length) {
+      return null;
+    }
+
+    const eligibleSkills = availableSkills.filter(function (skill) {
+      return skill.kind === "attack" || Number(skill.power || 0) > 0 || (skill.statModifiers?.self || []).length || (skill.statModifiers?.foe || []).length || (skill.statusEffects || []).length;
+    });
+    const pool = eligibleSkills.length ? eligibleSkills : availableSkills;
+    const selected = pool[Math.floor(Math.random() * pool.length)] || null;
+    return selected ? getEffectiveSkillAtLevel(selected, 1) : null;
   }
 
   function getPlayerSkillProgressEntries(state) {
@@ -1681,14 +1781,32 @@
     }
   }
 
-  function getEffectiveBattleStat(monster, stat) {
+  function hasBattleStatus(monster, statusType) {
+    const temp = ensureBattleTemporaryState(monster);
+    return (temp.statuses || []).some(function (status) {
+      return status.type === statusType && Number(status.duration || 0) > 0;
+    });
+  }
+
+  function getEffectiveBattleStat(monster, stat, options) {
+    const battleModel = options?.battleModel || ensureBattleModelSettings(ACTIVE_APP?.content || fallbackContent);
+    const temp = ensureBattleTemporaryState(monster);
+    const stageValue = Number(temp?.modifiers?.[stat] || 0);
     if (stat === "accuracy") {
-      const temp = ensureBattleTemporaryState(monster);
-      return Number(temp?.modifiers?.accuracy || 0);
+      return stageValue * Number(battleModel.accuracyModifierPerStage || 0);
     }
 
-    const temp = ensureBattleTemporaryState(monster);
-    return Math.max(0, Number(monster?.stats?.[stat] || 0) + Number(temp?.modifiers?.[stat] || 0));
+    const baseValue = Math.max(0, Number(monster?.stats?.[stat] || 0));
+    const stageMultiplier = Math.max(0, 1 + (stageValue * Number(battleModel.statModifierPercentPerStage || 0)) / 100);
+    return Math.max(0, Math.round(baseValue * stageMultiplier));
+  }
+
+  function getDirectDamageStatusMultiplier(attacker, battleModel) {
+    let multiplier = 1;
+    if (hasBattleStatus(attacker, "burn")) {
+      multiplier *= Math.max(0, 1 - (Number(battleModel.burnDamagePenaltyPercent || 0) / 100));
+    }
+    return multiplier;
   }
 
   function addBattleTag(monster, label) {
@@ -1979,13 +2097,18 @@
         percent: 0,
         maxed: currentLevel >= maxLevel,
       };
-      const canLearn = bucketLabel === "available" && unlockStatus.unlocked && currentLevel > 0;
+      const canLearn = bucketLabel === "available"
+        && unlockStatus.unlocked
+        && currentLevel > 0
+        && learnedSkills.length < MAX_LEARNED_MONSTER_SKILLS;
       const actionLabel = bucketLabel === "learned" ? "Remove" : "Learn";
       const actionName = bucketLabel === "learned" ? "remove-monster-skill" : "learn-monster-skill";
       const requirementCopy = unlockStatus.unlocked
         ? (bucketLabel === "learned"
             ? "Ready to use at player skill level " + currentLevel + "."
-            : "Unlocked for this save.")
+            : (learnedSkills.length >= MAX_LEARNED_MONSTER_SKILLS
+                ? "This monster already knows 4 moves."
+                : "Unlocked for this save."))
         : unlockStatus.reasons.join(" • ");
       return [
         '<li class="monster-move-row' + (unlockStatus.unlocked ? "" : " monster-move-row-locked") + '">',
@@ -2009,10 +2132,10 @@
     return [
       '<section class="monster-moves-panel">',
       '<div class="monster-moves-columns">',
-      '<div><h4>Learned Moves</h4><ul class="compact-list">' + learnedMarkup + "</ul></div>",
+      '<div><h4>Learned Moves (' + learnedSkills.length + '/' + MAX_LEARNED_MONSTER_SKILLS + ')</h4><ul class="compact-list">' + learnedMarkup + "</ul></div>",
       '<div><h4>Available Moves</h4><ul class="compact-list">' + availableMarkup + "</ul></div>",
       "</div>",
-      '<p class="monster-moves-note">' + escapeHtml((species?.name || "This monster") + " can learn moves from the Available Moves column. Skill levels now increase automatically from battle usage and victories.") + "</p>",
+      '<p class="monster-moves-note">' + escapeHtml((species?.name || "This monster") + " can learn moves from the Available Moves column. Each monster can know up to " + MAX_LEARNED_MONSTER_SKILLS + " moves at once, and skill levels increase automatically from battle usage and victories.") + "</p>",
       "</section>",
     ].join("");
   }
@@ -2466,6 +2589,7 @@
       respawnSeconds: Number(spawn.respawnSeconds || 120),
       spawnConfig: JSON.parse(JSON.stringify(spawn)),
     };
+    wildMonster.skills = buildWildMonsterSkills(content, species, wildMonster.level);
     ensureElementalAffinityState(wildMonster);
     return wildMonster;
   }
@@ -2946,6 +3070,7 @@
         speciesId: emberfox.id,
         variantId: getSpeciesVariant(emberfox, "")?.id || "default",
         level: 3,
+        skills: buildWildMonsterSkills(content, emberfox, 3),
         x: playerSpawn.x + 160,
         y: playerSpawn.y + 48,
         active: true,
@@ -2958,6 +3083,7 @@
         speciesId: secondSpecies.id,
         variantId: getSpeciesVariant(secondSpecies, "")?.id || "default",
         level: 4,
+        skills: buildWildMonsterSkills(content, secondSpecies, 4),
         x: playerSpawn.x + 320,
         y: playerSpawn.y + 200,
         active: true,
@@ -3164,7 +3290,7 @@
 
   function ensureWorldUiState(state) {
     if (!state.ui) {
-      state.ui = { activePanel: "", encounterPreviewExpanded: true, monsterMovesTarget: null, monsterAffinityTarget: null };
+      state.ui = { activePanel: "", encounterPreviewExpanded: true, monsterMovesTarget: null, monsterAffinityTarget: null, selectedCharacterCrestId: "" };
     }
 
     if (typeof state.ui.activePanel !== "string") {
@@ -3173,6 +3299,10 @@
 
     if (typeof state.ui.encounterPreviewExpanded !== "boolean") {
       state.ui.encounterPreviewExpanded = true;
+    }
+
+    if (typeof state.ui.selectedCharacterCrestId !== "string") {
+      state.ui.selectedCharacterCrestId = "";
     }
 
     if (
@@ -3384,12 +3514,103 @@
     const skill = options?.skill || null;
     const battleModel = options?.battleModel || ensureBattleModelSettings(ACTIVE_APP?.content || fallbackContent);
     const basePower = Number(skill?.power ?? options?.power ?? 0);
+    const attackValue = getEffectiveBattleStat(attacker, "attack", { battleModel });
+    const defenseValue = getEffectiveBattleStat(defender, "defense", { battleModel });
     const rawBase = basePower > 0
-      ? basePower + Math.floor(getEffectiveBattleStat(attacker, "attack") * Number(battleModel.skillAttackScale || 0)) - Math.floor(getEffectiveBattleStat(defender, "defense") * Number(battleModel.skillDefenseScale || 0))
-      : getEffectiveBattleStat(attacker, "attack") - Math.floor(getEffectiveBattleStat(defender, "defense") / Math.max(1, Number(battleModel.basicDefenseDivisor || 1)));
-    const variance = Math.floor(Math.random() * (Math.max(0, Number(battleModel.randomVarianceMax || 0)) || 1));
+      ? basePower + Math.floor(attackValue * Number(battleModel.skillAttackScale || 0)) - Math.floor(defenseValue * Number(battleModel.skillDefenseScale || 0))
+      : attackValue - Math.floor(defenseValue / Math.max(1, Number(battleModel.basicDefenseDivisor || 1)));
+    const maxVariance = Math.max(0, Number(battleModel.randomVarianceMax || 0));
+    const variance = options?.varianceOverride !== undefined
+      ? Math.max(0, Math.min(maxVariance, Number(options.varianceOverride || 0)))
+      : Math.floor(Math.random() * (maxVariance || 1));
     const affinityMultiplier = 1 + getElementalAffinityDamageBonus(attacker, skill);
-    return Math.max(1, Math.round((Math.max(1, rawBase) + variance) * affinityMultiplier));
+    const statusMultiplier = getDirectDamageStatusMultiplier(attacker, battleModel);
+    return Math.max(1, Math.round((Math.max(1, rawBase) + variance) * affinityMultiplier * statusMultiplier));
+  }
+
+  function buildBattleModelSample(selectedSkill, battleModel) {
+    ensureSkillEffectCollections(selectedSkill);
+    const sampleSkill = getEffectiveSkillAtLevel(selectedSkill, 1);
+    const attacker = {
+      stats: {
+        hp: 30,
+        attack: 12,
+        defense: 8,
+        speed: 10,
+      },
+      elementalAffinityPoints: normalizeSkillElement(sampleSkill.element) === "Neutral"
+        ? {}
+        : { [normalizeSkillElement(sampleSkill.element)]: 3 },
+      _battleTemp: {
+        modifiers: {
+          attack: 2,
+          defense: 0,
+          speed: 1,
+          accuracy: 1,
+        },
+        statuses: [
+          {
+            type: "burn",
+            duration: 2,
+            power: 2,
+            tickChance: 100,
+            showLabel: true,
+          },
+        ],
+        tags: [],
+      },
+    };
+    const defender = {
+      stats: {
+        hp: 34,
+        attack: 10,
+        defense: 11,
+        speed: 8,
+      },
+      _battleTemp: {
+        modifiers: {
+          attack: -1,
+          defense: 1,
+          speed: 0,
+          accuracy: 0,
+        },
+        statuses: [],
+        tags: [],
+      },
+    };
+    const effectiveAttack = getEffectiveBattleStat(attacker, "attack", { battleModel });
+    const effectiveDefense = getEffectiveBattleStat(defender, "defense", { battleModel });
+    const effectiveSpeed = getEffectiveBattleStat(attacker, "speed", { battleModel });
+    const effectiveAccuracyBonus = getEffectiveBattleStat(attacker, "accuracy", { battleModel });
+    const rawBase = Number(sampleSkill.power || 0) > 0
+      ? Number(sampleSkill.power || 0) + Math.floor(effectiveAttack * Number(battleModel.skillAttackScale || 0)) - Math.floor(effectiveDefense * Number(battleModel.skillDefenseScale || 0))
+      : effectiveAttack - Math.floor(effectiveDefense / Math.max(1, Number(battleModel.basicDefenseDivisor || 1)));
+    const affinityBonus = getElementalAffinityDamageBonus(attacker, sampleSkill);
+    const statusMultiplier = getDirectDamageStatusMultiplier(attacker, battleModel);
+    const minDamage = calculateDamage(attacker, defender, {
+      skill: sampleSkill,
+      battleModel,
+      varianceOverride: 0,
+    });
+    const maxDamage = calculateDamage(attacker, defender, {
+      skill: sampleSkill,
+      battleModel,
+      varianceOverride: Math.max(0, Number(battleModel.randomVarianceMax || 0)),
+    });
+    const hitChance = Math.max(0, Math.min(100, Number(sampleSkill.accuracy ?? 100) + effectiveAccuracyBonus));
+    return {
+      sampleSkill,
+      effectiveAttack,
+      effectiveDefense,
+      effectiveSpeed,
+      effectiveAccuracyBonus,
+      rawBase,
+      affinityBonusPercent: Math.round(affinityBonus * 1000) / 10,
+      statusMultiplier,
+      minDamage,
+      maxDamage,
+      hitChance,
+    };
   }
 
   function startBattle(state, content, wildMonsterId) {
@@ -3413,6 +3634,7 @@
       stats: Object.assign({}, species.baseStats),
       currentHp: species.baseStats.hp,
       maxHp: species.baseStats.hp,
+      skills: Array.isArray(wildMonster.skills) ? wildMonster.skills.slice() : getDefaultMonsterSkills(species),
     };
     ensureElementalAffinityState(enemy, {
       primaryElement: wildMonster.primaryElementalAffinity,
@@ -3514,7 +3736,8 @@
 
   function getSkillHitChance(monster, skill) {
     ensureSkillEffectCollections(skill);
-    return Math.max(0, Math.min(100, Number(skill?.accuracy ?? 100) + getEffectiveBattleStat(monster, "accuracy")));
+    const battleModel = ensureBattleModelSettings(ACTIVE_APP?.content || fallbackContent);
+    return Math.max(0, Math.min(100, Number(skill?.accuracy ?? 100) + getEffectiveBattleStat(monster, "accuracy", { battleModel })));
   }
 
   function applySkillModifierEffect(target, effect) {
@@ -3612,9 +3835,10 @@
     }
 
     const name = getBattlerDisplayName(content, battler);
+    const battleModel = ensureBattleModelSettings(content);
     const roll = Math.random();
     if (roll < 1 / 3) {
-      const selfDamage = Math.max(1, Math.round((Number(confusion.power || 4) + getEffectiveBattleStat(battler, "attack") * 0.25)));
+      const selfDamage = Math.max(1, Math.round(Number(confusion.power || 4) + getEffectiveBattleStat(battler, "attack", { battleModel }) * 0.25));
       battler.currentHp = Math.max(0, Number(battler.currentHp || 0) - selfDamage);
       state.battle.log.unshift(name + " hurt itself in confusion for " + selfDamage + " damage.");
       return { canAct: false, selfDamage: true };
@@ -3729,7 +3953,7 @@
     ensureSkillEffectCollections(selectedSkill);
     const battleModel = ensureBattleModelSettings(content);
     let skipEnemyTurn = false;
-    const playerFirst = getEffectiveBattleStat(playerMonster, "speed") >= getEffectiveBattleStat(state.battle.enemy, "speed");
+    const playerFirst = getEffectiveBattleStat(playerMonster, "speed", { battleModel }) >= getEffectiveBattleStat(state.battle.enemy, "speed", { battleModel });
     const steps = playerFirst ? ["player", "enemy"] : ["enemy", "player"];
 
     steps.forEach(function (step) {
@@ -3805,9 +4029,37 @@
           }
           return;
         }
-        const damage = calculateDamage({ stats: enemy.stats, elementalAffinityPoints: enemy.elementalAffinityPoints, primaryElementalAffinity: enemy.primaryElementalAffinity }, playerMonster, { battleModel });
-        playerMonster.currentHp = Math.max(0, playerMonster.currentHp - damage);
-        state.battle.log.unshift(enemySpecies.name + " dealt " + damage + " damage.");
+        const enemySkill = getBattleSkillForEnemy(content, enemy);
+        const hitChance = enemySkill ? getSkillHitChance(enemy, enemySkill) : 100;
+        if (enemySkill) {
+          state.battle.log.unshift(enemySpecies.name + " used " + enemySkill.name + ".");
+        }
+        if (enemySkill && Math.random() * 100 > hitChance) {
+          state.battle.log.unshift(enemySpecies.name + " missed.");
+          processEndOfTurnStatuses(state, content, enemy);
+          if (Number(enemy.currentHp || 0) <= 0 && !state.battle.outcome) {
+            handleEnemyDefeat(state, content, enemy);
+          }
+          return;
+        }
+
+        const skillDealsDamage = !enemySkill || enemySkill.kind === "attack" || Number(enemySkill.power || 0) > 0;
+        const damage = calculateDamage({
+          stats: enemy.stats,
+          elementalAffinityPoints: enemy.elementalAffinityPoints,
+          primaryElementalAffinity: enemy.primaryElementalAffinity,
+          _battleTemp: enemy._battleTemp,
+        }, playerMonster, { skill: enemySkill, battleModel });
+        if (skillDealsDamage) {
+          playerMonster.currentHp = Math.max(0, playerMonster.currentHp - damage);
+          state.battle.log.unshift(enemySpecies.name + " dealt " + damage + " damage.");
+        } else {
+          state.battle.log.unshift(enemySpecies.name + " used a non-damaging skill.");
+        }
+
+        if (enemySkill) {
+          processSkillSecondaryEffects(state, content, enemy, playerMonster, enemySkill);
+        }
 
         if (playerMonster.currentHp <= 0) {
           handlePlayerDefeat(state, content, playerMonster);
@@ -3870,6 +4122,7 @@
     if (Math.random() <= catchChance) {
       const captured = createMonsterInstance(species, enemy.level, enemy.variantId, {
         primaryElement: enemy.primaryElementalAffinity,
+        skills: enemy.skills,
       });
       state.registry.seen = Array.from(new Set(state.registry.seen.concat(species.id)));
       state.registry.caught = Array.from(new Set(state.registry.caught.concat(species.id)));
@@ -3915,6 +4168,7 @@
     if (Math.random() <= befriendChance) {
       const befriended = createMonsterInstance(species, enemy.level, enemy.variantId, {
         primaryElement: enemy.primaryElementalAffinity,
+        skills: enemy.skills,
       });
       state.registry.seen = Array.from(new Set(state.registry.seen.concat(species.id)));
       state.registry.caught = Array.from(new Set(state.registry.caught.concat(species.id)));
@@ -3958,14 +4212,37 @@
       return;
     }
 
+    const enemySkill = getBattleSkillForEnemy(content, enemy);
+    const hitChance = enemySkill ? getSkillHitChance(enemy, enemySkill) : 100;
+    if (enemySkill) {
+      state.battle.log.unshift(enemySpecies.name + " used " + enemySkill.name + ".");
+    }
+    if (enemySkill && Math.random() * 100 > hitChance) {
+      state.battle.log.unshift(enemySpecies.name + " missed.");
+      processEndOfTurnStatuses(state, content, enemy);
+      if (Number(enemy.currentHp || 0) <= 0 && !state.battle.outcome) {
+        handleEnemyDefeat(state, content, enemy);
+      }
+      return;
+    }
+
+    const skillDealsDamage = !enemySkill || enemySkill.kind === "attack" || Number(enemySkill.power || 0) > 0;
     const damage = calculateDamage({
       stats: enemy.stats,
       elementalAffinityPoints: enemy.elementalAffinityPoints,
       primaryElementalAffinity: enemy.primaryElementalAffinity,
       _battleTemp: enemy._battleTemp,
-    }, playerMonster);
-    playerMonster.currentHp = Math.max(0, playerMonster.currentHp - damage);
-    state.battle.log.unshift(enemySpecies.name + " hit back for " + damage + " damage.");
+    }, playerMonster, { skill: enemySkill });
+    if (skillDealsDamage) {
+      playerMonster.currentHp = Math.max(0, playerMonster.currentHp - damage);
+      state.battle.log.unshift(enemySpecies.name + " hit back for " + damage + " damage.");
+    } else {
+      state.battle.log.unshift(enemySpecies.name + " used a non-damaging skill.");
+    }
+
+    if (enemySkill) {
+      processSkillSecondaryEffects(state, content, enemy, playerMonster, enemySkill);
+    }
 
     if (playerMonster.currentHp <= 0) {
       handlePlayerDefeat(state, content, playerMonster);
@@ -5655,22 +5932,56 @@
     } else if (panel === "character") {
       const arenaProgress = ensureArenaProgress(state);
       const currentAvatar = getCharacterSheetConfig(content, state.player.avatarId || "");
-      const earnedCrestMarkup = arenaProgress.earnedCrests.map(function (crestId) {
-        const arena = ensureArenaCatalog(content).find(function (entry) {
-          return entry.crestId === crestId;
-        }) || { crestId, crestName: crestId };
-        return '<li class="crest-list-item">' + renderArenaCrestMarkup(content, arena, "arena-crest-image") + '<div><strong>' + escapeHtml(arena.crestName || crestId) + '</strong><span>' + escapeHtml(arena.name || crestId) + "</span></div></li>";
+      const arenaCatalog = ensureArenaCatalog(content);
+      const crestEntries = arenaCatalog
+        .filter(function (arena) {
+          return arena?.crestId || arena?.crestName;
+        })
+        .filter(function (arena, index, list) {
+          const crestKey = String(arena.crestId || arena.crestName || "");
+          return list.findIndex(function (entry) {
+            return String(entry.crestId || entry.crestName || "") === crestKey;
+          }) === index;
+        });
+      const selectedCrestId = crestEntries.some(function (arena) {
+        return String(arena.crestId || "") === String(ui.selectedCharacterCrestId || "");
+      })
+        ? String(ui.selectedCharacterCrestId || "")
+        : String(arenaProgress.earnedCrests[0] || crestEntries[0]?.crestId || "");
+      const selectedCrestArena = crestEntries.find(function (arena) {
+        return String(arena.crestId || "") === selectedCrestId;
+      }) || null;
+      const crestMarkup = crestEntries.map(function (arena) {
+        const crestId = String(arena.crestId || arena.crestName || "");
+        const earned = arenaProgress.earnedCrests.includes(crestId);
+        const selected = crestId === selectedCrestId;
+        return [
+          '<button class="character-crest-button' + (earned ? "" : " character-crest-button-locked") + (selected ? " character-crest-button-selected" : "") + '"',
+          ' type="button" data-action="select-character-crest" data-crest-id="' + escapeHtml(crestId) + '"',
+          ' title="' + escapeHtml(arena.crestName || crestId) + '" aria-label="' + escapeHtml(arena.crestName || crestId) + '">',
+          renderArenaCrestMarkup(content, arena, "character-crest-image"),
+          "</button>",
+        ].join("");
       }).join("");
+      const partyIconMarkup = state.party.map(function (monster) {
+        const species = getSpecies(content, monster.speciesId);
+        const variant = getSpeciesVariant(species, monster.variantId || "default");
+        return '<div class="character-party-icon" title="' + escapeHtml((species?.name || monster.speciesId) + " Lv " + Number(monster.level || 1)) + '">' + renderMonsterVariantVisualMarkup(monster.speciesId, variant?.id || monster.variantId || "default", "character-party-sprite", "default") + "</div>";
+      }).join("");
+      const currentLocation = content.mapMetadata[state.world.currentMapId]?.displayName || state.world.currentMapId || "Unknown";
       panelBody = [
-        "<p>Name: <strong>" + escapeHtml(state.player.name) + "</strong></p>",
-        "<p>Avatar: " + escapeHtml(currentAvatar?.playerLabel || currentAvatar?.label || state.player.avatarId || "Unknown") + "</p>",
-        "<p>Money: $" + state.player.money + "</p>",
-        "<p>Experience: " + Number(state.player.experience || 0) + "</p>",
-        "<p>Last Town: " + escapeHtml(state.player.lastTownId || "Unknown") + "</p>",
-        "<p>Crests Earned: " + arenaProgress.earnedCrests.length + "</p>",
-        "<h3>Crests</h3>",
-        '<ul class="compact-list crest-list">' + (earnedCrestMarkup || "<li><span>No crests earned yet.</span></li>") + "</ul>",
-        "<p>Support skills are still a placeholder, but this is where they will appear.</p>",
+        '<section class="character-panel-layout">',
+        '<div class="character-panel-identity">',
+        '<div class="character-panel-portrait-frame">' + renderAvatarPreviewMarkup(currentAvatar, "character-panel-avatar") + "</div>",
+        '<div class="character-panel-name">' + escapeHtml(state.player.name || "Player") + "</div>",
+        "</div>",
+        '<div class="character-panel-main">',
+        '<div class="character-panel-crest-row">' + (crestMarkup || '<p class="character-panel-empty">No crests configured yet.</p>') + "</div>",
+        '<div class="character-panel-crest-label">' + escapeHtml(selectedCrestArena?.crestName || (crestEntries.length ? "Select a crest" : "No crests configured")) + "</div>",
+        '<div class="character-panel-party-row">' + (partyIconMarkup || '<p class="character-panel-empty">No party monsters yet.</p>') + "</div>",
+        '<div class="character-panel-meta"><p><strong>Location</strong> ' + escapeHtml(currentLocation) + '</p><p><strong>Money</strong> $' + Number(state.player.money || 0) + "</p></div>",
+        "</div>",
+        "</section>",
       ].join("");
     } else if (panel === "inventory") {
       panelBody = '<ul class="compact-list">' + state.inventory.map(function (item) {
@@ -7265,6 +7576,7 @@
 
       ensureSkillEffectCollections(selectedSkill);
       const battleModel = ensureBattleModelSettings(content);
+      const battleSample = buildBattleModelSample(selectedSkill, battleModel);
       const skillElementOptions = SKILL_ELEMENTS.map(function (element) {
         const selected = normalizeSkillElement(selectedSkill.element) === element ? " selected" : "";
         return '<option value="' + escapeHtml(element) + '"' + selected + '>' + escapeHtml(element) + "</option>";
@@ -7429,16 +7741,28 @@
         renderStatusRows(selectedSkill.statusEffects || []),
         '<section class="panel-block">',
         '<div class="section-heading"><h3>Battle Model</h3></div>',
-        '<p>The live damage formula for elemental attack skills is currently <code>max(1, round((power + attack * attackScale - defense * defenseScale + variance) * (1 + affinityBonus)))</code>.</p>',
-        '<p><strong>Speed</strong> currently decides turn order only. If the player monster speed is greater than or equal to the enemy speed, the player acts first; otherwise the enemy acts first.</p>',
+        '<p>The live direct-damage formula is currently <code>max(1, round((max(1, power + effectiveAttack * attackScale - effectiveDefense * defenseScale) + variance) * (1 + affinityBonus) * statusMultiplier))</code>.</p>',
+        '<p><strong>Effective stats</strong> now include active battle stat modifiers. Each modifier stage changes attack, defense, and speed by the configured per-stage percent, while accuracy stages add flat accuracy bonus. <strong>Burn</strong> reduces outgoing direct damage by the configured penalty percent, and burn damage-over-time still resolves separately at end of turn using the status effect power value.</p>',
+        '<p><strong>Speed</strong> still decides turn order only. If the player monster speed is greater than or equal to the enemy speed, the player acts first; otherwise the enemy acts first.</p>',
         '<div class="form-grid">',
         '<label class="input-group"><span>Attack Scale</span><input type="number" step="0.05" data-dev-battle-model-field="skillAttackScale" value="' + Number(battleModel.skillAttackScale || 0) + '" /></label>',
         '<label class="input-group"><span>Defense Scale</span><input type="number" step="0.05" data-dev-battle-model-field="skillDefenseScale" value="' + Number(battleModel.skillDefenseScale || 0) + '" /></label>',
         '<label class="input-group"><span>Basic Defense Divisor</span><input type="number" step="0.1" min="1" data-dev-battle-model-field="basicDefenseDivisor" value="' + Number(battleModel.basicDefenseDivisor || 1) + '" /></label>',
         '<label class="input-group"><span>Random Variance Max</span><input type="number" step="1" min="0" data-dev-battle-model-field="randomVarianceMax" value="' + Number(battleModel.randomVarianceMax || 0) + '" /></label>',
         '<label class="input-group"><span>Affinity Bonus Per Point %</span><input type="number" step="0.1" min="0" data-dev-battle-model-field="affinityDamageBonusPerPointPercent" value="' + Number(battleModel.affinityDamageBonusPerPointPercent || 0) + '" /></label>',
+        '<label class="input-group"><span>Stat Modifier % Per Stage</span><input type="number" step="0.1" min="0" data-dev-battle-model-field="statModifierPercentPerStage" value="' + Number(battleModel.statModifierPercentPerStage || 0) + '" /></label>',
+        '<label class="input-group"><span>Accuracy Bonus Per Stage</span><input type="number" step="0.1" min="0" data-dev-battle-model-field="accuracyModifierPerStage" value="' + Number(battleModel.accuracyModifierPerStage || 0) + '" /></label>',
+        '<label class="input-group"><span>Burn Damage Penalty %</span><input type="number" step="0.1" min="0" data-dev-battle-model-field="burnDamagePenaltyPercent" value="' + Number(battleModel.burnDamagePenaltyPercent || 0) + '" /></label>',
         '</div>',
-        '<p class="dev-helper-text">Basic attacks without a skill power still use the simpler fallback formula <code>attack - defense / divisor + variance</code>.</p>',
+        '<div class="dev-subcard">',
+        '<div class="section-heading"><h3>Sample Output</h3></div>',
+        '<p><strong>Example:</strong> Lv 1 ' + escapeHtml(battleSample.sampleSkill.name || selectedSkill.name || "Skill") + ' used by an attacker with base ATK 12, SPD 10, Accuracy +1 stage, ATK +2 stages, while burned, against a defender with base DEF 11 and DEF +1 stage.</p>',
+        '<p><strong>Effective Attack:</strong> ' + Number(battleSample.effectiveAttack || 0) + ' · <strong>Effective Defense:</strong> ' + Number(battleSample.effectiveDefense || 0) + ' · <strong>Effective Speed:</strong> ' + Number(battleSample.effectiveSpeed || 0) + ' · <strong>Accuracy Bonus:</strong> +' + Number(battleSample.effectiveAccuracyBonus || 0) + '%</p>',
+        '<p><strong>Base Formula Result:</strong> ' + Number(battleSample.rawBase || 0) + ' before variance · <strong>Affinity Bonus:</strong> +' + Number(battleSample.affinityBonusPercent || 0) + '% · <strong>Status Multiplier:</strong> x' + Number(battleSample.statusMultiplier || 1).toFixed(2) + '</p>',
+        '<p><strong>Damage Range:</strong> ' + Number(battleSample.minDamage || 0) + ' - ' + Number(battleSample.maxDamage || 0) + ' · <strong>Hit Chance:</strong> ' + Number(battleSample.hitChance || 0) + '%</p>',
+        '<p class="dev-helper-text">This sample uses the currently selected skill and current battle model values. It shows a stable min/max range using variance 0 and variance max instead of rolling a random result.</p>',
+        '</div>',
+        '<p class="dev-helper-text">Basic attacks without a skill power still use the simpler fallback formula <code>effectiveAttack - effectiveDefense / divisor + variance</code>, then apply affinity and status multipliers if relevant.</p>',
         '</section>',
         '</section>',
       ].join("");
@@ -8450,6 +8774,11 @@
     root.querySelectorAll("[data-open-panel]").forEach(function (button) {
       button.addEventListener("click", function () {
         app.openWorldPanel(button.getAttribute("data-open-panel"));
+      });
+    });
+    root.querySelectorAll('[data-action="select-character-crest"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.selectCharacterCrest(button.getAttribute("data-crest-id") || "");
       });
     });
 
@@ -9586,7 +9915,8 @@
           return;
         }
 
-        ensureWorldUiState(this.state).activePanel = panel;
+        const ui = ensureWorldUiState(this.state);
+        ui.activePanel = panel;
         this.render();
       },
       closeWorldPanel: function () {
@@ -9595,6 +9925,15 @@
         }
 
         ensureWorldUiState(this.state).activePanel = "";
+        this.render();
+      },
+      selectCharacterCrest: function (crestId) {
+        if (this.state.screen !== "world") {
+          return;
+        }
+
+        const ui = ensureWorldUiState(this.state);
+        ui.selectedCharacterCrestId = String(crestId || "");
         this.render();
       },
       toggleEncounterPreviewExpanded: function () {
@@ -9804,6 +10143,12 @@
 
         if ((monster.skills || []).includes(skillId)) {
           this.state.message = (species?.name || "Monster") + " already knows " + skill.name + ".";
+          this.render();
+          return;
+        }
+
+        if ((monster.skills || []).length >= MAX_LEARNED_MONSTER_SKILLS) {
+          this.state.message = (species?.name || "Monster") + " already knows " + MAX_LEARNED_MONSTER_SKILLS + " moves. Remove one before teaching " + skill.name + ".";
           this.render();
           return;
         }
@@ -11234,7 +11579,7 @@
         const numericValue = Number(rawValue || 0);
         if (path === "basicDefenseDivisor") {
           battleModel[path] = Math.max(1, numericValue || 1);
-        } else if (path === "randomVarianceMax" || path === "affinityDamageBonusPerPointPercent") {
+        } else if (path === "randomVarianceMax" || path === "affinityDamageBonusPerPointPercent" || path === "statModifierPercentPerStage" || path === "accuracyModifierPerStage" || path === "burnDamagePenaltyPercent") {
           battleModel[path] = Math.max(0, numericValue || 0);
         } else {
           battleModel[path] = numericValue;
@@ -11821,6 +12166,7 @@
 
         renderWorld(root, this.state, this.content, this.saveManager, this.devTools);
         drawMonsterVariantCanvases(root, this.content);
+        safeDrawAvatarPreviewCanvases(root, this.content);
         attachInputHandlers(root, this);
         restoreFocusableState(root, focusState);
       },

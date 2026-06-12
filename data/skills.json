@@ -92,6 +92,98 @@
       "statusEffects": [],
       "power": 10,
       "description": ""
+    },
+    {
+      "id": "skill-4",
+      "name": "Dust Stun",
+      "kind": "attack",
+      "element": "Air",
+      "maxLevel": 1,
+      "levelOverrides": [],
+      "accuracy": 100,
+      "unlockRequirements": {
+        "arenaClears": [],
+        "requiredSkillLevels": []
+      },
+      "statModifiers": {
+        "self": [
+          {
+            "type": "modify",
+            "stat": "attack",
+            "amount": 1,
+            "label": "",
+            "showLabel": true
+          }
+        ],
+        "foe": [
+          {
+            "type": "modify",
+            "stat": "attack",
+            "amount": -1,
+            "label": "Stun",
+            "showLabel": true
+          }
+        ]
+      },
+      "statusEffects": [],
+      "power": 0,
+      "description": ""
+    },
+    {
+      "id": "skill-5",
+      "name": "Wind Guard",
+      "kind": "attack",
+      "element": "Air",
+      "maxLevel": 1,
+      "levelOverrides": [],
+      "accuracy": 100,
+      "unlockRequirements": {
+        "arenaClears": [],
+        "requiredSkillLevels": []
+      },
+      "statModifiers": {
+        "self": [
+          {
+            "type": "modify",
+            "stat": "speed",
+            "amount": 1,
+            "label": "",
+            "showLabel": true
+          }
+        ],
+        "foe": []
+      },
+      "statusEffects": [],
+      "power": 0,
+      "description": ""
+    },
+    {
+      "id": "skill-6",
+      "name": "Terra Spike",
+      "kind": "attack",
+      "element": "Earth",
+      "maxLevel": 1,
+      "levelOverrides": [],
+      "accuracy": 100,
+      "unlockRequirements": {
+        "arenaClears": [],
+        "requiredSkillLevels": []
+      },
+      "statModifiers": {
+        "self": [],
+        "foe": [
+          {
+            "type": "modify",
+            "stat": "defense",
+            "amount": -1,
+            "label": "",
+            "showLabel": true
+          }
+        ]
+      },
+      "statusEffects": [],
+      "power": 0,
+      "description": ""
     }
   ]
 }
