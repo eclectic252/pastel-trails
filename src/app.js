@@ -54,6 +54,10 @@
     text: "#24313c",
     shadow: "rgba(70, 49, 31, 0.18)",
   };
+  const TRAINER_STATUS_ICON_PATHS = {
+    ready: "assets/UI/trainer-status-ready-v2.png",
+    cooldown: "assets/UI/trainer-status-cooldown-v2.png",
+  };
   const CHARACTER_SHEET_OPTIONS = [
     {
       id: "boardwalk-girl-check",
@@ -125,6 +129,7 @@
         trainerRefightMinLevel: 1,
         trainerRefightMaxLevel: 5,
         trainerRefightPartySize: 2,
+        trainerRefightCooldownSeconds: 180,
         wildMonsterMaxLevel: 5,
         crestLevelCaps: DEFAULT_CREST_LEVEL_CAPS.map(function (entry) {
           return Object.assign({}, entry);
@@ -135,6 +140,11 @@
           basicDefenseDivisor: 2,
           randomVarianceMax: 3,
           affinityDamageBonusPerPointPercent: 1,
+          elementalAdvantageMultiplier: 2,
+          elementalResistanceMultiplier: 0.5,
+          elementalAdvantagePointPercent: 0,
+          elementalResistancePointPercent: 0,
+          elementalMatchupChart: {},
           statModifierPercentPerStage: 12,
           accuracyModifierPerStage: 5,
           burnDamagePenaltyPercent: 15,
@@ -1065,6 +1075,70 @@
     return spentPoints * (Number(battleModel.affinityDamageBonusPerPointPercent || 0) / 100);
   }
 
+  function createDefaultElementalMatchupChart() {
+    return Object.fromEntries(ELEMENTAL_AFFINITIES.map(function (attackElement) {
+      return [attackElement, Object.fromEntries(ELEMENTAL_AFFINITIES.map(function (defenderAffinity) {
+        return [defenderAffinity, "normal"];
+      }))];
+    }));
+  }
+
+  function normalizeElementalMatchupResult(value) {
+    const normalized = String(value || "").trim().toLowerCase();
+    if (normalized === "strong" || normalized === "weak") {
+      return normalized;
+    }
+    return "normal";
+  }
+
+  function normalizeElementalMatchupChart(chart) {
+    const source = chart && typeof chart === "object" ? chart : {};
+    return Object.fromEntries(ELEMENTAL_AFFINITIES.map(function (attackElement) {
+      const attackRow = source[attackElement] && typeof source[attackElement] === "object"
+        ? source[attackElement]
+        : {};
+      return [attackElement, Object.fromEntries(ELEMENTAL_AFFINITIES.map(function (defenderAffinity) {
+        return [defenderAffinity, normalizeElementalMatchupResult(attackRow[defenderAffinity])];
+      }))];
+    }));
+  }
+
+  function getElementalMatchupResult(battleModel, attackElement, defenderAffinity) {
+    if (!attackElement || attackElement === "Neutral" || !defenderAffinity) {
+      return "normal";
+    }
+    return normalizeElementalMatchupResult(battleModel?.elementalMatchupChart?.[attackElement]?.[defenderAffinity]);
+  }
+
+  function getElementalMatchupMultiplier(attacker, defender, skill, battleModel) {
+    if (!skill || normalizeSkillElement(skill.element) === "Neutral") {
+      return 1;
+    }
+
+    ensureElementalAffinityState(defender);
+    const attackElement = normalizeSkillElement(skill.element);
+    const assignedAffinities = getAssignedElementalAffinities(defender);
+    if (!assignedAffinities.length) {
+      return 1;
+    }
+
+    return assignedAffinities.reduce(function (multiplier, defenderAffinity) {
+      const result = getElementalMatchupResult(battleModel, attackElement, defenderAffinity);
+      const spentPoints = Math.max(0, Number(defender.elementalAffinityPoints?.[defenderAffinity] || 0));
+      if (result === "strong") {
+        const base = Math.max(0, Number(battleModel.elementalAdvantageMultiplier || 1));
+        const perPoint = Math.max(0, Number(battleModel.elementalAdvantagePointPercent || 0)) / 100;
+        return multiplier * (base * (1 + spentPoints * perPoint));
+      }
+      if (result === "weak") {
+        const base = Math.max(0, Number(battleModel.elementalResistanceMultiplier || 1));
+        const perPoint = Math.max(0, Number(battleModel.elementalResistancePointPercent || 0)) / 100;
+        return multiplier * Math.max(0, base * (1 - spentPoints * perPoint));
+      }
+      return multiplier;
+    }, 1);
+  }
+
   function ensureBattleModelSettings(content) {
     if (!content.settings) {
       content.settings = JSON.parse(JSON.stringify(fallbackContent.settings));
@@ -1081,6 +1155,11 @@
       basicDefenseDivisor: Math.max(1, Number(source.basicDefenseDivisor ?? fallback.basicDefenseDivisor)),
       randomVarianceMax: Math.max(0, Number(source.randomVarianceMax ?? fallback.randomVarianceMax)),
       affinityDamageBonusPerPointPercent: Math.max(0, Number(source.affinityDamageBonusPerPointPercent ?? fallback.affinityDamageBonusPerPointPercent)),
+      elementalAdvantageMultiplier: Math.max(0, Number(source.elementalAdvantageMultiplier ?? fallback.elementalAdvantageMultiplier)),
+      elementalResistanceMultiplier: Math.max(0, Number(source.elementalResistanceMultiplier ?? fallback.elementalResistanceMultiplier)),
+      elementalAdvantagePointPercent: Math.max(0, Number(source.elementalAdvantagePointPercent ?? fallback.elementalAdvantagePointPercent)),
+      elementalResistancePointPercent: Math.max(0, Number(source.elementalResistancePointPercent ?? fallback.elementalResistancePointPercent)),
+      elementalMatchupChart: normalizeElementalMatchupChart(source.elementalMatchupChart ?? fallback.elementalMatchupChart ?? createDefaultElementalMatchupChart()),
       statModifierPercentPerStage: Math.max(0, Number(source.statModifierPercentPerStage ?? fallback.statModifierPercentPerStage)),
       accuracyModifierPerStage: Math.max(0, Number(source.accuracyModifierPerStage ?? fallback.accuracyModifierPerStage)),
       burnDamagePenaltyPercent: Math.max(0, Number(source.burnDamagePenaltyPercent ?? fallback.burnDamagePenaltyPercent)),
@@ -3218,10 +3297,16 @@
     if (!runtime || !npc) {
       return npc;
     }
+    const availability = npc?.type === "trainer"
+      ? getTrainerNpcAvailability(state, content, npc)
+      : null;
     return Object.assign({}, npc, {
       x: runtime.x,
       y: runtime.y,
       facing: runtime.facing,
+      overworldLabel: String(npc?.label || npc?.id || "NPC"),
+      overworldLabelIconPath: getTrainerStatusIconPath(availability),
+      trainerAvailability: availability,
       _runtime: runtime,
     });
   }
@@ -3299,8 +3384,15 @@
     }
   }
 
-  function buildNpcPrompt(npc) {
+  function buildNpcPrompt(state, content, npc) {
     if (npc?.type === "trainer") {
+      const availability = getTrainerNpcAvailability(state, content, npc);
+      if (availability.onCooldown) {
+        return "Press E to check cooldown (" + formatTrainerCooldownRemaining(availability.cooldownRemainingMs) + ")";
+      }
+      if (availability.hasBeenDefeated) {
+        return "Press E to rematch";
+      }
       return "Press E to challenge";
     }
 
@@ -3346,7 +3438,7 @@
           kind: "npc",
           npc: runtimeNpc,
           distance,
-          prompt: buildNpcPrompt(npc),
+          prompt: buildNpcPrompt(state, content, runtimeNpc),
         };
       }
     });
@@ -3576,6 +3668,7 @@
         trainer.pool = [];
       }
       trainer.partySize = Math.max(1, Number(trainer.partySize || trainer.team.length || 1));
+      trainer.refightPartyMode = normalizeTrainerRefightPartyMode(trainer.refightPartyMode);
       trainer.recommendedLevel = Math.max(1, Number(trainer.recommendedLevel || trainer.team[0]?.level || 5));
       trainer.rewardMoney = Math.max(0, Number(trainer.rewardMoney || 0));
       if (typeof trainer.name !== "string") {
@@ -3604,16 +3697,84 @@
     }) || null;
   }
 
+  function normalizeTrainerRefightPartyMode(mode) {
+    return String(mode || "").trim().toLowerCase() === "flexible"
+      ? "flexible"
+      : "fixed";
+  }
+
   function ensureTrainerProgress(state) {
     if (!state.trainerProgress) {
       state.trainerProgress = {
         defeatedTrainerIds: [],
+        rematchCooldowns: {},
       };
     }
     if (!Array.isArray(state.trainerProgress.defeatedTrainerIds)) {
       state.trainerProgress.defeatedTrainerIds = [];
     }
+    if (!state.trainerProgress.rematchCooldowns || typeof state.trainerProgress.rematchCooldowns !== "object") {
+      state.trainerProgress.rematchCooldowns = {};
+    }
     return state.trainerProgress;
+  }
+
+  function getTrainerRefightCooldownSeconds(state) {
+    return Math.max(0, Number(state?.settings?.trainerRefightCooldownSeconds ?? 180));
+  }
+
+  function getTrainerCooldownEndsAt(state, trainerId) {
+    if (!trainerId) {
+      return 0;
+    }
+
+    const progress = ensureTrainerProgress(state);
+    return Math.max(0, Number(progress.rematchCooldowns?.[trainerId] || 0));
+  }
+
+  function getTrainerCooldownRemainingMs(state, trainerId) {
+    return Math.max(0, getTrainerCooldownEndsAt(state, trainerId) - Date.now());
+  }
+
+  function isTrainerOnRefightCooldown(state, trainerId) {
+    return getTrainerCooldownRemainingMs(state, trainerId) > 0;
+  }
+
+  function formatTrainerCooldownRemaining(ms) {
+    const totalSeconds = Math.max(0, Math.ceil(Number(ms || 0) / 1000));
+    if (totalSeconds >= 60) {
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      return minutes + "m " + String(seconds).padStart(2, "0") + "s";
+    }
+    return totalSeconds + "s";
+  }
+
+  function getTrainerNpcAvailability(state, content, npc) {
+    const trainerId = String(npc?.data?.trainerId || "");
+    const trainer = trainerId ? getTrainer(content, trainerId) : null;
+    const hasBeenDefeated = Boolean(trainerId && ensureTrainerProgress(state).defeatedTrainerIds.includes(trainerId));
+    const remainingMs = trainerId ? getTrainerCooldownRemainingMs(state, trainerId) : 0;
+
+    return {
+      trainerId,
+      trainer,
+      hasBeenDefeated,
+      cooldownRemainingMs: remainingMs,
+      cooldownEndsAt: trainerId ? getTrainerCooldownEndsAt(state, trainerId) : 0,
+      onCooldown: hasBeenDefeated && remainingMs > 0,
+      ready: Boolean(trainer && (!hasBeenDefeated || remainingMs <= 0)),
+    };
+  }
+
+  function getTrainerStatusIconPath(availability) {
+    if (availability?.onCooldown) {
+      return TRAINER_STATUS_ICON_PATHS.cooldown;
+    }
+    if (availability?.ready) {
+      return TRAINER_STATUS_ICON_PATHS.ready;
+    }
+    return "";
   }
 
   function normalizeArenaLeaderLevelRange(settings) {
@@ -3698,9 +3859,13 @@
     const fallbackPool = (trainer?.pool || []).map(function (member) {
       return resolveArenaRosterMember(content, member);
     }).filter(Boolean);
+    const authoredPartySize = Math.max(1, Number(trainer?.partySize || authoredTeam.length || 1));
+    const refightPartyMode = normalizeTrainerRefightPartyMode(trainer?.refightPartyMode);
     const requestedSize = isRefight
-      ? Math.max(1, Number(state.settings?.trainerRefightPartySize || authoredTeam.length || trainer?.partySize || 1))
-      : Math.max(1, Number(trainer?.partySize || authoredTeam.length || 1));
+      ? (refightPartyMode === "flexible"
+          ? Math.max(1, Number(state.settings?.trainerRefightPartySize || authoredPartySize || 1))
+          : authoredPartySize)
+      : authoredPartySize;
     const roster = authoredTeam.slice(0, requestedSize);
     const refightRange = getTrainerRefightLevelRange(state);
 
@@ -3742,6 +3907,7 @@
       victoryText: "",
       recommendedLevel: 5,
       partySize: 1,
+      refightPartyMode: "fixed",
       team: [],
       pool: [],
     };
@@ -3927,6 +4093,12 @@
         state.interaction = null;
         return;
       }
+      const availability = getTrainerNpcAvailability(state, content, npc);
+      if (availability.onCooldown) {
+        state.message = (trainer.name || label || "Trainer") + " can battle again in " + formatTrainerCooldownRemaining(availability.cooldownRemainingMs) + ".";
+        state.interaction = null;
+        return;
+      }
       startTrainerBattle(state, content, trainer, npc);
       return;
     }
@@ -4067,6 +4239,7 @@
       },
       trainerProgress: {
         defeatedTrainerIds: [],
+        rematchCooldowns: {},
       },
       battle: null,
       interaction: null,
@@ -4105,6 +4278,7 @@
       },
       trainerProgress: save.trainerProgress || {
         defeatedTrainerIds: [],
+        rematchCooldowns: {},
       },
       battle: null,
       interaction: null,
@@ -4429,8 +4603,9 @@
       ? Math.max(0, Math.min(maxVariance, Number(options.varianceOverride || 0)))
       : Math.floor(Math.random() * (maxVariance || 1));
     const affinityMultiplier = 1 + getElementalAffinityDamageBonus(attacker, skill);
+    const matchupMultiplier = getElementalMatchupMultiplier(attacker, defender, skill, battleModel);
     const statusMultiplier = getDirectDamageStatusMultiplier(attacker, battleModel);
-    return Math.max(1, Math.round((Math.max(1, rawBase) + variance) * affinityMultiplier * statusMultiplier));
+    return Math.max(1, Math.round((Math.max(1, rawBase) + variance) * affinityMultiplier * matchupMultiplier * statusMultiplier));
   }
 
   function buildBattleModelSample(selectedSkill, battleModel) {
@@ -4472,6 +4647,9 @@
         defense: 11,
         speed: 8,
       },
+      elementalAffinityPoints: {
+        Water: 3,
+      },
       _battleTemp: {
         modifiers: {
           attack: -1,
@@ -4491,6 +4669,7 @@
       ? Number(sampleSkill.power || 0) + Math.floor(effectiveAttack * Number(battleModel.skillAttackScale || 0)) - Math.floor(effectiveDefense * Number(battleModel.skillDefenseScale || 0))
       : effectiveAttack - Math.floor(effectiveDefense / Math.max(1, Number(battleModel.basicDefenseDivisor || 1)));
     const affinityBonus = getElementalAffinityDamageBonus(attacker, sampleSkill);
+    const matchupMultiplier = getElementalMatchupMultiplier(attacker, defender, sampleSkill, battleModel);
     const statusMultiplier = getDirectDamageStatusMultiplier(attacker, battleModel);
     const minDamage = calculateDamage(attacker, defender, {
       skill: sampleSkill,
@@ -4511,6 +4690,7 @@
       effectiveAccuracyBonus,
       rawBase,
       affinityBonusPercent: Math.round(affinityBonus * 1000) / 10,
+      matchupMultiplier,
       statusMultiplier,
       minDamage,
       maxDamage,
@@ -4976,6 +5156,10 @@
       if (!trainerProgress.defeatedTrainerIds.includes(battle.trainerId)) {
         trainerProgress.defeatedTrainerIds.push(battle.trainerId);
       }
+      const cooldownSeconds = getTrainerRefightCooldownSeconds(state);
+      trainerProgress.rematchCooldowns[battle.trainerId] = cooldownSeconds > 0
+        ? (Date.now() + cooldownSeconds * 1000)
+        : 0;
     }
 
     normalizeCrestScaledWorldSettings(state);
@@ -6381,21 +6565,29 @@
     const fontSize = Math.max(13, Math.round(15 * zoomScale));
     const paddingX = Math.max(10, Math.round(11 * zoomScale));
     const paddingY = Math.max(5, Math.round(6 * zoomScale));
+    const iconGap = Math.max(4, Math.round(6 * zoomScale));
+    const iconPath = String(options?.iconPath || "");
+    const iconImage = iconPath ? getImage(iconPath) : null;
+    const hasIcon = Boolean(iconImage?.complete && iconImage?.naturalWidth);
+    const iconSize = hasIcon ? Math.max(18, Math.round(24 * zoomScale)) : 0;
 
     ctx.save();
     ctx.font = "600 " + fontSize + "px Avenir Next, Trebuchet MS, sans-serif";
-    ctx.textAlign = "center";
+    ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
 
     const textWidth = ctx.measureText(label).width;
     const metrics = ctx.measureText(label);
     const textAscent = Number(metrics.actualBoundingBoxAscent || fontSize * 0.72);
     const textDescent = Number(metrics.actualBoundingBoxDescent || fontSize * 0.28);
-    const pillWidth = textWidth + paddingX * 2;
+    const contentWidth = textWidth + (hasIcon ? (iconSize + iconGap) : 0);
+    const pillWidth = contentWidth + paddingX * 2;
     const textHeight = textAscent + textDescent;
-    const pillHeight = Math.max(fontSize + paddingY * 2, textHeight + paddingY * 2);
+    const pillHeight = Math.max(fontSize + paddingY * 2, textHeight + paddingY * 2, iconSize + paddingY * 2);
     const pillX = Math.round(screenX - pillWidth / 2);
     const pillY = Math.round(topY - pillHeight);
+    const contentStartX = Math.round(pillX + paddingX);
+    const textX = Math.round(contentStartX + (hasIcon ? (iconSize + iconGap) : 0));
     const textY = Math.round(pillY + ((pillHeight - textHeight) / 2) + textAscent + textOffsetY);
 
     ctx.fillStyle = OVERWORLD_LABEL_STYLE.background;
@@ -6413,8 +6605,12 @@
     ctx.fill();
     ctx.shadowColor = "transparent";
     ctx.stroke();
+    if (hasIcon) {
+      const iconY = Math.round(pillY + (pillHeight - iconSize) / 2);
+      ctx.drawImage(iconImage, contentStartX, iconY, iconSize, iconSize);
+    }
     ctx.fillStyle = OVERWORLD_LABEL_STYLE.text;
-    ctx.fillText(label, screenX, textY);
+    ctx.fillText(label, textX, textY);
     ctx.restore();
   }
 
@@ -6463,7 +6659,8 @@
     ctx.restore();
 
     drawOverworldLabel(ctx, {
-      label: npc?.label || npc?.id || "NPC",
+      label: npc?.overworldLabel || npc?.label || npc?.id || "NPC",
+      iconPath: npc?.overworldLabelIconPath || "",
       screenX,
       topY: drawY - 8,
       zoomScale,
@@ -7548,7 +7745,9 @@
         '<label class="input-group"><span>Trainer Min Level</span><input type="number" min="1" max="' + crestLevelCap + '" data-world-setting="trainerRefightMinLevel" value="' + Number(trainerRefightRange.min) + '" /></label>' +
         '<label class="input-group"><span>Trainer Max Level</span><input type="number" min="1" max="' + crestLevelCap + '" data-world-setting="trainerRefightMaxLevel" value="' + Number(trainerRefightRange.max) + '" /></label>' +
         '<label class="input-group"><span>Trainer Party Size</span><input type="number" min="1" max="12" data-world-setting="trainerRefightPartySize" value="' + Number(state.settings.trainerRefightPartySize || 1) + '" /></label>' +
-        '<p class="dev-helper-text">Trainer settings apply to rematches only. First battles still use each trainer&apos;s authored team and party size.</p>' +
+        '<label class="input-group"><span>Trainer Cooldown</span><input type="number" min="0" max="86400" data-world-setting="trainerRefightCooldownSeconds" value="' + Number(getTrainerRefightCooldownSeconds(state)) + '" /></label>' +
+        '<p class="dev-helper-text">Cooldown is in seconds. Set it to 0 if you want trainers to be immediately rematchable.</p>' +
+        '<p class="dev-helper-text">Trainer level settings apply to rematches only and are capped by crest progression. The global trainer party size applies only to trainers set to <strong>flexible</strong>; fixed trainers keep their authored size.</p>' +
         '</div></section>',
         '<div class="title-actions"><button class="secondary-button" type="button" data-action="save">Save Game</button><button class="secondary-button" type="button" data-action="title">Return To Title</button></div>',
       ].join("");
@@ -9031,6 +9230,12 @@
       ensureSkillEffectCollections(selectedSkill);
       const battleModel = ensureBattleModelSettings(content);
       const battleSample = buildBattleModelSample(selectedSkill, battleModel);
+      const matchupGridRows = ELEMENTAL_AFFINITIES.map(function (attackElement) {
+        return '<tr><th scope="row">' + escapeHtml(attackElement) + '</th>' + ELEMENTAL_AFFINITIES.map(function (defenderAffinity) {
+          const selectedResult = getElementalMatchupResult(battleModel, attackElement, defenderAffinity);
+          return '<td><select data-dev-battle-model-matchup data-attack-element="' + escapeHtml(attackElement) + '" data-defender-affinity="' + escapeHtml(defenderAffinity) + '"><option value="normal"' + (selectedResult === "normal" ? " selected" : "") + '>Normal</option><option value="strong"' + (selectedResult === "strong" ? " selected" : "") + '>Strong</option><option value="weak"' + (selectedResult === "weak" ? " selected" : "") + '>Weak</option></select></td>';
+        }).join("") + '</tr>';
+      }).join("");
       const skillElementOptions = SKILL_ELEMENTS.map(function (element) {
         const selected = normalizeSkillElement(selectedSkill.element) === element ? " selected" : "";
         return '<option value="' + escapeHtml(element) + '"' + selected + '>' + escapeHtml(element) + "</option>";
@@ -9186,7 +9391,7 @@
         '<label class="input-group"><span>Power</span><input type="number" step="1" data-dev-skill-field="power" value="' + Number(selectedSkill.power || 0) + '" /></label>',
         '<label class="input-group dev-input-group-wide"><span>Description</span><textarea rows="5" data-dev-skill-field="description">' + escapeHtml(selectedSkill.description || "") + '</textarea></label>',
         '</div>',
-        '<p class="dev-helper-text">Matching elemental affinity grants <strong>+1% damage per point spent</strong> for this skill. Neutral skills do not receive an elemental bonus. Gates are checked against save-wide player skill progression, not monster level.</p>',
+        '<p class="dev-helper-text">Matching elemental affinity grants <strong>+1% damage per point spent</strong> for this skill. Neutral skills do not receive an attacker affinity bonus or defender matchup effect. Gates are checked against save-wide player skill progression, not monster level.</p>',
         renderLevelOverrideRows(),
         renderArenaGateRows(),
         renderPrerequisiteSkillRows(),
@@ -9195,8 +9400,9 @@
         renderStatusRows(selectedSkill.statusEffects || []),
         '<section class="panel-block">',
         '<div class="section-heading"><h3>Battle Model</h3></div>',
-        '<p>The live direct-damage formula is currently <code>max(1, round((max(1, power + effectiveAttack * attackScale - effectiveDefense * defenseScale) + variance) * (1 + affinityBonus) * statusMultiplier))</code>.</p>',
+        '<p>The live direct-damage formula is currently <code>max(1, round((max(1, power + effectiveAttack * attackScale - effectiveDefense * defenseScale) + variance) * (1 + affinityBonus) * matchupMultiplier * statusMultiplier))</code>.</p>',
         '<p><strong>Effective stats</strong> now include active battle stat modifiers. Each modifier stage changes attack, defense, and speed by the configured per-stage percent, while accuracy stages add flat accuracy bonus. <strong>Burn</strong> reduces outgoing direct damage by the configured penalty percent, and burn damage-over-time still resolves separately at end of turn using the status effect power value.</p>',
+        '<p><strong>Elemental damage</strong> now has two layers: the attacker gets its same-element affinity bonus, then the defender applies chart-based weakness or resistance for every spent affinity that matches the incoming element.</p>',
         '<p><strong>Speed</strong> still decides turn order only. If the player monster speed is greater than or equal to the enemy speed, the player acts first; otherwise the enemy acts first.</p>',
         '<div class="form-grid">',
         '<label class="input-group"><span>Attack Scale</span><input type="number" step="0.05" data-dev-battle-model-field="skillAttackScale" value="' + Number(battleModel.skillAttackScale || 0) + '" /></label>',
@@ -9204,19 +9410,24 @@
         '<label class="input-group"><span>Basic Defense Divisor</span><input type="number" step="0.1" min="1" data-dev-battle-model-field="basicDefenseDivisor" value="' + Number(battleModel.basicDefenseDivisor || 1) + '" /></label>',
         '<label class="input-group"><span>Random Variance Max</span><input type="number" step="1" min="0" data-dev-battle-model-field="randomVarianceMax" value="' + Number(battleModel.randomVarianceMax || 0) + '" /></label>',
         '<label class="input-group"><span>Affinity Bonus Per Point %</span><input type="number" step="0.1" min="0" data-dev-battle-model-field="affinityDamageBonusPerPointPercent" value="' + Number(battleModel.affinityDamageBonusPerPointPercent || 0) + '" /></label>',
+        '<label class="input-group"><span>Advantage Multiplier</span><input type="number" step="0.05" min="0" data-dev-battle-model-field="elementalAdvantageMultiplier" value="' + Number(battleModel.elementalAdvantageMultiplier || 0) + '" /></label>',
+        '<label class="input-group"><span>Resistance Multiplier</span><input type="number" step="0.05" min="0" data-dev-battle-model-field="elementalResistanceMultiplier" value="' + Number(battleModel.elementalResistanceMultiplier || 0) + '" /></label>',
+        '<label class="input-group"><span>Advantage Point %</span><input type="number" step="0.1" min="0" data-dev-battle-model-field="elementalAdvantagePointPercent" value="' + Number(battleModel.elementalAdvantagePointPercent || 0) + '" /></label>',
+        '<label class="input-group"><span>Resistance Point %</span><input type="number" step="0.1" min="0" data-dev-battle-model-field="elementalResistancePointPercent" value="' + Number(battleModel.elementalResistancePointPercent || 0) + '" /></label>',
         '<label class="input-group"><span>Stat Modifier % Per Stage</span><input type="number" step="0.1" min="0" data-dev-battle-model-field="statModifierPercentPerStage" value="' + Number(battleModel.statModifierPercentPerStage || 0) + '" /></label>',
         '<label class="input-group"><span>Accuracy Bonus Per Stage</span><input type="number" step="0.1" min="0" data-dev-battle-model-field="accuracyModifierPerStage" value="' + Number(battleModel.accuracyModifierPerStage || 0) + '" /></label>',
         '<label class="input-group"><span>Burn Damage Penalty %</span><input type="number" step="0.1" min="0" data-dev-battle-model-field="burnDamagePenaltyPercent" value="' + Number(battleModel.burnDamagePenaltyPercent || 0) + '" /></label>',
         '</div>',
+        '<div class="dev-subcard"><div class="section-heading"><h3>Elemental Matchup Chart</h3></div><p class="dev-helper-text">Set how each attack element interacts with each defender affinity. <strong>Strong</strong> uses the advantage multiplier and point scaling, <strong>Weak</strong> uses the resistance multiplier and point scaling, and <strong>Normal</strong> applies no extra defender modifier.</p><div class="table-scroll"><table class="dev-battle-model-grid"><thead><tr><th>Attack \\ Defense</th>' + ELEMENTAL_AFFINITIES.map(function (element) { return '<th>' + escapeHtml(element) + '</th>'; }).join("") + '</tr></thead><tbody>' + matchupGridRows + '</tbody></table></div></div>',
         '<div class="dev-subcard">',
         '<div class="section-heading"><h3>Sample Output</h3></div>',
         '<p><strong>Example:</strong> Lv 1 ' + escapeHtml(battleSample.sampleSkill.name || selectedSkill.name || "Skill") + ' used by an attacker with base ATK 12, SPD 10, Accuracy +1 stage, ATK +2 stages, while burned, against a defender with base DEF 11 and DEF +1 stage.</p>',
         '<p><strong>Effective Attack:</strong> ' + Number(battleSample.effectiveAttack || 0) + ' · <strong>Effective Defense:</strong> ' + Number(battleSample.effectiveDefense || 0) + ' · <strong>Effective Speed:</strong> ' + Number(battleSample.effectiveSpeed || 0) + ' · <strong>Accuracy Bonus:</strong> +' + Number(battleSample.effectiveAccuracyBonus || 0) + '%</p>',
-        '<p><strong>Base Formula Result:</strong> ' + Number(battleSample.rawBase || 0) + ' before variance · <strong>Affinity Bonus:</strong> +' + Number(battleSample.affinityBonusPercent || 0) + '% · <strong>Status Multiplier:</strong> x' + Number(battleSample.statusMultiplier || 1).toFixed(2) + '</p>',
+        '<p><strong>Base Formula Result:</strong> ' + Number(battleSample.rawBase || 0) + ' before variance · <strong>Affinity Bonus:</strong> +' + Number(battleSample.affinityBonusPercent || 0) + '% · <strong>Matchup Multiplier:</strong> x' + Number(battleSample.matchupMultiplier || 1).toFixed(2) + ' · <strong>Status Multiplier:</strong> x' + Number(battleSample.statusMultiplier || 1).toFixed(2) + '</p>',
         '<p><strong>Damage Range:</strong> ' + Number(battleSample.minDamage || 0) + ' - ' + Number(battleSample.maxDamage || 0) + ' · <strong>Hit Chance:</strong> ' + Number(battleSample.hitChance || 0) + '%</p>',
         '<p class="dev-helper-text">This sample uses the currently selected skill and current battle model values. It shows a stable min/max range using variance 0 and variance max instead of rolling a random result.</p>',
         '</div>',
-        '<p class="dev-helper-text">Basic attacks without a skill power still use the simpler fallback formula <code>effectiveAttack - effectiveDefense / divisor + variance</code>, then apply affinity and status multipliers if relevant.</p>',
+        '<p class="dev-helper-text">Basic attacks without a skill power still use the simpler fallback formula <code>effectiveAttack - effectiveDefense / divisor + variance</code>, then apply affinity, matchup, and status multipliers if relevant.</p>',
         '</section>',
         '</section>',
       ].join("");
@@ -9453,14 +9664,15 @@
           '<label class="input-group"><span>Title</span><input data-dev-trainer-field="title" value="' + escapeHtml(selectedTrainer.title || "") + '" /></label>',
           '<label class="input-group"><span>Recommended Level</span><input type="number" step="1" min="1" data-dev-trainer-field="recommendedLevel" value="' + Number(selectedTrainer.recommendedLevel || 1) + '" /></label>',
           '<label class="input-group"><span>Party Size</span><input type="number" step="1" min="1" data-dev-trainer-field="partySize" value="' + Number(selectedTrainer.partySize || 1) + '" /></label>',
+          '<label class="input-group"><span>Refight Party Mode</span><select data-dev-trainer-field="refightPartyMode"><option value="fixed"' + (normalizeTrainerRefightPartyMode(selectedTrainer.refightPartyMode) === "fixed" ? " selected" : "") + '>Fixed</option><option value="flexible"' + (normalizeTrainerRefightPartyMode(selectedTrainer.refightPartyMode) === "flexible" ? " selected" : "") + '>Flexible</option></select></label>',
           '<label class="input-group"><span>Reward Money</span><input type="number" step="1" min="0" data-dev-trainer-field="rewardMoney" value="' + Number(selectedTrainer.rewardMoney || 0) + '" /></label>',
           '<label class="input-group dev-input-group-wide"><span>Intro Text</span><textarea rows="3" data-dev-trainer-field="introText">' + escapeHtml(selectedTrainer.introText || "") + '</textarea></label>',
           '<label class="input-group dev-input-group-wide"><span>Reward Notes</span><textarea rows="3" data-dev-trainer-field="rewardText">' + escapeHtml(selectedTrainer.rewardText || "") + '</textarea></label>',
           '<label class="input-group dev-input-group-wide"><span>Victory Text</span><textarea rows="3" data-dev-trainer-field="victoryText">' + escapeHtml(selectedTrainer.victoryText || "") + '</textarea></label>',
           '</div></section>',
           '<section class="panel-block dev-editor-panel"><div class="section-heading"><h2>Trainer Team</h2><div class="topbar-stats"><button class="secondary-button" type="button" data-action="add-trainer-team-member">Add Team Member</button></div></div>' + ((selectedTrainer.team || []).length ? '<ul class="compact-list">' + teamEditor + '</ul>' : '<p>Add at least one team member to make this trainer battleable.</p>') + '</section>',
-          '<section class="panel-block dev-editor-panel"><div class="section-heading"><h2>Fallback Pool</h2><div class="topbar-stats"><button class="secondary-button" type="button" data-action="add-trainer-pool-member">Add Pool Monster</button></div></div><p class="dev-helper-text">Trainer rematches can expand to the trainer refight party size using this pool.</p>' + ((selectedTrainer.pool || []).length ? '<ul class="compact-list">' + poolEditor + '</ul>' : '<p>No fallback pool monsters configured yet.</p>') + '</section>',
-          '<section class="panel-block"><div class="section-heading"><h2>Preview</h2></div><p><strong>' + escapeHtml(selectedTrainer.title || "Trainer") + " " + escapeHtml(selectedTrainer.name || selectedTrainer.id || "Trainer") + '</strong></p><p>Recommended Level: ' + Number(selectedTrainer.recommendedLevel || 1) + ' · Party Size: ' + Number(selectedTrainer.partySize || 1) + '</p><p>Reward Money: $' + Number(selectedTrainer.rewardMoney || 0) + '</p><p class="dev-helper-text">First battles use the authored team here. Rematches use the trainer refight settings in the in-game Settings panel, capped by crest progression.</p><h3>Configured Team</h3><ul class="compact-list">' + (teamPreview || "<li><span>No team members configured yet.</span></li>") + '</ul></section>',
+          '<section class="panel-block dev-editor-panel"><div class="section-heading"><h2>Fallback Pool</h2><div class="topbar-stats"><button class="secondary-button" type="button" data-action="add-trainer-pool-member">Add Pool Monster</button></div></div><p class="dev-helper-text">Flexible trainer rematches can expand toward the global trainer refight party size using this pool. Fixed trainers ignore the global party-size setting.</p>' + ((selectedTrainer.pool || []).length ? '<ul class="compact-list">' + poolEditor + '</ul>' : '<p>No fallback pool monsters configured yet.</p>') + '</section>',
+          '<section class="panel-block"><div class="section-heading"><h2>Preview</h2></div><p><strong>' + escapeHtml(selectedTrainer.title || "Trainer") + " " + escapeHtml(selectedTrainer.name || selectedTrainer.id || "Trainer") + '</strong></p><p>Recommended Level: ' + Number(selectedTrainer.recommendedLevel || 1) + ' · Party Size: ' + Number(selectedTrainer.partySize || 1) + ' · Refight Mode: ' + escapeHtml(normalizeTrainerRefightPartyMode(selectedTrainer.refightPartyMode)) + '</p><p>Reward Money: $' + Number(selectedTrainer.rewardMoney || 0) + '</p><p class="dev-helper-text">First battles use the authored team here. Rematches use the in-game trainer refight level settings, capped by crest progression. Flexible trainers grow toward the global trainer refight party-size setting; fixed trainers keep their authored size.</p><h3>Configured Team</h3><ul class="compact-list">' + (teamPreview || "<li><span>No team members configured yet.</span></li>") + '</ul></section>',
         ].join("")
       : '<section class="panel-block dev-editor-panel"><h2>No Trainer Selected</h2><p>Add a new trainer to begin editing.</p></section>';
 
@@ -10950,6 +11162,15 @@
         app.updateBattleModelField(field.getAttribute("data-dev-battle-model-field"), field.value);
       });
     });
+    root.querySelectorAll("[data-dev-battle-model-matchup]").forEach(function (field) {
+      field.addEventListener("change", function () {
+        app.updateBattleModelMatchup(
+          field.getAttribute("data-attack-element") || "",
+          field.getAttribute("data-defender-affinity") || "",
+          field.value
+        );
+      });
+    });
     root.querySelectorAll("[data-dev-skill-modifier-field]").forEach(function (field) {
       const useDeferredRender = isDeferredDevTextField(field);
       const eventName = field.tagName === "SELECT" ? "change" : "input";
@@ -11671,7 +11892,9 @@
           return;
         }
 
-        if (key === "zoom" || key === "walkSpeed" || key === "partySize" || key === "arenaLeaderPartySize" || key === "trainerRefightPartySize") {
+        if (key === "trainerRefightCooldownSeconds") {
+          this.state.settings[key] = Math.max(0, Number(rawValue || 0));
+        } else if (key === "zoom" || key === "walkSpeed" || key === "partySize" || key === "arenaLeaderPartySize" || key === "trainerRefightPartySize") {
           this.state.settings[key] = Number(rawValue || 0);
         } else if (key === "wildMonsterMaxLevel") {
           this.state.settings[key] = Math.max(1, Math.min(getCurrentPlayerLevelCap(this.state), Number(rawValue || 1)));
@@ -13482,7 +13705,17 @@
         const numericValue = Number(rawValue || 0);
         if (path === "basicDefenseDivisor") {
           battleModel[path] = Math.max(1, numericValue || 1);
-        } else if (path === "randomVarianceMax" || path === "affinityDamageBonusPerPointPercent" || path === "statModifierPercentPerStage" || path === "accuracyModifierPerStage" || path === "burnDamagePenaltyPercent") {
+        } else if (path === "elementalAdvantageMultiplier" || path === "elementalResistanceMultiplier") {
+          battleModel[path] = Math.max(0, numericValue || 0);
+        } else if (
+          path === "randomVarianceMax"
+          || path === "affinityDamageBonusPerPointPercent"
+          || path === "elementalAdvantagePointPercent"
+          || path === "elementalResistancePointPercent"
+          || path === "statModifierPercentPerStage"
+          || path === "accuracyModifierPerStage"
+          || path === "burnDamagePenaltyPercent"
+        ) {
           battleModel[path] = Math.max(0, numericValue || 0);
         } else {
           battleModel[path] = numericValue;
@@ -13490,6 +13723,21 @@
         if (shouldRender !== false) {
           this.render();
         }
+      },
+      updateBattleModelMatchup: function (attackElement, defenderAffinity, result) {
+        if (!ELEMENTAL_AFFINITIES.includes(attackElement) || !ELEMENTAL_AFFINITIES.includes(defenderAffinity)) {
+          return;
+        }
+
+        const battleModel = ensureBattleModelSettings(this.content);
+        if (!battleModel.elementalMatchupChart || typeof battleModel.elementalMatchupChart !== "object") {
+          battleModel.elementalMatchupChart = createDefaultElementalMatchupChart();
+        }
+        if (!battleModel.elementalMatchupChart[attackElement] || typeof battleModel.elementalMatchupChart[attackElement] !== "object") {
+          battleModel.elementalMatchupChart[attackElement] = {};
+        }
+        battleModel.elementalMatchupChart[attackElement][defenderAffinity] = normalizeElementalMatchupResult(result);
+        this.render();
       },
       updateVariantField: function (variantIndex, field, rawValue, shouldRender) {
         const species = this.content.monsters.species.find((entry) => entry.id === this.devTools.selectedSpeciesId);
@@ -13551,7 +13799,9 @@
 
         const previousId = trainer.id;
         const numericFields = new Set(["recommendedLevel", "partySize", "rewardMoney"]);
-        const value = numericFields.has(path) ? Number(rawValue || 0) : rawValue;
+        const value = path === "refightPartyMode"
+          ? normalizeTrainerRefightPartyMode(rawValue)
+          : (numericFields.has(path) ? Number(rawValue || 0) : rawValue);
         trainer[path] = value;
         if (path === "id") {
           replaceTrainerReferences(this.content, previousId, rawValue);
@@ -13642,7 +13892,7 @@
         syncDevToolsMonsterSpriteSettings(this.content, this.devTools);
         syncDevToolsCrestLevelCapSettings(this.content, this.devTools);
         const payload = {
-          defaults: Object.assign({}, this.content.settings?.defaults || fallbackContent.settings.defaults),
+          defaults: Object.assign({}, fallbackContent.settings.defaults, this.content.settings?.defaults || {}),
           allowedZoomLevels: this.content.settings?.allowedZoomLevels || fallbackContent.settings.allowedZoomLevels,
           maxSaveSlots: this.content.settings?.maxSaveSlots || fallbackContent.settings.maxSaveSlots,
         };

@@ -2283,6 +2283,34 @@ button {
   background: rgba(255, 255, 255, 0.58);
 }
 
+.table-scroll {
+  overflow-x: auto;
+}
+
+.dev-battle-model-grid {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 640px;
+}
+
+.dev-battle-model-grid th,
+.dev-battle-model-grid td {
+  padding: 0.45rem;
+  border: 1px solid rgba(57, 79, 91, 0.12);
+  text-align: center;
+}
+
+.dev-battle-model-grid th {
+  font-size: 0.82rem;
+  color: #355564;
+  background: rgba(214, 237, 246, 0.4);
+}
+
+.dev-battle-model-grid td select {
+  width: 100%;
+  min-width: 84px;
+}
+
 .dev-effect-card {
   border: 1px solid rgba(57, 79, 91, 0.08);
 }

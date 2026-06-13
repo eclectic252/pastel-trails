@@ -4,19 +4,20 @@
       "id": "route-2-scout-mira",
       "name": "Mira",
       "title": "Scout",
-      "introText": "Show me what your team can do.",
+      "introText": "Route 2 is where trainers learn to keep their monsters sharp. Show me what your team can do.",
       "rewardMoney": 30,
       "rewardText": "Win to earn prize money from Scout Mira.",
-      "victoryText": "Nice battle. Your team looked ready for the next challenge.",
+      "victoryText": "Nice battle. Your team looked ready for the next route.",
       "team": [
         {
           "speciesId": "Owlet",
-          "variantId": "owlet-pink",
+          "variantId": "owlet-default",
           "level": 4
         }
       ],
       "pool": [],
       "partySize": 1,
+      "refightPartyMode": "fixed",
       "recommendedLevel": 4
     }
   ]
