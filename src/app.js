@@ -6860,6 +6860,7 @@
     const species = getSpecies(content, monster.speciesId);
     const variant = getSpeciesVariant(species, monster.variantId || "default");
     const variantLabel = formatMonsterVariantLabel(variant, monster.variantId || "default");
+    const affinityLabel = getMonsterAffinitySummaryLabel(monster);
     const maxHp = Number(options.maxHp || monster.maxHp || monster.stats?.hp || 1);
     const currentHp = Math.round(Number(options.currentHp ?? monster.currentHp ?? 0));
     const hpPercent = Math.max(0, Math.min(100, (currentHp / Math.max(1, maxHp)) * 100));
@@ -6874,6 +6875,7 @@
       '<div class="battle-hud-icon">' + visual + '<span class="battle-hud-level-badge' + badgeSideClass + '">Lv ' + Number(monster.level || 1) + "</span></div>",
       '<div class="battle-hud-body">',
       '<h3 class="battle-hud-name">' + escapeHtml(species?.name || monster.speciesId) + " (" + escapeHtml(variantLabel) + ")" + "</h3>",
+      '<div class="battle-hud-affinity"><strong>Affinity:</strong> ' + escapeHtml(affinityLabel) + '</div>',
       '<div class="battle-hp-bar battle-hp-bar-hud"><span style="width:' + hpPercent + '%"></span></div>',
       '<div class="battle-hp-row"><span>' + currentHp + "/" + maxHp + ' HP</span></div>',
       (labels.length

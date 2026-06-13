@@ -40,6 +40,18 @@
         "x": 1984,
         "y": 5184
       }
+    },
+    {
+      "id": "route2-to-route5",
+      "x": 3712,
+      "y": 768,
+      "width": 128,
+      "height": 384,
+      "targetMapId": "route-5",
+      "targetSpawn": {
+        "x": 192,
+        "y": 4160
+      }
     }
   ],
   "interactions": [],

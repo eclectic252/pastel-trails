@@ -1,0 +1,63 @@
+{
+  "mapId": "route-4",
+  "displayName": "Route 4",
+  "isTown": true,
+  "safezone": false,
+  "collisionGrid": 64,
+  "transitions": [
+    {
+      "id": "route4-to-route3",
+      "x": 128,
+      "y": 512,
+      "width": 128,
+      "height": 384,
+      "targetMapId": "route-3",
+      "targetSpawn": {
+        "x": 2496,
+        "y": 576
+      }
+    },
+    {
+      "id": "route4-to-moonflower",
+      "x": 2432,
+      "y": 1152,
+      "width": 640,
+      "height": 128,
+      "targetMapId": "moonflower-woods",
+      "targetSpawn": {
+        "x": 2624,
+        "y": 320
+      }
+    },
+    {
+      "id": "route4-to-route5",
+      "x": 3456,
+      "y": 1024,
+      "width": 1536,
+      "height": 128,
+      "targetMapId": "route-5",
+      "targetSpawn": {
+        "x": 704,
+        "y": 192
+      }
+    }
+  ],
+  "interactions": [],
+  "spawnZones": [
+    {
+      "id": "default-zone",
+      "label": "Default Zone",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "visibleSpawns": [],
+      "spawnTable": []
+    }
+  ],
+  "trainers": [],
+  "npcs": [],
+  "mapMonstersPanel": []
+}

@@ -1659,6 +1659,16 @@ button {
   min-width: 0;
 }
 
+.battle-hud-affinity {
+  color: #5f7568;
+  font-size: 0.74rem;
+  line-height: 1.2;
+}
+
+.battle-hud-affinity strong {
+  color: #355564;
+}
+
 .battle-hud-labels {
   display: flex;
   flex-wrap: wrap;

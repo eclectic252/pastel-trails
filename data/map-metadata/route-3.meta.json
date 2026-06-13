@@ -7,7 +7,7 @@
   "transitions": [
     {
       "id": "route3-to-camelia",
-      "x": 512,
+      "x": 896,
       "y": 256,
       "width": 128,
       "height": 384,
@@ -19,7 +19,7 @@
     },
     {
       "id": "route3-to-roue1",
-      "x": 1280,
+      "x": 1664,
       "y": 8192,
       "width": 512,
       "height": 128,
@@ -31,7 +31,7 @@
     },
     {
       "id": "route3-to-jasminebay",
-      "x": 256,
+      "x": 640,
       "y": 8320,
       "width": 512,
       "height": 128,
@@ -43,7 +43,7 @@
     },
     {
       "id": "route3-route2",
-      "x": 2176,
+      "x": 2560,
       "y": 4992,
       "width": 128,
       "height": 512,
@@ -55,7 +55,7 @@
     },
     {
       "id": "route3-to-bougainvillea",
-      "x": 2176,
+      "x": 2560,
       "y": 3456,
       "width": 128,
       "height": 512,
@@ -67,7 +67,7 @@
     },
     {
       "id": "route3-to-rosetown",
-      "x": 0,
+      "x": 384,
       "y": 4224,
       "width": 128,
       "height": 256,
@@ -75,6 +75,18 @@
       "targetSpawn": {
         "x": 2112,
         "y": 1344
+      }
+    },
+    {
+      "id": "route3-route4",
+      "x": 2560,
+      "y": 512,
+      "width": 128,
+      "height": 384,
+      "targetMapId": "route-4",
+      "targetSpawn": {
+        "x": 320,
+        "y": 704
       }
     }
   ],
@@ -168,8 +180,8 @@
     {
       "id": "npc-1",
       "type": "trainer",
-      "x": 960,
-      "y": 2368,
+      "x": 1344,
+      "y": 2752,
       "label": "Cowboy Roy",
       "text": "Hello there!",
       "sheetId": "assets-characters-boardwalk-girl-sprite-western-red-shirt-walksheet-v1-transparent",

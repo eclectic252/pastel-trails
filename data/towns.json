@@ -184,6 +184,36 @@
           "overlayOpacity": 0.18
         }
       }
+    },
+    {
+      "id": "moonflower-woods",
+      "name": "Moonflower Woods",
+      "cardSubtitle": "Ethereal Woods",
+      "mapId": "moonflower-woods",
+      "spawn": {
+        "x": 1984,
+        "y": 1088
+      },
+      "includeInStarterSelection": true,
+      "cardBackgrounds": {
+        "desktop": {
+          "imagePath": "assets/posters/moonflower_woods_poster.png",
+          "fit": "cover",
+          "zoom": 100,
+          "positionX": 50,
+          "positionY": 50,
+          "repeat": "no-repeat"
+        },
+        "mobile": {
+          "imagePath": "assets/posters/moonflower_woods_poster.png",
+          "fit": "cover",
+          "zoom": 100,
+          "positionX": 81,
+          "positionY": 50,
+          "repeat": "no-repeat",
+          "overlayOpacity": 0.18
+        }
+      }
     }
   ]
 }
