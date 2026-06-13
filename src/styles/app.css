@@ -1855,8 +1855,8 @@ button {
 }
 
 .battle-trainer-sheet-sprite {
-  width: 144px;
-  height: 144px;
+  width: 188px;
+  height: 188px;
   background: transparent;
   border: 0;
   border-radius: 0;
@@ -1944,17 +1944,21 @@ button {
   background: linear-gradient(180deg, #fff7f0, #fff0e3);
   border: 2px solid rgba(202, 168, 144, 0.55);
   overflow: hidden;
+  min-height: 0;
 }
 
 .battle-log-command {
   margin-top: 0;
   min-height: 180px;
+  max-height: 220px;
   align-content: end;
   background: rgba(255, 248, 239, 0.98);
   border: 0;
   border-right: 2px solid rgba(175, 141, 120, 0.5);
   box-shadow: none;
   border-radius: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .battle-command-panel {
@@ -1962,6 +1966,8 @@ button {
   gap: 0.35rem;
   padding: 0.35rem;
   align-content: start;
+  min-width: 0;
+  min-height: 0;
 }
 
 .battle-suboptions-shell {
@@ -2944,6 +2950,10 @@ button {
   .battle-topbar,
   .battle-stage {
     grid-template-columns: 1fr;
+  }
+
+  .battle-log-command {
+    max-height: 180px;
   }
 
   .battle-stage {

@@ -1823,8 +1823,14 @@
         current: null,
         actorPose: "",
         trainerIntro: {
-          active: false,
+          phase: "",
           progress: 0,
+          awaitingContinue: false,
+        },
+        playerIntro: {
+          phase: "",
+          progress: 0,
+          completed: true,
         },
         displayedHp: {
           player: Number(playerMonster?.currentHp || 0),
@@ -1843,8 +1849,16 @@
     }
     if (!animation.trainerIntro || typeof animation.trainerIntro !== "object") {
       animation.trainerIntro = {
-        active: false,
+        phase: "",
         progress: 0,
+        awaitingContinue: false,
+      };
+    }
+    if (!animation.playerIntro || typeof animation.playerIntro !== "object") {
+      animation.playerIntro = {
+        phase: "",
+        progress: 0,
+        completed: true,
       };
     }
     const playerMonster = state.party?.[state.battle.playerIndex] || null;
@@ -1895,9 +1909,16 @@
         if (typeof animation.current.callback === "function") {
           animation.current.callback();
         }
-      } else if (animation.current.type === "trainer-sendout") {
-        animation.trainerIntro.active = true;
+      } else if (animation.current.type === "trainer-enter") {
+        animation.trainerIntro.phase = "enter";
         animation.trainerIntro.progress = 0;
+      } else if (animation.current.type === "trainer-exit") {
+        animation.trainerIntro.phase = "exit";
+        animation.trainerIntro.progress = 0;
+      } else if (animation.current.type === "player-enter") {
+        animation.playerIntro.phase = "enter";
+        animation.playerIntro.progress = 0;
+        animation.playerIntro.completed = false;
       } else if (animation.current.type === "lunge") {
         animation.actorPose = animation.current.actor || "";
         const playerMonster = state.party?.[state.battle.playerIndex] || null;
@@ -1923,10 +1944,14 @@
       const to = Number(animation.current.to || 0);
       animation.displayedHp[animation.current.target] = Math.round(from + (to - from) * progress);
       changed = true;
-    } else if (animation.current.type === "trainer-sendout") {
+    } else if (animation.current.type === "trainer-enter" || animation.current.type === "trainer-exit") {
       const duration = Math.max(1, Number(animation.current.duration || 1));
-      animation.trainerIntro.active = true;
       animation.trainerIntro.progress = Math.max(0, Math.min(1, animation.current.elapsed / duration));
+      changed = true;
+    } else if (animation.current.type === "player-enter") {
+      const duration = Math.max(1, Number(animation.current.duration || 1));
+      animation.playerIntro.phase = "enter";
+      animation.playerIntro.progress = Math.max(0, Math.min(1, animation.current.elapsed / duration));
       changed = true;
     }
 
@@ -1944,9 +1969,18 @@
         animation.actorPose = "";
       } else if (animation.current.type === "hp") {
         animation.displayedHp[animation.current.target] = Number(animation.current.to || 0);
-      } else if (animation.current.type === "trainer-sendout") {
+      } else if (animation.current.type === "trainer-enter") {
         animation.trainerIntro.progress = 1;
-        animation.trainerIntro.active = false;
+        animation.trainerIntro.phase = "awaiting";
+        animation.trainerIntro.awaitingContinue = true;
+      } else if (animation.current.type === "trainer-exit") {
+        animation.trainerIntro.progress = 1;
+        animation.trainerIntro.phase = "";
+        animation.trainerIntro.awaitingContinue = false;
+      } else if (animation.current.type === "player-enter") {
+        animation.playerIntro.progress = 1;
+        animation.playerIntro.phase = "done";
+        animation.playerIntro.completed = true;
       }
       animation.current = null;
       changed = true;
@@ -4638,13 +4672,14 @@
       outcome: null,
     };
     const animation = ensureBattleAnimationState(state);
-    animation.trainerIntro.active = true;
+    animation.trainerIntro.phase = "enter";
     animation.trainerIntro.progress = 0;
+    animation.trainerIntro.awaitingContinue = false;
+    animation.playerIntro.phase = "hidden";
+    animation.playerIntro.progress = 0;
+    animation.playerIntro.completed = false;
     queueBattleAnimationEvents(state, [
-      { type: "log", message: (trainer.title || "Trainer") + " " + (trainer.name || npc.label || "Trainer") + " sends out " + team[0].name + ".", duration: 180 },
-      { type: "pause", duration: 260 },
-      { type: "trainer-sendout", duration: 820 },
-      { type: "pause", duration: 180 },
+      { type: "trainer-enter", duration: 1400 },
     ]);
     state.message = (trainer.name || npc.label || "Trainer") + " challenged you to a battle.";
   }
@@ -4802,6 +4837,7 @@
 
   function handlePlayerDefeat(state, content, playerMonster, options) {
     state.battle.outcome = "defeat";
+    state.battle.mustSelectReplacement = false;
     if (!options?.skipLog) {
       addBattleLogEntry(state, "Your " + getBattlerDisplayName(content, playerMonster) + " fainted.");
     }
@@ -4824,13 +4860,14 @@
         state.battle.enemy = nextEnemy;
         if (state.battle.battleSource === "npc-trainer" && state.battle.trainerSheetId) {
           const animation = ensureBattleAnimationState(state);
-          animation.trainerIntro.active = true;
+          animation.trainerIntro.phase = "enter";
           animation.trainerIntro.progress = 0;
+          animation.trainerIntro.awaitingContinue = false;
+          animation.playerIntro.phase = "hidden";
+          animation.playerIntro.progress = 0;
+          animation.playerIntro.completed = false;
           queueBattleAnimationEvents(state, [
-            { type: "log", message: (state.battle.opponentTitle || "Leader") + " " + (state.battle.opponentName || "Trainer") + " sends out " + nextEnemy.name + ".", duration: 180 },
-            { type: "pause", duration: 240 },
-            { type: "trainer-sendout", duration: 820 },
-            { type: "pause", duration: 160 },
+            { type: "trainer-enter", duration: 1400 },
           ]);
         } else {
           addBattleLogEntry(state, (state.battle.opponentTitle || "Leader") + " " + (state.battle.opponentName || "Trainer") + " sent out " + nextEnemy.name + ".");
@@ -4864,6 +4901,56 @@
       grantBattleVictorySkillXp(state, content, activeMonster);
       state.message = "Victory. Your party earned 5 XP.";
     }
+  }
+
+  function getNextAvailableBattlePartyIndex(state, excludedIndex) {
+    if (!state?.battle || !Array.isArray(state.party)) {
+      return -1;
+    }
+
+    return state.party.findIndex(function (monster, index) {
+      return index !== Number(excludedIndex) && Number(monster?.currentHp || 0) > 0;
+    });
+  }
+
+  function queuePlayerSendOutAnimation(state, content, options) {
+    if (!state?.battle) {
+      return;
+    }
+
+    const playerMonster = state.party?.[state.battle.playerIndex] || null;
+    if (!playerMonster) {
+      return;
+    }
+
+    const animation = ensureBattleAnimationState(state);
+    if (animation) {
+      animation.playerIntro.phase = "hidden";
+      animation.playerIntro.progress = 0;
+      animation.playerIntro.completed = false;
+    }
+
+    queueBattleAnimationEvents(state, [
+      { type: "log", message: options?.message || ("You send out " + getBattlerDisplayName(content, playerMonster) + "."), duration: 180 },
+      { type: "pause", duration: Math.max(0, Number(options?.pauseBeforeEnter ?? 220)) },
+      { type: "player-enter", duration: Math.max(1, Number(options?.duration || 1100)) },
+      { type: "pause", duration: Math.max(0, Number(options?.pauseAfterEnter ?? 140)) },
+    ]);
+  }
+
+  function handlePlayerMonsterFaint(state, content, playerMonster, options) {
+    const replacementIndex = getNextAvailableBattlePartyIndex(state, state.battle.playerIndex);
+    if (replacementIndex < 0) {
+      handlePlayerDefeat(state, content, playerMonster, options);
+      return;
+    }
+
+    if (!options?.skipLog) {
+      addBattleLogEntry(state, "Your " + getBattlerDisplayName(content, playerMonster) + " fainted.");
+    }
+    state.battle.mustSelectReplacement = true;
+    state.battle.menu = "switch";
+    state.message = "Choose the next monster to send out.";
   }
 
   function rewardStructuredBattleVictory(state, content, battle) {
@@ -4914,6 +5001,9 @@
     }
 
     const playerMonster = state.party[state.battle.playerIndex];
+    if (!playerMonster || Number(playerMonster.currentHp || 0) <= 0 || state.battle.mustSelectReplacement) {
+      return;
+    }
     const selectedSkill = options?.skill || null;
     ensureSkillEffectCollections(selectedSkill);
     const battleModel = ensureBattleModelSettings(content);
@@ -4935,46 +5025,50 @@
       };
 
       if (step === "player") {
-        const preTurn = processPreTurnStatuses(state, content, playerMonster);
+        const activePlayerMonster = state.party[state.battle.playerIndex];
+        if (!activePlayerMonster || Number(activePlayerMonster.currentHp || 0) <= 0 || state.battle.mustSelectReplacement) {
+          return;
+        }
+        const preTurn = processPreTurnStatuses(state, content, activePlayerMonster);
         if (!preTurn.canAct) {
-          if (Number(playerMonster.currentHp || 0) <= 0) {
-            handlePlayerDefeat(state, content, playerMonster);
+          if (Number(activePlayerMonster.currentHp || 0) <= 0) {
+            handlePlayerMonsterFaint(state, content, activePlayerMonster);
             return;
           }
-          processEndOfTurnStatuses(state, content, playerMonster);
-          if (Number(playerMonster.currentHp || 0) <= 0 && !state.battle.outcome) {
-            handlePlayerDefeat(state, content, playerMonster);
+          processEndOfTurnStatuses(state, content, activePlayerMonster);
+          if (Number(activePlayerMonster.currentHp || 0) <= 0 && !state.battle.outcome) {
+            handlePlayerMonsterFaint(state, content, activePlayerMonster);
           }
           return;
         }
 
-        const hitChance = selectedSkill ? getSkillHitChance(playerMonster, selectedSkill) : 100;
+        const hitChance = selectedSkill ? getSkillHitChance(activePlayerMonster, selectedSkill) : 100;
         if (selectedSkill && Math.random() * 100 > hitChance) {
         queueBattleAnimationEvents(state, buildBattleAnimationEvents({
           actor: "player",
-          message: getBattlerDisplayName(content, playerMonster) + " missed with " + formatBattleSkillPhrase(selectedSkill) + ".",
+          message: getBattlerDisplayName(content, activePlayerMonster) + " missed with " + formatBattleSkillPhrase(selectedSkill) + ".",
           turnDelay: 520,
         }));
-          processEndOfTurnStatuses(state, content, playerMonster);
-          if (Number(playerMonster.currentHp || 0) <= 0 && !state.battle.outcome) {
-            handlePlayerDefeat(state, content, playerMonster);
+          processEndOfTurnStatuses(state, content, activePlayerMonster);
+          if (Number(activePlayerMonster.currentHp || 0) <= 0 && !state.battle.outcome) {
+            handlePlayerMonsterFaint(state, content, activePlayerMonster);
           }
           return;
         }
 
         const skillDealsDamage = isDamagingBattleSkill(selectedSkill);
         const enemyHpBefore = Number(enemy.currentHp || 0);
-        const damage = calculateDamage(playerMonster, enemyInstance, { skill: selectedSkill, battleModel });
+        const damage = calculateDamage(activePlayerMonster, enemyInstance, { skill: selectedSkill, battleModel });
         let primaryMessage = "";
         if (skillDealsDamage) {
           enemy.currentHp = Math.max(0, enemy.currentHp - damage);
-          primaryMessage = getSpecies(content, playerMonster.speciesId).name + " dealt " + damage + " damage with " + formatBattleSkillPhrase(selectedSkill) + ".";
+          primaryMessage = getSpecies(content, activePlayerMonster.speciesId).name + " dealt " + damage + " damage with " + formatBattleSkillPhrase(selectedSkill) + ".";
         } else {
-          primaryMessage = getBattlerDisplayName(content, playerMonster) + " used " + formatBattleSkillPhrase(selectedSkill) + ".";
+          primaryMessage = getBattlerDisplayName(content, activePlayerMonster) + " used " + formatBattleSkillPhrase(selectedSkill) + ".";
         }
 
         const extraMessages = selectedSkill
-          ? processSkillSecondaryEffects(state, content, playerMonster, enemy, selectedSkill)
+          ? processSkillSecondaryEffects(state, content, activePlayerMonster, enemy, selectedSkill)
           : [];
         if (enemy.currentHp <= 0) {
           extraMessages.push(enemySpecies.name + " fainted.");
@@ -4996,11 +5090,15 @@
         if (enemy.currentHp <= 0) {
           skipEnemyTurn = true;
         }
-        processEndOfTurnStatuses(state, content, playerMonster);
-        if (Number(playerMonster.currentHp || 0) <= 0 && !state.battle.outcome) {
-          handlePlayerDefeat(state, content, playerMonster);
+        processEndOfTurnStatuses(state, content, activePlayerMonster);
+        if (Number(activePlayerMonster.currentHp || 0) <= 0 && !state.battle.outcome) {
+          handlePlayerMonsterFaint(state, content, activePlayerMonster);
         }
       } else {
+        const activePlayerMonster = state.party[state.battle.playerIndex];
+        if (!activePlayerMonster || Number(activePlayerMonster.currentHp || 0) <= 0 || state.battle.mustSelectReplacement) {
+          return;
+        }
         const preTurn = processPreTurnStatuses(state, content, enemy);
         if (!preTurn.canAct) {
           if (Number(enemy.currentHp || 0) <= 0) {
@@ -5029,42 +5127,42 @@
         }
 
         const skillDealsDamage = isDamagingBattleSkill(enemySkill);
-        const playerHpBefore = Number(playerMonster.currentHp || 0);
+        const playerHpBefore = Number(activePlayerMonster.currentHp || 0);
         const damage = calculateDamage({
           stats: enemy.stats,
           elementalAffinityPoints: enemy.elementalAffinityPoints,
           primaryElementalAffinity: enemy.primaryElementalAffinity,
           _battleTemp: enemy._battleTemp,
-        }, playerMonster, { skill: enemySkill, battleModel });
+        }, activePlayerMonster, { skill: enemySkill, battleModel });
         let primaryMessage = "";
         if (skillDealsDamage) {
-          playerMonster.currentHp = Math.max(0, playerMonster.currentHp - damage);
+          activePlayerMonster.currentHp = Math.max(0, activePlayerMonster.currentHp - damage);
           primaryMessage = enemySpecies.name + " dealt " + damage + " damage with " + formatBattleSkillPhrase(enemySkill) + ".";
         } else {
           primaryMessage = enemySpecies.name + " used " + formatBattleSkillPhrase(enemySkill) + ".";
         }
 
         const extraMessages = enemySkill
-          ? processSkillSecondaryEffects(state, content, enemy, playerMonster, enemySkill)
+          ? processSkillSecondaryEffects(state, content, enemy, activePlayerMonster, enemySkill)
           : [];
-        if (playerMonster.currentHp <= 0) {
-          extraMessages.push("Your " + getBattlerDisplayName(content, playerMonster) + " fainted.");
+        if (activePlayerMonster.currentHp <= 0) {
+          extraMessages.push("Your " + getBattlerDisplayName(content, activePlayerMonster) + " fainted.");
         }
         queueBattleAnimationEvents(state, buildBattleAnimationEvents({
           actor: "enemy",
           message: primaryMessage,
           hpTarget: skillDealsDamage ? "player" : "",
           hpFrom: playerHpBefore,
-          hpTo: Number(playerMonster.currentHp || 0),
+          hpTo: Number(activePlayerMonster.currentHp || 0),
           extraMessages,
-          turnDelay: playerMonster.currentHp > 0 ? 520 : 0,
-          callback: playerMonster.currentHp <= 0
+          turnDelay: activePlayerMonster.currentHp > 0 ? 520 : 0,
+          callback: activePlayerMonster.currentHp <= 0
             ? function () {
-                handlePlayerDefeat(state, content, playerMonster, { skipLog: true });
+                handlePlayerMonsterFaint(state, content, activePlayerMonster, { skipLog: true });
               }
             : null,
         }));
-        if (playerMonster.currentHp <= 0) {
+        if (activePlayerMonster.currentHp <= 0) {
           return;
         }
 
@@ -5200,6 +5298,9 @@
     }
 
     const playerMonster = state.party[state.battle.playerIndex];
+    if (!playerMonster || Number(playerMonster.currentHp || 0) <= 0 || state.battle.mustSelectReplacement) {
+      return;
+    }
     const enemy = state.battle.enemy;
     const enemySpecies = getSpecies(content, enemy.speciesId);
     const preTurn = processPreTurnStatuses(state, content, enemy);
@@ -5262,7 +5363,7 @@
       turnDelay: playerMonster.currentHp > 0 ? 520 : 0,
       callback: playerMonster.currentHp <= 0
         ? function () {
-            handlePlayerDefeat(state, content, playerMonster, { skipLog: true });
+            handlePlayerMonsterFaint(state, content, playerMonster, { skipLog: true });
           }
         : null,
     }));
@@ -6655,6 +6756,7 @@
     const species = getSpecies(content, battle?.enemy?.speciesId);
     const variant = getSpeciesVariant(species, battle?.enemy?.variantId || "default");
     const progress = Math.max(0, Math.min(1, Number(animation?.trainerIntro?.progress || 0)));
+    const introPhase = String(animation?.trainerIntro?.phase || "");
     let trainerTranslateX = 0;
     let trainerTranslateY = 0;
     let trainerOpacity = 1;
@@ -6663,34 +6765,49 @@
     let monsterScale = 1;
     let monsterOpacity = 0;
 
-    if (progress < 0.45) {
-      const enterProgress = progress / 0.45;
-      trainerTranslateX = Math.round(-160 + (160 * enterProgress));
-      trainerTranslateY = Math.round(18 * enterProgress);
-    } else if (progress < 0.65) {
+    if (introPhase === "enter") {
+      trainerTranslateX = Math.round(-220 + (220 * progress));
+      trainerTranslateY = Math.round(18 * progress);
+    } else if (introPhase === "awaiting") {
       trainerTranslateX = 0;
       trainerTranslateY = 18;
-    } else {
-      const swapProgress = (progress - 0.65) / 0.35;
-      trainerTranslateX = Math.round(-12 - (132 * swapProgress));
-      trainerTranslateY = Math.round(18 - (10 * swapProgress));
-      trainerOpacity = Math.max(0, 1 - swapProgress * 1.15);
-      monsterTranslateX = Math.round(128 - (128 * swapProgress));
-      monsterTranslateY = Math.round(8 * (1 - swapProgress));
-      monsterScale = 0.78 + (0.22 * swapProgress);
-      monsterOpacity = Math.max(0, Math.min(1, swapProgress * 1.25));
+    } else if (introPhase === "exit") {
+      trainerTranslateX = Math.round(-(150 * progress));
+      trainerTranslateY = Math.round(18 - (10 * progress));
+      trainerOpacity = Math.max(0, 1 - progress * 1.15);
+      monsterTranslateX = Math.round(128 - (128 * progress));
+      monsterTranslateY = Math.round(8 * (1 - progress));
+      monsterScale = 0.78 + (0.22 * progress);
+      monsterOpacity = Math.max(0, Math.min(1, progress * 1.25));
     }
 
     return [
       '<div class="battle-trainer-intro-layer">',
       '<div class="battle-battler battle-battler-enemy battle-battler-trainer-intro" style="transform: translate(' + trainerTranslateX + 'px, ' + trainerTranslateY + 'px); opacity:' + trainerOpacity.toFixed(3) + ';">',
       '<div class="battle-battler-shadow"></div>',
-      renderAvatarPreviewMarkup(trainerSheet, "battle-trainer-sheet-sprite"),
+      renderAvatarPreviewMarkup(trainerSheet, "battle-trainer-sheet-sprite", { transparent: true }),
       "</div>",
       '<div class="battle-battler battle-battler-enemy battle-battler-enemy-intro" style="transform: translate(' + monsterTranslateX + 'px, ' + monsterTranslateY + 'px) scale(' + monsterScale.toFixed(3) + '); opacity:' + monsterOpacity.toFixed(3) + ';">',
       '<div class="battle-battler-shadow"></div>',
       renderMonsterVariantVisualMarkup(battle.enemy.speciesId, variant?.id || battle.enemy.variantId || "default", "battle-battler-sprite", "default"),
       "</div>",
+      "</div>",
+    ].join("");
+  }
+
+  function renderBattlePlayerIntro(content, monster, animation) {
+    const species = getSpecies(content, monster?.speciesId);
+    const variant = getSpeciesVariant(species, monster?.variantId || "default");
+    const progress = Math.max(0, Math.min(1, Number(animation?.playerIntro?.progress || 0)));
+    const playerTranslateX = Math.round(220 - (220 * progress));
+    const playerTranslateY = Math.round(22 * (1 - progress));
+    const playerScale = 0.78 + (0.22 * progress);
+    const playerOpacity = Math.max(0, Math.min(1, progress * 1.2));
+
+    return [
+      '<div class="battle-battler battle-battler-player battle-battler-player-intro" style="transform: translate(' + playerTranslateX + 'px, ' + playerTranslateY + 'px) scale(' + playerScale.toFixed(3) + '); opacity:' + playerOpacity.toFixed(3) + ';">',
+      '<div class="battle-battler-shadow"></div>',
+      renderMonsterVariantVisualMarkup(monster.speciesId, variant?.id || monster.variantId || "default", "battle-battler-sprite", "default"),
       "</div>",
     ].join("");
   }
@@ -6926,7 +7043,9 @@
     const locationLabel = content.mapMetadata[state.world.currentMapId]?.displayName || state.world.currentMapId;
     const tonicCount = getInventoryQuantity(state, "small-tonic");
     const orbCount = getInventoryQuantity(state, "basic-orb");
-    const hasBench = state.party.length > 1;
+    const hasBench = state.party.some(function (monster, index) {
+      return index !== state.battle.playerIndex && Number(monster?.currentHp || 0) > 0;
+    });
     const enemyRoster = isTrainerBattle && Array.isArray(state.battle.enemyQueue) && state.battle.enemyQueue.length
       ? state.battle.enemyQueue
       : [enemy];
@@ -6945,11 +7064,19 @@
     });
     const enemyPartyPips = renderBattlePartyPips(enemyRoster, enemyActiveIndex, "battle-party-pips-enemy");
     const playerPartyPips = renderBattlePartyPips(state.party, state.battle.playerIndex, "battle-party-pips-player");
+    const trainerIntroAwaitingContinue = Boolean(animation?.trainerIntro?.awaitingContinue);
+    const mustSelectReplacement = Boolean(state.battle.mustSelectReplacement);
+    const showPlayerIntro = Boolean(animation?.playerIntro?.phase === "enter");
+    const suppressDefaultPlayerBattler = Boolean(
+      isTrainerBattle
+      && state.battle.battleSource === "npc-trainer"
+      && animation?.playerIntro?.completed === false
+    );
     const showTrainerIntro = Boolean(
       isTrainerBattle
       && state.battle.battleSource === "npc-trainer"
       && state.battle.trainerSheetId
-      && animation?.trainerIntro?.active
+      && ["enter", "awaiting", "exit"].includes(String(animation?.trainerIntro?.phase || ""))
     );
     const partyRoster = state.party.map(function (monster, index) {
       const species = getSpecies(content, monster.speciesId);
@@ -6974,6 +7101,12 @@
 
     if (state.battle.outcome) {
       actionPanel = '<div class="battle-action-grid battle-action-grid-single">' + outcomeButton + "</div>";
+    } else if (trainerIntroAwaitingContinue) {
+      actionPanel = '<div class="battle-action-grid battle-action-grid-single"><button type="button" class="battle-action-card" data-battle-action="continue-trainer-sendout"><strong>Continue</strong><span>Send out the monster</span></button></div>';
+    } else if (mustSelectReplacement) {
+      actionPanel = '<div class="battle-action-grid battle-action-grid-single">' +
+        partyRoster +
+      "</div>";
     } else if (menu === "fight") {
       actionPanel = '<div class="battle-action-grid">' +
         (activeSkills.length ? activeSkills.map(function (skill) {
@@ -6998,7 +7131,7 @@
       actionPanel = '<div class="battle-action-grid battle-action-grid-single"><div class="battle-suboption-placeholder">Choose a command to continue.</div></div>';
     }
 
-    if (!state.battle.outcome) {
+    if (!state.battle.outcome && !trainerIntroAwaitingContinue && !mustSelectReplacement) {
       rootActionPanel = '<div class="battle-action-grid battle-action-grid-root">' +
         '<button type="button" class="battle-action-card battle-action-card-root' + (menu === "fight" ? " battle-action-card-selected" : "") + '" data-battle-action="open-fight-menu"' + (activeSkills.length ? "" : " disabled") + '><strong>Fight</strong><span>Skills</span></button>' +
         '<button type="button" class="battle-action-card battle-action-card-root' + (menu === "switch" ? " battle-action-card-selected" : "") + '" data-battle-action="open-switch-menu"' + (!hasBench ? " disabled" : "") + '><strong>Switch</strong><span>Party</span></button>' +
@@ -7031,7 +7164,9 @@
           (showTrainerIntro
             ? renderBattleTrainerIntro(content, state.battle, animation)
             : renderBattleBattler(content, enemy, "battle-battler-enemy")) +
-          renderBattleBattler(content, activeMonster, "battle-battler-player") +
+          (showPlayerIntro
+            ? renderBattlePlayerIntro(content, activeMonster, animation)
+            : (!showTrainerIntro && !suppressDefaultPlayerBattler ? renderBattleBattler(content, activeMonster, "battle-battler-player") : "")) +
         '</div>' +
       '</section>',
       '<section class="battle-command-shell">' +
@@ -8464,12 +8599,12 @@
     return selectable.length ? selectable : getAvailableCharacterSheets(content).slice(0, 1);
   }
 
-  function renderAvatarPreviewMarkup(sheet, className) {
+  function renderAvatarPreviewMarkup(sheet, className, options) {
     if (!sheet?.path) {
       return '<span class="avatar-swatch"></span>';
     }
 
-    return '<canvas class="' + escapeHtml(className || "avatar-preview-sprite") + '" data-avatar-preview-sheet="' + escapeHtml(sheet.id || "") + '"></canvas>';
+    return '<canvas class="' + escapeHtml(className || "avatar-preview-sprite") + '" data-avatar-preview-sheet="' + escapeHtml(sheet.id || "") + '"' + (options?.transparent ? ' data-avatar-preview-transparent="true"' : "") + '></canvas>';
   }
 
   function getCharacterSheetConfig(content, sheetId) {
@@ -9667,8 +9802,11 @@
 
     ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
     ctx.clearRect(0, 0, cssWidth, cssHeight);
-    ctx.fillStyle = "rgba(214, 237, 246, 0.45)";
-    ctx.fillRect(0, 0, cssWidth, cssHeight);
+    const useTransparentBackground = canvas.getAttribute("data-avatar-preview-transparent") === "true";
+    if (!useTransparentBackground) {
+      ctx.fillStyle = "rgba(214, 237, 246, 0.45)";
+      ctx.fillRect(0, 0, cssWidth, cssHeight);
+    }
 
     if (!sheet?.path) {
       return;
@@ -11893,7 +12031,13 @@
         this.closeInteraction();
       },
       tryInteract: function () {
-        if (this.state.screen !== "world" || this.state.battle) {
+        if (this.state.screen !== "world") {
+          return;
+        }
+        if (this.state.battle) {
+          if (this.state.battle.animation?.trainerIntro?.awaitingContinue) {
+            this.handleBattleAction("continue-trainer-sendout");
+          }
           return;
         }
 
@@ -11996,6 +12140,14 @@
         if (!this.state.battle) {
           return;
         }
+        const trainerIntroAwaitingContinue = Boolean(this.state.battle.animation?.trainerIntro?.awaitingContinue);
+        const mustSelectReplacement = Boolean(this.state.battle.mustSelectReplacement);
+        if (trainerIntroAwaitingContinue && action !== "continue-trainer-sendout" && action !== "close-battle") {
+          return;
+        }
+        if (mustSelectReplacement && action !== "close-battle") {
+          return;
+        }
         if (battleHasPendingAnimation(this.state) && action !== "close-battle") {
           return;
         }
@@ -12034,6 +12186,19 @@
           }
           attemptRun(this.state, this.content);
           this.state.battle.menu = "root";
+        } else if (action === "continue-trainer-sendout") {
+          const animation = ensureBattleAnimationState(this.state);
+          if (animation) {
+            animation.trainerIntro.awaitingContinue = false;
+            animation.trainerIntro.phase = "exit";
+            animation.trainerIntro.progress = 0;
+          }
+          queueBattleAnimationEvents(this.state, [
+            { type: "log", message: (this.state.battle.opponentTitle || "Leader") + " " + (this.state.battle.opponentName || "Trainer") + " sends out " + this.state.battle.enemy.name + ".", duration: 180 },
+            { type: "pause", duration: 380 },
+            { type: "trainer-exit", duration: 1400 },
+          ]);
+          queuePlayerSendOutAnimation(this.state, this.content);
         } else if (action === "close-battle") {
           clearAllBattleTemporaryState(this.state);
           this.state.battle = null;
@@ -12073,8 +12238,14 @@
         }
 
         this.state.battle.playerIndex = partyIndex;
-        addBattleLogEntry(this.state, "You swapped to another monster.");
-        resolveEnemyCounter(this.state, this.content);
+        const forcedReplacement = Boolean(this.state.battle.mustSelectReplacement);
+        this.state.battle.mustSelectReplacement = false;
+        if (forcedReplacement) {
+          queuePlayerSendOutAnimation(this.state, this.content);
+        } else {
+          addBattleLogEntry(this.state, "You swapped to another monster.");
+          resolveEnemyCounter(this.state, this.content);
+        }
         this.state.battle.menu = "root";
         this.render();
       },
