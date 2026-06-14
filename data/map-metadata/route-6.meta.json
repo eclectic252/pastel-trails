@@ -1,0 +1,51 @@
+{
+  "mapId": "route-6",
+  "displayName": "Route 6",
+  "isTown": false,
+  "safezone": false,
+  "collisionGrid": 64,
+  "transitions": [
+    {
+      "id": "route6-rouote4",
+      "x": 2048,
+      "y": 1408,
+      "width": 512,
+      "height": 128,
+      "targetMapId": "route-4",
+      "targetSpawn": {
+        "x": 3264,
+        "y": 448
+      }
+    },
+    {
+      "id": "route6-snowdrop",
+      "x": 1408,
+      "y": 0,
+      "width": 512,
+      "height": 128,
+      "targetMapId": "snowdrop-town",
+      "targetSpawn": {
+        "x": 1728,
+        "y": 1856
+      }
+    }
+  ],
+  "interactions": [],
+  "spawnZones": [
+    {
+      "id": "default-zone",
+      "label": "Default Zone",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "visibleSpawns": [],
+      "spawnTable": []
+    }
+  ],
+  "trainers": [],
+  "npcs": [],
+  "mapMonstersPanel": []
+}

@@ -1,7 +1,7 @@
 {
   "mapId": "route-4",
   "displayName": "Route 4",
-  "isTown": true,
+  "isTown": false,
   "safezone": false,
   "collisionGrid": 64,
   "transitions": [
@@ -39,6 +39,18 @@
       "targetSpawn": {
         "x": 704,
         "y": 192
+      }
+    },
+    {
+      "id": "route4-route6",
+      "x": 3072,
+      "y": 128,
+      "width": 512,
+      "height": 128,
+      "targetMapId": "route-6",
+      "targetSpawn": {
+        "x": 2240,
+        "y": 1216
       }
     }
   ],

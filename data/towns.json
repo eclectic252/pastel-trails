@@ -214,6 +214,36 @@
           "overlayOpacity": 0.18
         }
       }
+    },
+    {
+      "id": "snowdrop-town",
+      "name": "Snowdrop Town",
+      "cardSubtitle": "",
+      "mapId": "snowdrop-town",
+      "spawn": {
+        "x": 128,
+        "y": 128
+      },
+      "includeInStarterSelection": true,
+      "cardBackgrounds": {
+        "desktop": {
+          "imagePath": "assets/posters/snowdrop_poster.png",
+          "fit": "cover",
+          "zoom": 100,
+          "positionX": 50,
+          "positionY": 50,
+          "repeat": "no-repeat"
+        },
+        "mobile": {
+          "imagePath": "assets/posters/snowdrop_poster.png",
+          "fit": "cover",
+          "zoom": 100,
+          "positionX": 50,
+          "positionY": 50,
+          "repeat": "no-repeat",
+          "overlayOpacity": 0.18
+        }
+      }
     }
   ]
 }

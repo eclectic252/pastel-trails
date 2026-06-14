@@ -1,7 +1,7 @@
 {
   "mapId": "route-5",
   "displayName": "Route 5",
-  "isTown": true,
+  "isTown": false,
   "safezone": false,
   "collisionGrid": 64,
   "transitions": [
