@@ -1433,12 +1433,66 @@ button {
   background: rgba(255, 255, 255, 0.54);
 }
 
+.skill-element-neutral {
+  --skill-accent-bg: rgba(214, 205, 198, 0.5);
+  --skill-accent-border: rgba(128, 109, 98, 0.28);
+  --skill-accent-ink: #6f5c52;
+}
+
+.skill-element-air {
+  --skill-accent-bg: rgba(211, 239, 246, 0.78);
+  --skill-accent-border: rgba(101, 172, 190, 0.34);
+  --skill-accent-ink: #2f6f84;
+}
+
+.skill-element-fire {
+  --skill-accent-bg: rgba(255, 224, 206, 0.82);
+  --skill-accent-border: rgba(218, 134, 92, 0.34);
+  --skill-accent-ink: #a6522e;
+}
+
+.skill-element-earth {
+  --skill-accent-bg: rgba(228, 221, 194, 0.82);
+  --skill-accent-border: rgba(149, 128, 76, 0.34);
+  --skill-accent-ink: #756036;
+}
+
+.skill-element-water {
+  --skill-accent-bg: rgba(214, 227, 255, 0.82);
+  --skill-accent-border: rgba(103, 132, 214, 0.32);
+  --skill-accent-ink: #355fa1;
+}
+
+.skill-element-light {
+  --skill-accent-bg: rgba(255, 246, 198, 0.88);
+  --skill-accent-border: rgba(204, 178, 88, 0.34);
+  --skill-accent-ink: #947239;
+}
+
+.skill-element-dark {
+  --skill-accent-bg: rgba(223, 214, 240, 0.82);
+  --skill-accent-border: rgba(118, 96, 163, 0.3);
+  --skill-accent-ink: #5d4e85;
+}
+
 .monster-move-row + .monster-move-row {
   margin-top: 0.45rem;
 }
 
 .monster-move-row-locked {
   background: rgba(233, 228, 223, 0.68);
+}
+
+.monster-move-row.skill-element-neutral,
+.monster-move-row.skill-element-air,
+.monster-move-row.skill-element-fire,
+.monster-move-row.skill-element-earth,
+.monster-move-row.skill-element-water,
+.monster-move-row.skill-element-light,
+.monster-move-row.skill-element-dark {
+  background:
+    linear-gradient(90deg, var(--skill-accent-bg) 0, var(--skill-accent-bg) 14px, rgba(255, 255, 255, 0.56) 14px, rgba(255, 255, 255, 0.56) 100%);
+  border: 1px solid var(--skill-accent-border);
 }
 
 .monster-move-row-main {
@@ -1460,6 +1514,71 @@ button {
   font-style: normal;
   font-size: 0.84rem;
   line-height: 1.35;
+}
+
+.monster-move-row-main em .skill-element-badge {
+  color: var(--skill-accent-ink);
+  font-size: 0.72rem;
+}
+
+.monster-move-row-main em .skill-effectiveness-more {
+  color: #4d7d42;
+  font-size: 0.72rem;
+}
+
+.monster-move-row-main em .skill-effectiveness-less {
+  color: #9a5541;
+  font-size: 0.72rem;
+}
+
+.monster-move-row-main em .skill-effectiveness-neutral {
+  color: #66597d;
+  font-size: 0.72rem;
+}
+
+.skill-element-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.12rem 0.42rem;
+  margin-right: 0.28rem;
+  border-radius: 999px;
+  background: var(--skill-accent-bg);
+  border: 1px solid var(--skill-accent-border);
+  color: var(--skill-accent-ink);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.1;
+  vertical-align: middle;
+}
+
+.skill-effectiveness {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.12rem 0.42rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.skill-effectiveness-more {
+  background: rgba(214, 244, 205, 0.9);
+  border: 1px solid rgba(99, 164, 86, 0.28);
+  color: #4d7d42;
+}
+
+.skill-effectiveness-less {
+  background: rgba(247, 220, 214, 0.92);
+  border: 1px solid rgba(193, 118, 94, 0.28);
+  color: #9a5541;
+}
+
+.skill-effectiveness-neutral {
+  background: rgba(228, 223, 238, 0.88);
+  border: 1px solid rgba(129, 114, 161, 0.22);
+  color: #66597d;
 }
 
 .monster-move-xp {
@@ -2014,15 +2133,69 @@ button {
   box-shadow: none;
 }
 
+.battle-action-card.skill-element-neutral,
+.battle-action-card.skill-element-air,
+.battle-action-card.skill-element-fire,
+.battle-action-card.skill-element-earth,
+.battle-action-card.skill-element-water,
+.battle-action-card.skill-element-light,
+.battle-action-card.skill-element-dark {
+  background:
+    linear-gradient(180deg, var(--skill-accent-bg), #fff8f1);
+  border-color: var(--skill-accent-border);
+}
+
+.battle-action-card-skill {
+  gap: 0.2rem;
+  min-height: 58px;
+  padding: 0.5rem 0.45rem;
+}
+
 .battle-action-card strong {
   font-size: 0.9rem;
   letter-spacing: 0.03em;
   text-transform: uppercase;
+  line-height: 1.1;
 }
 
 .battle-action-card span {
   color: #a08374;
   font-size: 0.7rem;
+}
+
+.battle-skill-meta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.22rem;
+  line-height: 1.15;
+}
+
+.battle-skill-effectiveness {
+  min-height: 18px;
+}
+
+.battle-action-card .skill-element-badge {
+  color: var(--skill-accent-ink);
+  font-size: 0.68rem;
+  padding: 0.08rem 0.34rem;
+  margin-right: 0;
+}
+
+.battle-action-card .skill-effectiveness-more {
+  color: #4d7d42;
+  font-size: 0.68rem;
+}
+
+.battle-action-card .skill-effectiveness-less {
+  color: #9a5541;
+  font-size: 0.68rem;
+}
+
+.battle-action-card .skill-effectiveness-neutral {
+  color: #66597d;
+  font-size: 0.68rem;
 }
 
 .battle-action-card:disabled {

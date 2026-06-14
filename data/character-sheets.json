@@ -1947,6 +1947,145 @@
       ]
     },
     {
+      "id": "assets-characters-boardwalk-girl-sprite-frost-male",
+      "label": "Frost Male",
+      "playerLabel": "Frost Male",
+      "playerSelectable": true,
+      "kind": "character",
+      "group": "Characters / Boardwalk girl sprite",
+      "path": "assets/Characters/Boardwalk girl sprite/frost_male.png",
+      "columns": 4,
+      "rows": 4,
+      "frameHeight": 313,
+      "offsetX": 0,
+      "offsetY": 0,
+      "renderWidth": null,
+      "rowOffsets": [
+        {
+          "x": 0,
+          "y": 10
+        },
+        {
+          "x": 0,
+          "y": 18
+        },
+        {
+          "x": 0,
+          "y": 38
+        },
+        {
+          "x": 0,
+          "y": 66
+        }
+      ],
+      "frameOffsets": [
+        [
+          {
+            "x": 35,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -23,
+            "y": 2,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -91,
+            "y": 2,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -141,
+            "y": 4,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 37,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -27,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -90,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -147,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 16,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -47,
+            "y": 4,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -98,
+            "y": 4,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -155,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ],
+        [
+          {
+            "x": 40,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -35,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -78,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          },
+          {
+            "x": -140,
+            "y": 0,
+            "width": 0,
+            "height": 0
+          }
+        ]
+      ]
+    },
+    {
       "id": "assets-characters-boardwalk-girl-sprite-gray-pants-walksheet",
       "label": "Gray Pants Walksheet",
       "playerLabel": "Gray Pants Walksheet",

@@ -1059,6 +1059,35 @@
     }) || "Neutral";
   }
 
+  function getSkillElementClassName(value) {
+    return "skill-element-" + normalizeSkillElement(value).toLowerCase();
+  }
+
+  function getSkillEffectivenessState(attacker, defender, skill, battleModel) {
+    if (!skill || !defender || normalizeSkillElement(skill.element) === "Neutral") {
+      return "neutral";
+    }
+
+    const matchupMultiplier = getElementalMatchupMultiplier(attacker, defender, skill, battleModel);
+    if (matchupMultiplier > 1.001) {
+      return "more";
+    }
+    if (matchupMultiplier < 0.999) {
+      return "less";
+    }
+    return "neutral";
+  }
+
+  function renderSkillEffectivenessLabel(state) {
+    if (state === "more") {
+      return '<span class="skill-effectiveness skill-effectiveness-more">Strong</span>';
+    }
+    if (state === "less") {
+      return '<span class="skill-effectiveness skill-effectiveness-less">Weak</span>';
+    }
+    return '<span class="skill-effectiveness skill-effectiveness-neutral">Neutral</span>';
+  }
+
   function getElementalAffinityDamageBonus(monster, skill) {
     if (!skill) {
       return 0;
@@ -2643,6 +2672,13 @@
 
   function renderMonsterMovesPanel(content, monster, options) {
     const profileState = ACTIVE_APP?.state || null;
+    const battleModel = ensureBattleModelSettings(content);
+    const currentOpponent = profileState?.battle?.enemy || null;
+    const isActiveBattleMonster = Boolean(
+      profileState?.battle
+      && options?.collection === "party"
+      && Number(options?.index) === Number(profileState.battle.playerIndex)
+    );
     ensureMonsterSkillState(monster, content);
     const learnedSkills = (monster.skills || []).map(function (skillId) {
       return getSkill(content, skillId);
@@ -2678,9 +2714,13 @@
                 ? "This monster already knows 4 moves."
                 : "Unlocked for this save."))
         : unlockStatus.reasons.join(" • ");
+      const skillElementClass = getSkillElementClassName(effectiveSkill.element);
+      const effectivenessState = isActiveBattleMonster && currentOpponent
+        ? getSkillEffectivenessState(monster, currentOpponent, effectiveSkill, battleModel)
+        : "neutral";
       return [
-        '<li class="monster-move-row' + (unlockStatus.unlocked ? "" : " monster-move-row-locked") + '">',
-        '<div class="monster-move-row-main"><span><strong>' + escapeHtml(skill.name) + '</strong><em>' + escapeHtml(effectiveSkill.kind || "skill") + " · " + escapeHtml(normalizeSkillElement(effectiveSkill.element)) + " · Power " + Number(effectiveSkill.power || 0) + " · Acc " + Number(effectiveSkill.accuracy ?? 100) + '%</em></span><div class="monster-move-xp"><div class="monster-move-xp-bar"><span style="width:' + Number(xpProgress.percent || 0) + '%"></span></div><strong>' + (xpProgress.maxed ? "Max" : (Number(xpProgress.current || 0) + "/" + Number(xpProgress.threshold || 0) + " XP")) + '</strong></div><small>' + escapeHtml(requirementCopy) + (effectiveSkill.description ? "<br>" + escapeHtml(effectiveSkill.description) : "") + "</small></div>",
+        '<li class="monster-move-row ' + skillElementClass + (unlockStatus.unlocked ? "" : " monster-move-row-locked") + '">',
+        '<div class="monster-move-row-main"><span><strong>' + escapeHtml(skill.name) + '</strong><em><span class="skill-element-badge ' + skillElementClass + '">' + escapeHtml(normalizeSkillElement(effectiveSkill.element)) + '</span> ' + escapeHtml(effectiveSkill.kind || "skill") + " · Power " + Number(effectiveSkill.power || 0) + " · Acc " + Number(effectiveSkill.accuracy ?? 100) + '%' + (isActiveBattleMonster && currentOpponent ? ' · ' + renderSkillEffectivenessLabel(effectivenessState) : "") + '</em></span><div class="monster-move-xp"><div class="monster-move-xp-bar"><span style="width:' + Number(xpProgress.percent || 0) + '%"></span></div><strong>' + (xpProgress.maxed ? "Max" : (Number(xpProgress.current || 0) + "/" + Number(xpProgress.threshold || 0) + " XP")) + '</strong></div><small>' + escapeHtml(requirementCopy) + (effectiveSkill.description ? "<br>" + escapeHtml(effectiveSkill.description) : "") + "</small></div>",
         '<div class="monster-move-row-controls"><button class="secondary-button monster-move-action" type="button" data-action="' + actionName + '" data-monster-collection="' + escapeHtml(options?.collection || "party") + '" data-monster-index="' + Number(options?.index || 0) + '" data-skill-id="' + escapeHtml(skill.id) + '"' + (bucketLabel === "available" && !canLearn ? " disabled" : "") + '>' + actionLabel + '</button><span class="monster-move-level-badge">Lv ' + currentLevel + "/" + maxLevel + '</span></div>',
         '</li>',
       ].join("");
@@ -4727,6 +4767,7 @@
     state.battle = {
       enemy,
       playerIndex: 0,
+      participantMonsterIds: state.party[0]?.instanceId ? [state.party[0].instanceId] : [],
       log: ["A wild " + species.name + " approached in " + mapLabel + "."],
       menu: "root",
       outcome: null,
@@ -4747,11 +4788,7 @@
   }
 
   function grantVictoryRewards(state, content) {
-    const activeMonster = state.party[0];
-    grantMonsterXp(state, content, activeMonster, 5, {
-      showBattleLog: true,
-      suppressStateMessage: true,
-    });
+    grantBattleMonsterXp(state, content, 5);
   }
 
   function grantBattleVictorySkillXp(state, content, monster) {
@@ -4761,6 +4798,74 @@
 
     monster.skills.forEach(function (skillId) {
       grantSkillXp(state, content, skillId, 2, { showBattleLog: true });
+    });
+  }
+
+  function ensureBattleParticipantTracking(state) {
+    if (!state?.battle) {
+      return [];
+    }
+    if (!Array.isArray(state.battle.participantMonsterIds)) {
+      state.battle.participantMonsterIds = [];
+    }
+    return state.battle.participantMonsterIds;
+  }
+
+  function markBattleParticipant(state, monster) {
+    if (!state?.battle || !monster?.instanceId) {
+      return;
+    }
+    const participantIds = ensureBattleParticipantTracking(state);
+    if (!participantIds.includes(monster.instanceId)) {
+      participantIds.push(monster.instanceId);
+    }
+  }
+
+  function markBattleParticipantByIndex(state, partyIndex) {
+    if (!state?.battle) {
+      return;
+    }
+    const monster = state.party?.[partyIndex];
+    if (!monster) {
+      return;
+    }
+    markBattleParticipant(state, monster);
+  }
+
+  function getBattleParticipantMonsters(state) {
+    if (!state?.battle) {
+      return [];
+    }
+    const participantIds = ensureBattleParticipantTracking(state);
+    return participantIds.map(function (instanceId) {
+      return (state.party || []).find(function (monster) {
+        return monster.instanceId === instanceId;
+      }) || null;
+    }).filter(Boolean);
+  }
+
+  function getBattleXpRecipients(state) {
+    if (!state?.battle) {
+      return [];
+    }
+    if (state.settings?.shareExperience) {
+      return (state.party || []).slice();
+    }
+    return getBattleParticipantMonsters(state);
+  }
+
+  function grantBattleMonsterXp(state, content, amount) {
+    getBattleXpRecipients(state).forEach(function (monster) {
+      grantMonsterXp(state, content, monster, amount, {
+        showBattleLog: true,
+        suppressStateMessage: true,
+      });
+    });
+  }
+
+  function grantBattleParticipantSkillXp(state, content) {
+    getBattleParticipantMonsters(state).forEach(function (monster) {
+      grantBattleVictorySkillXp(state, content, monster);
     });
   }
 
@@ -4813,6 +4918,7 @@
       enemyIndex: 0,
       enemy: team[0],
       playerIndex: 0,
+      participantMonsterIds: state.party[0]?.instanceId ? [state.party[0].instanceId] : [],
       log: [(arena.leaderTitle || "Leader") + " " + (arena.leaderName || "Arena Leader") + " challenges you to a battle."],
       menu: "root",
       outcome: null,
@@ -4847,6 +4953,7 @@
       enemyIndex: 0,
       enemy: team[0],
       playerIndex: 0,
+      participantMonsterIds: state.party[0]?.instanceId ? [state.party[0].instanceId] : [],
       log: [(trainer.title || "Trainer") + " " + (trainer.name || npc.label || "Trainer") + " challenges you to a battle."],
       menu: "root",
       outcome: null,
@@ -5028,7 +5135,6 @@
 
   function handleEnemyDefeat(state, content, enemy, options) {
     const enemySpecies = getSpecies(content, enemy.speciesId);
-    const activeMonster = state.party[state.battle.playerIndex] || state.party[0] || null;
     if (!options?.skipLog) {
       addBattleLogEntry(state, enemySpecies.name + " fainted.");
     }
@@ -5055,7 +5161,7 @@
       } else {
         state.battle.outcome = "victory";
         rewardStructuredBattleVictory(state, content, state.battle);
-        grantBattleVictorySkillXp(state, content, activeMonster);
+        grantBattleParticipantSkillXp(state, content);
         const rewardParts = [];
         if (state.battle.crestName) {
           rewardParts.push("the " + state.battle.crestName);
@@ -5078,7 +5184,7 @@
       state.battle.outcome = "victory";
       markWildMonsterDefeated(state, enemy.wildMonsterId);
       grantVictoryRewards(state, content);
-      grantBattleVictorySkillXp(state, content, activeMonster);
+      grantBattleParticipantSkillXp(state, content);
       state.message = "Victory. Your party earned 5 XP.";
     }
   }
@@ -5134,11 +5240,7 @@
   }
 
   function rewardStructuredBattleVictory(state, content, battle) {
-    const activeMonster = state.party[0];
-    grantMonsterXp(state, content, activeMonster, 10, {
-      showBattleLog: true,
-      suppressStateMessage: true,
-    });
+    grantBattleMonsterXp(state, content, 10);
     state.player.money += Number(battle.rewardMoney || 0);
 
     if (battle.arenaId || battle.crestId) {
@@ -7249,6 +7351,7 @@
       ? state.battle.enemyQueue
       : [enemy];
     const enemyActiveIndex = isTrainerBattle ? Number(state.battle.enemyIndex || 0) : 0;
+    const battleModel = ensureBattleModelSettings(content);
     ensurePlayerSkillProgressState(state, content);
     const activeSkills = (activeMonster.skills || []).map(function (skillId) {
       const baseSkill = ensureSkillCatalog(content).find(function (entry) {
@@ -7310,9 +7413,11 @@
       actionPanel = '<div class="battle-action-grid">' +
         (activeSkills.length ? activeSkills.map(function (skill) {
           const skillElement = normalizeSkillElement(skill.element);
+          const skillElementClass = getSkillElementClassName(skill.element);
           const affinityBonusPercent = Math.round(getElementalAffinityDamageBonus(activeMonster, skill) * 100);
+          const effectivenessState = getSkillEffectivenessState(activeMonster, enemy, skill, battleModel);
           const skillLevel = getPlayerSkillLevel(state, content, skill.id);
-          return '<button type="button" class="battle-action-card" data-battle-skill="' + escapeHtml(skill.id) + '"><strong>' + escapeHtml(skill.name) + ' · Lv ' + skillLevel + "/" + getSkillMaxLevel(skill) + '</strong><span>' + escapeHtml(skill.kind || "skill") + " · " + escapeHtml(skillElement) + " · Power " + Number(skill.power || 0) + " · Acc " + Number(skill.accuracy ?? 100) + "%" + (affinityBonusPercent > 0 ? " · +" + affinityBonusPercent + "% affinity" : "") + "</span></button>";
+          return '<button type="button" class="battle-action-card battle-action-card-skill ' + skillElementClass + '" data-battle-skill="' + escapeHtml(skill.id) + '"><strong>' + escapeHtml(skill.name) + ' · Lv ' + skillLevel + "/" + getSkillMaxLevel(skill) + '</strong><span class="battle-skill-meta"><span class="skill-element-badge ' + skillElementClass + '">' + escapeHtml(skillElement) + '</span><span>' + escapeHtml(skill.kind || "skill") + " · Pow " + Number(skill.power || 0) + " · Acc " + Number(skill.accuracy ?? 100) + "%" + (affinityBonusPercent > 0 ? " · +" + affinityBonusPercent + "%" : "") + '</span></span><span class="battle-skill-effectiveness">' + renderSkillEffectivenessLabel(effectivenessState) + "</span></button>";
         }).join("") : '<div class="battle-action-card battle-action-card-secondary"><strong>No Skills Ready</strong><span>Raise a global skill level in the party Moves panel first.</span></div>') +
         '<button type="button" class="battle-action-card battle-action-card-secondary" data-battle-action="back-menu"><strong>Back</strong><span>Return to commands</span></button>' +
       "</div>";
@@ -9048,10 +9153,7 @@
 
     root.innerHTML = [
       '<main class="dev-screen">',
-      '<header class="game-topbar">',
-      '<div><span class="eyebrow">Dev Tools</span><strong>Map Editor</strong></div>',
-      '<div class="topbar-stats"><button class="' + (devToolsState.section === "maps" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-maps">Maps</button><button class="' + (devToolsState.section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button><button class="' + (devToolsState.section === "arenas" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-arenas">Arenas</button><button class="' + (devToolsState.section === "trainers" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-trainers">Trainers</button><button class="' + (devToolsState.section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button><button class="' + (devToolsState.section === "characters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-characters">Characters</button><button class="secondary-button" type="button" data-action="back-to-title">Back</button><button class="secondary-button" type="button" data-action="load-folder">Load Project Folder</button></div>',
-      "</header>",
+      renderDevToolsTopbar(devToolsState.section, "Map Editor"),
       '<section class="dev-screen-layout">',
       '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>Maps</h2></div><ul class="compact-list dev-map-list">' + mapList + "</ul></aside>",
       '<section class="dev-main">',
@@ -9453,10 +9555,7 @@
       validation,
       html: [
         '<main class="dev-screen">',
-        '<header class="game-topbar">',
-        '<div><span class="eyebrow">Dev Tools</span><strong>Monster Editor</strong></div>',
-        '<div class="topbar-stats"><button class="' + (devToolsState.section === "maps" ? "secondary-button" : "primary-button") + '" type="button" data-action="dev-section-maps">Maps</button><button class="' + (devToolsState.section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button><button class="' + (devToolsState.section === "arenas" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-arenas">Arenas</button><button class="' + (devToolsState.section === "trainers" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-trainers">Trainers</button><button class="' + (devToolsState.section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button><button class="' + (devToolsState.section === "characters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-characters">Characters</button><button class="secondary-button" type="button" data-action="back-to-title">Back</button><button class="secondary-button" type="button" data-action="load-folder">Load Project Folder</button></div>',
-        '</header>',
+        renderDevToolsTopbar(devToolsState.section, "Monster Editor"),
         '<section class="dev-screen-layout">',
         '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>' + (monsterSubMode === "species" ? "Monster Species" : "Skills") + '</h2><button class="secondary-button" type="button" data-action="' + addAction + '">' + addLabel + '</button></div><ul class="compact-list dev-map-list">' + (sidebarItems || "<li>No entries yet.</li>") + '</ul></aside>',
         '<section class="dev-main">',
@@ -9592,10 +9691,7 @@
 
     root.innerHTML = [
       '<main class="dev-screen">',
-      '<header class="game-topbar">',
-      '<div><span class="eyebrow">Dev Tools</span><strong>Arena Editor</strong></div>',
-      '<div class="topbar-stats"><button class="' + (devToolsState.section === "maps" ? "secondary-button" : "primary-button") + '" type="button" data-action="dev-section-maps">Maps</button><button class="' + (devToolsState.section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button><button class="' + (devToolsState.section === "arenas" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-arenas">Arenas</button><button class="' + (devToolsState.section === "trainers" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-trainers">Trainers</button><button class="' + (devToolsState.section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button><button class="' + (devToolsState.section === "characters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-characters">Characters</button><button class="secondary-button" type="button" data-action="back-to-title">Back</button><button class="secondary-button" type="button" data-action="load-folder">Load Project Folder</button></div>',
-      '</header>',
+      renderDevToolsTopbar(devToolsState.section, "Arena Editor"),
       '<section class="dev-screen-layout">',
       '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>Arenas</h2><button class="secondary-button" type="button" data-action="add-arena">Add Arena</button></div><ul class="compact-list dev-map-list">' + (arenaItems || "<li>No arenas yet.</li>") + '</ul></aside>',
       '<section class="dev-main">',
@@ -9680,10 +9776,7 @@
 
     root.innerHTML = [
       '<main class="dev-screen">',
-      '<header class="game-topbar">',
-      '<div><span class="eyebrow">Dev Tools</span><strong>Trainer Editor</strong></div>',
-      '<div class="topbar-stats"><button class="' + (devToolsState.section === "maps" ? "secondary-button" : "primary-button") + '" type="button" data-action="dev-section-maps">Maps</button><button class="' + (devToolsState.section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button><button class="' + (devToolsState.section === "arenas" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-arenas">Arenas</button><button class="' + (devToolsState.section === "trainers" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-trainers">Trainers</button><button class="' + (devToolsState.section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button><button class="' + (devToolsState.section === "characters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-characters">Characters</button><button class="secondary-button" type="button" data-action="back-to-title">Back</button><button class="secondary-button" type="button" data-action="load-folder">Load Project Folder</button></div>',
-      '</header>',
+      renderDevToolsTopbar(devToolsState.section, "Trainer Editor"),
       '<section class="dev-screen-layout">',
       '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>Trainers</h2><button class="secondary-button" type="button" data-action="add-trainer">Add Trainer</button></div><ul class="compact-list dev-map-list">' + (trainerItems || "<li>No trainers yet.</li>") + '</ul></aside>',
       '<section class="dev-main"><section class="panel-block dev-preview-controls"><div class="section-heading"><h2>Trainer Tools</h2></div><p>Edit trainer rosters in-memory, then export <code>trainers.json</code> into <code>data/</code> and rebuild local content before reloading the game.</p><div class="title-actions"><button class="secondary-button" type="button" data-action="export-trainers-json">Export trainers.json</button></div></section>' + trainerEditor + '</section>',
@@ -9783,10 +9876,7 @@
 
     root.innerHTML = [
       '<main class="dev-screen">',
-      '<header class="game-topbar">',
-      '<div><span class="eyebrow">Dev Tools</span><strong>Town Editor</strong></div>',
-      '<div class="topbar-stats"><button class="' + (devToolsState.section === "maps" ? "secondary-button" : "primary-button") + '" type="button" data-action="dev-section-maps">Maps</button><button class="' + (devToolsState.section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button><button class="' + (devToolsState.section === "arenas" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-arenas">Arenas</button><button class="' + (devToolsState.section === "trainers" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-trainers">Trainers</button><button class="' + (devToolsState.section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button><button class="' + (devToolsState.section === "characters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-characters">Characters</button><button class="secondary-button" type="button" data-action="back-to-title">Back</button><button class="secondary-button" type="button" data-action="load-folder">Load Project Folder</button></div>',
-      "</header>",
+      renderDevToolsTopbar(devToolsState.section, "Town Editor"),
       '<section class="dev-screen-layout">',
       '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>Towns</h2></div><ul class="compact-list dev-map-list">' + (townList || "<li>No town maps available.</li>") + "</ul></aside>",
       '<section class="dev-main">',
@@ -9862,24 +9952,10 @@
     }).join("");
     const selectedRowOffset = getCharacterRowOffset(devToolsState, selectedRow);
     const selectedFrameOffset = getCharacterFrameOffset(devToolsState, selectedRow, selectedFrame);
-    const crestLevelCaps = ensureDevToolsCrestLevelCapSettings(devToolsState, content);
-    const crestLevelCapMarkup = crestLevelCaps.map(function (entry, index) {
-      return '<section class="panel-block dev-editor-panel">' +
-        '<div class="section-heading"><h3>Tier ' + (index + 1) + '</h3><div class="topbar-stats"><button class="secondary-button" type="button" data-action="delete-crest-level-cap" data-crest-cap-index="' + index + '"' + (crestLevelCaps.length <= 1 ? " disabled" : "") + '>Delete</button></div></div>' +
-        '<div class="form-grid">' +
-        '<label class="input-group"><span>Crests Min</span><input type="number" min="0" step="1" data-dev-character-field="crestLevelCapMin:' + index + '" value="' + Number(entry.crestMin) + '" /></label>' +
-        '<label class="input-group"><span>Crests Max</span><input type="number" min="0" step="1" data-dev-character-field="crestLevelCapMax:' + index + '" value="' + Number(entry.crestMax) + '" /></label>' +
-        '<label class="input-group"><span>Level Cap</span><input type="number" min="1" step="1" data-dev-character-field="crestLevelCapLevel:' + index + '" value="' + Number(entry.levelCap) + '" /></label>' +
-        '</div>' +
-      '</section>';
-    }).join("");
 
     root.innerHTML = [
       '<main class="dev-screen">',
-      '<header class="game-topbar">',
-      '<div><span class="eyebrow">Dev Tools</span><strong>Sprite Sheet Checker</strong></div>',
-      '<div class="topbar-stats"><button class="' + (devToolsState.section === "maps" ? "secondary-button" : "primary-button") + '" type="button" data-action="dev-section-maps">Maps</button><button class="' + (devToolsState.section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button><button class="' + (devToolsState.section === "arenas" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-arenas">Arenas</button><button class="' + (devToolsState.section === "trainers" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-trainers">Trainers</button><button class="' + (devToolsState.section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button><button class="' + (devToolsState.section === "characters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-characters">Characters</button><button class="secondary-button" type="button" data-action="back-to-title">Back</button><button class="secondary-button" type="button" data-action="load-folder">Load Project Folder</button></div>',
-      '</header>',
+      renderDevToolsTopbar(devToolsState.section, "Sprite Sheet Checker"),
       '<section class="dev-screen-layout">',
       '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>Sprite Sheets</h2></div><div class="dev-sheet-group-wrap">' + sidebarItems + '</div></aside>',
       '<section class="dev-main">',
@@ -9894,10 +9970,6 @@
       '<p class="dev-helper-text">' + (isMonsterSheet
         ? 'This width becomes the default render size for monster sheets across the game. Individual monster sheets can still override it below.'
         : 'These values are global defaults for all player character sheets and are saved to <code>settings.json</code>, not to one sheet.') + '</p>',
-      '<div class="section-heading"><h2>Crest Progression Level Caps</h2><div class="topbar-stats"><button class="secondary-button" type="button" data-action="add-crest-level-cap">Add Tier</button></div></div>',
-      crestLevelCapMarkup,
-      '<p class="dev-helper-text">These tiers control the player wild/refight level cap based on earned crests, and the default cap range used for arena refights. They are saved to <code>settings.json</code>.</p>',
-      '<div class="title-actions"><button class="secondary-button" type="button" data-action="export-settings-json">Export settings.json</button></div>',
       '</section>',
       '<section class="panel-block dev-editor-panel">',
       '<div class="section-heading"><h2>Sheet Settings</h2></div>',
@@ -10085,6 +10157,9 @@
     const species = getSpecies(content, speciesId);
     const variant = getSpeciesVariant(species, variantId || "default");
     const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      return;
+    }
     const cssWidth = Math.max(1, Math.round(canvas.clientWidth || Number(canvas.width) || 96));
     const cssHeight = Math.max(1, Math.round(canvas.clientHeight || Number(canvas.height) || 96));
     const pixelRatio = window.devicePixelRatio || 1;
@@ -10198,14 +10273,26 @@
 
   function drawMonsterVariantCanvases(root, content) {
     root.querySelectorAll("[data-monster-visual-species]").forEach(function (canvas) {
-      drawMonsterVariantCanvas(
-        canvas,
-        content,
-        canvas.getAttribute("data-monster-visual-species") || "",
-        canvas.getAttribute("data-monster-visual-variant") || "default",
-        canvas.getAttribute("data-monster-visual-mode") || "default"
-      );
+      try {
+        drawMonsterVariantCanvas(
+          canvas,
+          content,
+          canvas.getAttribute("data-monster-visual-species") || "",
+          canvas.getAttribute("data-monster-visual-variant") || "default",
+          canvas.getAttribute("data-monster-visual-mode") || "default"
+        );
+      } catch (error) {
+        console.error("Could not draw monster variant preview.", error);
+      }
     });
+  }
+
+  function safeDrawMonsterVariantCanvases(root, content) {
+    try {
+      drawMonsterVariantCanvases(root, content);
+    } catch (error) {
+      console.error("Could not draw monster variant previews.", error);
+    }
   }
 
   function drawCharacterSheetGrid(canvas, devToolsState) {
@@ -10425,9 +10512,63 @@
     }
   }
 
+  function renderDevToolsTopbar(section, title) {
+    return [
+      '<header class="game-topbar">',
+      '<div><span class="eyebrow">Dev Tools</span><strong>' + escapeHtml(title) + '</strong></div>',
+      '<div class="topbar-stats">',
+      '<button class="' + (section === "maps" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-maps">Maps</button>',
+      '<button class="' + (section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button>',
+      '<button class="' + (section === "arenas" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-arenas">Arenas</button>',
+      '<button class="' + (section === "trainers" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-trainers">Trainers</button>',
+      '<button class="' + (section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button>',
+      '<button class="' + (section === "characters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-characters">Characters</button>',
+      '<button class="' + (section === "progression" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-progression">Progression</button>',
+      '<button class="secondary-button" type="button" data-action="back-to-title">Back</button>',
+      '<button class="secondary-button" type="button" data-action="load-folder">Load Project Folder</button>',
+      '</div>',
+      '</header>',
+    ].join("");
+  }
+
+  function renderProgressionDevToolsScreen(root, content, devToolsState) {
+    const crestLevelCaps = ensureDevToolsCrestLevelCapSettings(devToolsState, content);
+    const crestLevelCapMarkup = crestLevelCaps.map(function (entry, index) {
+      return '<section class="panel-block dev-editor-panel">' +
+        '<div class="section-heading"><h3>Tier ' + (index + 1) + '</h3><div class="topbar-stats"><button class="secondary-button" type="button" data-action="delete-crest-level-cap" data-crest-cap-index="' + index + '"' + (crestLevelCaps.length <= 1 ? " disabled" : "") + '>Delete</button></div></div>' +
+        '<div class="form-grid">' +
+        '<label class="input-group"><span>Crests Min</span><input type="number" min="0" step="1" data-dev-character-field="crestLevelCapMin:' + index + '" value="' + Number(entry.crestMin) + '" /></label>' +
+        '<label class="input-group"><span>Crests Max</span><input type="number" min="0" step="1" data-dev-character-field="crestLevelCapMax:' + index + '" value="' + Number(entry.crestMax) + '" /></label>' +
+        '<label class="input-group"><span>Level Cap</span><input type="number" min="1" step="1" data-dev-character-field="crestLevelCapLevel:' + index + '" value="' + Number(entry.levelCap) + '" /></label>' +
+        '</div>' +
+      '</section>';
+    }).join("");
+
+    root.innerHTML = [
+      '<main class="dev-screen">',
+      renderDevToolsTopbar(devToolsState.section, "Progression Settings"),
+      '<section class="dev-screen-layout">',
+      '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>Progression</h2></div><p class="dev-helper-text">Manage crest milestones and the level caps they unlock for wild monsters plus arena and trainer refights.</p></aside>',
+      '<section class="dev-main">',
+      '<section class="panel-block dev-editor-panel">',
+      '<div class="section-heading"><h2>Crest Progression Level Caps</h2><div class="topbar-stats"><button class="secondary-button" type="button" data-action="add-crest-level-cap">Add Tier</button></div></div>',
+      crestLevelCapMarkup,
+      '<p class="dev-helper-text">These tiers control the player wild/refight level cap based on earned crests, and the default cap range used for arena and trainer refights. They are saved to <code>settings.json</code>.</p>',
+      '<div class="title-actions"><button class="secondary-button" type="button" data-action="export-settings-json">Export settings.json</button></div>',
+      '</section>',
+      '</section>',
+      '</section>',
+      '</main>',
+    ].join("");
+  }
+
   function renderDevToolsScreen(root, content, devToolsState) {
     if (devToolsState.section === "characters") {
       return renderCharacterDevToolsScreen(root, content, devToolsState);
+    }
+
+    if (devToolsState.section === "progression") {
+      return renderProgressionDevToolsScreen(root, content, devToolsState);
     }
 
     if (devToolsState.section === "towns") {
@@ -10744,6 +10885,9 @@
     });
     root.querySelector('[data-action="dev-section-characters"]')?.addEventListener("click", function () {
       app.setDevSection("characters");
+    });
+    root.querySelector('[data-action="dev-section-progression"]')?.addEventListener("click", function () {
+      app.setDevSection("progression");
     });
     root.querySelector('[data-action="load-folder"]')?.addEventListener("click", function () {
       app.loadProjectFolder(true);
@@ -11514,6 +11658,12 @@
             event.preventDefault();
             event.stopPropagation();
             app.setDevSection("characters");
+            return;
+          }
+          if (action === "dev-section-progression") {
+            event.preventDefault();
+            event.stopPropagation();
+            app.setDevSection("progression");
             return;
           }
           if (action === "mode-transitions") {
@@ -12463,6 +12613,7 @@
         }
 
         this.state.battle.playerIndex = partyIndex;
+        markBattleParticipant(this.state, targetMonster);
         const forcedReplacement = Boolean(this.state.battle.mustSelectReplacement);
         this.state.battle.mustSelectReplacement = false;
         if (forcedReplacement) {
@@ -14485,7 +14636,7 @@
           if (this.devTools.section === "characters") {
             drawCharacterDevCanvases(root, this.devTools);
           }
-          drawMonsterVariantCanvases(root, this.content);
+          safeDrawMonsterVariantCanvases(root, this.content);
           attachDevToolsHandlers(root, this);
           restoreFocusableState(root, focusState);
           this.restoreDevPreviewScroll();
@@ -14493,7 +14644,7 @@
         }
 
         renderWorld(root, this.state, this.content, this.saveManager, this.devTools);
-        drawMonsterVariantCanvases(root, this.content);
+        safeDrawMonsterVariantCanvases(root, this.content);
         safeDrawAvatarPreviewCanvases(root, this.content);
         attachInputHandlers(root, this);
         restoreFocusableState(root, focusState);

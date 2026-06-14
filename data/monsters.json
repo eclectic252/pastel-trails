@@ -17,7 +17,10 @@
         "skill-3",
         "skill-4",
         "skill-5",
-        "skill-6"
+        "skill-6",
+        "skill-7",
+        "skill-8",
+        "skill-9"
       ],
       "variants": [
         {
@@ -280,7 +283,10 @@
         "skill-2",
         "skill-6",
         "skill-5",
-        "skill-4"
+        "skill-4",
+        "skill-7",
+        "skill-8",
+        "skill-9"
       ],
       "variants": [
         {
@@ -543,7 +549,10 @@
         "skill-3",
         "skill-6",
         "skill-5",
-        "skill-4"
+        "skill-4",
+        "skill-7",
+        "skill-8",
+        "skill-9"
       ],
       "variants": [
         {
@@ -757,7 +766,10 @@
         "skill-3",
         "skill-4",
         "skill-5",
-        "skill-6"
+        "skill-6",
+        "skill-7",
+        "skill-8",
+        "skill-9"
       ],
       "variants": [
         {
@@ -1028,7 +1040,10 @@
         "skill-3",
         "skill-6",
         "skill-5",
-        "skill-4"
+        "skill-4",
+        "skill-7",
+        "skill-8",
+        "skill-9"
       ],
       "variants": [
         {
@@ -1300,7 +1315,10 @@
         "skill-3",
         "skill-4",
         "skill-5",
-        "skill-6"
+        "skill-6",
+        "skill-7",
+        "skill-8",
+        "skill-9"
       ],
       "variants": [
         {
@@ -1398,6 +1416,150 @@
             "frameDurationMs": 180
           },
           "label": "Electric"
+        },
+        {
+          "id": "Caniri-electric-copy",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Caniri/caniri_water.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "portrait",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "Water"
+        },
+        {
+          "id": "Caniri-fire",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Caniri/caniri_fire.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "portrait",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "Fire"
+        },
+        {
+          "id": "Caniri-pink",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Caniri/caniri_pink.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "portrait",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "Pink"
+        },
+        {
+          "id": "Caniri-dark",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Caniri/caniri_dark.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "portrait",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "Dark"
+        },
+        {
+          "id": "Caniri-galaxy",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Caniri/caniri_galaxy.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "portrait",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "Galaxy"
+        },
+        {
+          "id": "Caniri-lavender",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Caniri/caniri_lavender.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "portrait",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "Lavender"
         }
       ]
     },
@@ -1418,7 +1580,10 @@
         "skill-3",
         "skill-6",
         "skill-5",
-        "skill-4"
+        "skill-4",
+        "skill-7",
+        "skill-8",
+        "skill-9"
       ],
       "variants": [
         {
@@ -1467,6 +1632,367 @@
             "frameDurationMs": 180
           },
           "label": "Snow"
+        },
+        {
+          "id": "kelpar-grass",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Kelpar/kelpar_grass.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "portrait",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "Grass"
+        },
+        {
+          "id": "kelpar-electric",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Kelpar/kelpar_electric.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "portrait",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "Electric"
+        },
+        {
+          "id": "kelpar-water",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Kelpar/kelpar_water.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "portrait",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "Water"
+        },
+        {
+          "id": "kelpar-fire",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Kelpar/kelpar_fire.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "portrait",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "Fire"
+        },
+        {
+          "id": "kelpar-pink",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Kelpar/kelpar_pink.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "portrait",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "Pink"
+        },
+        {
+          "id": "kelpar-dark",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Kelpar/kelpar_dark.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "portrait",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "Dark"
+        },
+        {
+          "id": "kelpar-galaxy",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Kelpar/kelpar_galaxy.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "portrait",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "Galaxy"
+        },
+        {
+          "id": "kelpar-lavender",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Kelpar/kelpar_lavender.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "portrait",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "Lavender"
+        }
+      ]
+    },
+    {
+      "id": "monster-8",
+      "name": "Torvyn",
+      "baseStats": {
+        "hp": 10,
+        "attack": 5,
+        "defense": 5,
+        "speed": 5
+      },
+      "growth": "medium",
+      "overworldDisplayMode": "portrait",
+      "skills": [
+        "basic-attack",
+        "skill-2",
+        "skill-3",
+        "skill-4",
+        "skill-5",
+        "skill-6",
+        "skill-7",
+        "skill-8",
+        "skill-9"
+      ],
+      "variants": [
+        {
+          "id": "default",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Torvyn/torvyn_default.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "Default"
+        },
+        {
+          "id": "default-copy",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Torvyn/torvyn_default.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "Default"
+        },
+        {
+          "id": "default-snow",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Torvyn/torvyn_frost.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "Snow"
+        },
+        {
+          "id": "default-grass",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Torvyn/torvyn_grass.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "Grass"
+        },
+        {
+          "id": "default-electric",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Torvyn/torvyn_electric.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "Electric"
+        },
+        {
+          "id": "default-water",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Torvyn/torvyn_water.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "Water"
         }
       ]
     }

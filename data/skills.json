@@ -4,7 +4,7 @@
       "id": "basic-attack",
       "name": "Tackle",
       "kind": "attack",
-      "power": 5,
+      "power": 4,
       "description": "A simple physical strike.",
       "element": "Neutral",
       "accuracy": 100,
@@ -53,7 +53,7 @@
         "foe": []
       },
       "statusEffects": [],
-      "power": 6,
+      "power": 5,
       "description": ""
     },
     {
@@ -90,13 +90,13 @@
         "foe": []
       },
       "statusEffects": [],
-      "power": 10,
+      "power": 8,
       "description": ""
     },
     {
       "id": "skill-4",
       "name": "Dust Stun",
-      "kind": "attack",
+      "kind": "Status",
       "element": "Air",
       "maxLevel": 1,
       "levelOverrides": [],
@@ -132,7 +132,7 @@
     {
       "id": "skill-5",
       "name": "Wind Guard",
-      "kind": "attack",
+      "kind": "Status",
       "element": "Air",
       "maxLevel": 1,
       "levelOverrides": [],
@@ -160,7 +160,7 @@
     {
       "id": "skill-6",
       "name": "Terra Spike",
-      "kind": "attack",
+      "kind": "Status",
       "element": "Earth",
       "maxLevel": 1,
       "levelOverrides": [],
@@ -183,6 +183,79 @@
       },
       "statusEffects": [],
       "power": 0,
+      "description": ""
+    },
+    {
+      "id": "skill-7",
+      "name": "Iron Spike",
+      "kind": "Status",
+      "element": "Earth",
+      "maxLevel": 1,
+      "levelOverrides": [],
+      "accuracy": 100,
+      "unlockRequirements": {
+        "arenaClears": [],
+        "requiredSkillLevels": []
+      },
+      "statModifiers": {
+        "self": [
+          {
+            "type": "modify",
+            "stat": "attack",
+            "amount": 1,
+            "label": "",
+            "showLabel": true
+          }
+        ],
+        "foe": []
+      },
+      "statusEffects": [],
+      "power": 0,
+      "description": ""
+    },
+    {
+      "id": "skill-8",
+      "name": "Rock Tumble",
+      "kind": "attack",
+      "element": "Neutral",
+      "maxLevel": 2,
+      "levelOverrides": [],
+      "accuracy": 100,
+      "unlockRequirements": {
+        "arenaClears": [],
+        "requiredSkillLevels": []
+      },
+      "statModifiers": {
+        "self": [],
+        "foe": []
+      },
+      "statusEffects": [],
+      "power": 5,
+      "description": ""
+    },
+    {
+      "id": "skill-9",
+      "name": "Earthquake",
+      "kind": "attack",
+      "element": "Neutral",
+      "maxLevel": 1,
+      "levelOverrides": [],
+      "accuracy": 100,
+      "unlockRequirements": {
+        "arenaClears": [],
+        "requiredSkillLevels": [
+          {
+            "skillId": "skill-8",
+            "level": 2
+          }
+        ]
+      },
+      "statModifiers": {
+        "self": [],
+        "foe": []
+      },
+      "statusEffects": [],
+      "power": 8,
       "description": ""
     }
   ]

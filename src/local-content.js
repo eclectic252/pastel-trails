@@ -81,7 +81,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "id": "basic-attack",
         "name": "Tackle",
         "kind": "attack",
-        "power": 5,
+        "power": 4,
         "description": "A simple physical strike.",
         "element": "Neutral",
         "accuracy": 100,
@@ -130,7 +130,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "foe": []
         },
         "statusEffects": [],
-        "power": 6,
+        "power": 5,
         "description": ""
       },
       {
@@ -167,13 +167,13 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "foe": []
         },
         "statusEffects": [],
-        "power": 10,
+        "power": 8,
         "description": ""
       },
       {
         "id": "skill-4",
         "name": "Dust Stun",
-        "kind": "attack",
+        "kind": "Status",
         "element": "Air",
         "maxLevel": 1,
         "levelOverrides": [],
@@ -209,7 +209,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       {
         "id": "skill-5",
         "name": "Wind Guard",
-        "kind": "attack",
+        "kind": "Status",
         "element": "Air",
         "maxLevel": 1,
         "levelOverrides": [],
@@ -237,7 +237,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       {
         "id": "skill-6",
         "name": "Terra Spike",
-        "kind": "attack",
+        "kind": "Status",
         "element": "Earth",
         "maxLevel": 1,
         "levelOverrides": [],
@@ -261,6 +261,79 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "statusEffects": [],
         "power": 0,
         "description": ""
+      },
+      {
+        "id": "skill-7",
+        "name": "Iron Spike",
+        "kind": "Status",
+        "element": "Earth",
+        "maxLevel": 1,
+        "levelOverrides": [],
+        "accuracy": 100,
+        "unlockRequirements": {
+          "arenaClears": [],
+          "requiredSkillLevels": []
+        },
+        "statModifiers": {
+          "self": [
+            {
+              "type": "modify",
+              "stat": "attack",
+              "amount": 1,
+              "label": "",
+              "showLabel": true
+            }
+          ],
+          "foe": []
+        },
+        "statusEffects": [],
+        "power": 0,
+        "description": ""
+      },
+      {
+        "id": "skill-8",
+        "name": "Rock Tumble",
+        "kind": "attack",
+        "element": "Neutral",
+        "maxLevel": 2,
+        "levelOverrides": [],
+        "accuracy": 100,
+        "unlockRequirements": {
+          "arenaClears": [],
+          "requiredSkillLevels": []
+        },
+        "statModifiers": {
+          "self": [],
+          "foe": []
+        },
+        "statusEffects": [],
+        "power": 5,
+        "description": ""
+      },
+      {
+        "id": "skill-9",
+        "name": "Earthquake",
+        "kind": "attack",
+        "element": "Neutral",
+        "maxLevel": 1,
+        "levelOverrides": [],
+        "accuracy": 100,
+        "unlockRequirements": {
+          "arenaClears": [],
+          "requiredSkillLevels": [
+            {
+              "skillId": "skill-8",
+              "level": 2
+            }
+          ]
+        },
+        "statModifiers": {
+          "self": [],
+          "foe": []
+        },
+        "statusEffects": [],
+        "power": 8,
+        "description": ""
       }
     ]
   },
@@ -283,7 +356,10 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "skill-3",
           "skill-4",
           "skill-5",
-          "skill-6"
+          "skill-6",
+          "skill-7",
+          "skill-8",
+          "skill-9"
         ],
         "variants": [
           {
@@ -546,7 +622,10 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "skill-2",
           "skill-6",
           "skill-5",
-          "skill-4"
+          "skill-4",
+          "skill-7",
+          "skill-8",
+          "skill-9"
         ],
         "variants": [
           {
@@ -809,7 +888,10 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "skill-3",
           "skill-6",
           "skill-5",
-          "skill-4"
+          "skill-4",
+          "skill-7",
+          "skill-8",
+          "skill-9"
         ],
         "variants": [
           {
@@ -1023,7 +1105,10 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "skill-3",
           "skill-4",
           "skill-5",
-          "skill-6"
+          "skill-6",
+          "skill-7",
+          "skill-8",
+          "skill-9"
         ],
         "variants": [
           {
@@ -1294,7 +1379,10 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "skill-3",
           "skill-6",
           "skill-5",
-          "skill-4"
+          "skill-4",
+          "skill-7",
+          "skill-8",
+          "skill-9"
         ],
         "variants": [
           {
@@ -1566,7 +1654,10 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "skill-3",
           "skill-4",
           "skill-5",
-          "skill-6"
+          "skill-6",
+          "skill-7",
+          "skill-8",
+          "skill-9"
         ],
         "variants": [
           {
@@ -1664,6 +1755,150 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               "frameDurationMs": 180
             },
             "label": "Electric"
+          },
+          {
+            "id": "Caniri-electric-copy",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Caniri/caniri_water.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "portrait",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180
+            },
+            "label": "Water"
+          },
+          {
+            "id": "Caniri-fire",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Caniri/caniri_fire.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "portrait",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180
+            },
+            "label": "Fire"
+          },
+          {
+            "id": "Caniri-pink",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Caniri/caniri_pink.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "portrait",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180
+            },
+            "label": "Pink"
+          },
+          {
+            "id": "Caniri-dark",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Caniri/caniri_dark.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "portrait",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180
+            },
+            "label": "Dark"
+          },
+          {
+            "id": "Caniri-galaxy",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Caniri/caniri_galaxy.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "portrait",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180
+            },
+            "label": "Galaxy"
+          },
+          {
+            "id": "Caniri-lavender",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Caniri/caniri_lavender.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "portrait",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180
+            },
+            "label": "Lavender"
           }
         ]
       },
@@ -1684,7 +1919,10 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "skill-3",
           "skill-6",
           "skill-5",
-          "skill-4"
+          "skill-4",
+          "skill-7",
+          "skill-8",
+          "skill-9"
         ],
         "variants": [
           {
@@ -1733,6 +1971,367 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               "frameDurationMs": 180
             },
             "label": "Snow"
+          },
+          {
+            "id": "kelpar-grass",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Kelpar/kelpar_grass.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "portrait",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180
+            },
+            "label": "Grass"
+          },
+          {
+            "id": "kelpar-electric",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Kelpar/kelpar_electric.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "portrait",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180
+            },
+            "label": "Electric"
+          },
+          {
+            "id": "kelpar-water",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Kelpar/kelpar_water.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "portrait",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180
+            },
+            "label": "Water"
+          },
+          {
+            "id": "kelpar-fire",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Kelpar/kelpar_fire.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "portrait",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180
+            },
+            "label": "Fire"
+          },
+          {
+            "id": "kelpar-pink",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Kelpar/kelpar_pink.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "portrait",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180
+            },
+            "label": "Pink"
+          },
+          {
+            "id": "kelpar-dark",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Kelpar/kelpar_dark.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "portrait",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180
+            },
+            "label": "Dark"
+          },
+          {
+            "id": "kelpar-galaxy",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Kelpar/kelpar_galaxy.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "portrait",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180
+            },
+            "label": "Galaxy"
+          },
+          {
+            "id": "kelpar-lavender",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Kelpar/kelpar_lavender.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "portrait",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180
+            },
+            "label": "Lavender"
+          }
+        ]
+      },
+      {
+        "id": "monster-8",
+        "name": "Torvyn",
+        "baseStats": {
+          "hp": 10,
+          "attack": 5,
+          "defense": 5,
+          "speed": 5
+        },
+        "growth": "medium",
+        "overworldDisplayMode": "portrait",
+        "skills": [
+          "basic-attack",
+          "skill-2",
+          "skill-3",
+          "skill-4",
+          "skill-5",
+          "skill-6",
+          "skill-7",
+          "skill-8",
+          "skill-9"
+        ],
+        "variants": [
+          {
+            "id": "default",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Torvyn/torvyn_default.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180
+            },
+            "label": "Default"
+          },
+          {
+            "id": "default-copy",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Torvyn/torvyn_default.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180
+            },
+            "label": "Default"
+          },
+          {
+            "id": "default-snow",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Torvyn/torvyn_frost.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180
+            },
+            "label": "Snow"
+          },
+          {
+            "id": "default-grass",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Torvyn/torvyn_grass.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180
+            },
+            "label": "Grass"
+          },
+          {
+            "id": "default-electric",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Torvyn/torvyn_electric.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180
+            },
+            "label": "Electric"
+          },
+          {
+            "id": "default-water",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Torvyn/torvyn_water.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180
+            },
+            "label": "Water"
           }
         ]
       }
@@ -4140,6 +4739,145 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         ]
       },
       {
+        "id": "assets-characters-boardwalk-girl-sprite-frost-male",
+        "label": "Frost Male",
+        "playerLabel": "Frost Male",
+        "playerSelectable": true,
+        "kind": "character",
+        "group": "Characters / Boardwalk girl sprite",
+        "path": "assets/Characters/Boardwalk girl sprite/frost_male.png",
+        "columns": 4,
+        "rows": 4,
+        "frameHeight": 313,
+        "offsetX": 0,
+        "offsetY": 0,
+        "renderWidth": null,
+        "rowOffsets": [
+          {
+            "x": 0,
+            "y": 10
+          },
+          {
+            "x": 0,
+            "y": 18
+          },
+          {
+            "x": 0,
+            "y": 38
+          },
+          {
+            "x": 0,
+            "y": 66
+          }
+        ],
+        "frameOffsets": [
+          [
+            {
+              "x": 35,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -23,
+              "y": 2,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -91,
+              "y": 2,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -141,
+              "y": 4,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 37,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -27,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -90,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -147,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 16,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -47,
+              "y": 4,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -98,
+              "y": 4,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -155,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ],
+          [
+            {
+              "x": 40,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -35,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -78,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            {
+              "x": -140,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            }
+          ]
+        ]
+      },
+      {
         "id": "assets-characters-boardwalk-girl-sprite-gray-pants-walksheet",
         "label": "Gray Pants Walksheet",
         "playerLabel": "Gray Pants Walksheet",
@@ -5616,7 +6354,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       "assets/Monsters/Torvyn/torvyn_default.png",
       "assets/Monsters/Torvyn/torvyn_electric.png",
       "assets/Monsters/Torvyn/torvyn_frost.png",
-      "assets/Monsters/Torvyn/torvyn_grass.png"
+      "assets/Monsters/Torvyn/torvyn_grass.png",
+      "assets/Monsters/Torvyn/torvyn_water.png"
     ]
   },
   "townAssets": {
@@ -5627,7 +6366,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       "assets/posters/Lily_harbor_poster.png",
       "assets/posters/Rose Town.png",
       "assets/posters/moonflower_woods_poster.png",
-      "assets/posters/plumeria_shores.png"
+      "assets/posters/plumeria_shores.png",
+      "assets/posters/snowdrop_poster.png"
     ]
   },
   "crestAssets": {
@@ -56325,21 +57065,6 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             },
             {
               "x": 0,
-              "y": 4,
-              "id": 54
-            },
-            {
-              "x": 0,
-              "y": 5,
-              "id": 54
-            },
-            {
-              "x": 0,
-              "y": 6,
-              "id": 54
-            },
-            {
-              "x": 0,
               "y": 7,
               "id": 54
             },
@@ -56371,21 +57096,6 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             {
               "x": 1,
               "y": 3,
-              "id": 54
-            },
-            {
-              "x": 1,
-              "y": 4,
-              "id": 54
-            },
-            {
-              "x": 1,
-              "y": 5,
-              "id": 54
-            },
-            {
-              "x": 1,
-              "y": 6,
               "id": 54
             },
             {
