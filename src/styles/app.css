@@ -2558,7 +2558,7 @@ button {
 
 .registry-grid {
   display: grid;
-  gap: 1rem;
+  gap: 0.65rem;
 }
 
 .registry-section-scroll {
@@ -2570,7 +2570,7 @@ button {
 .registry-card {
   border: 1px solid rgba(32, 56, 82, 0.12);
   border-radius: 18px;
-  padding: 1rem 1.1rem;
+  padding: 0.8rem 0.9rem;
   background: rgba(255, 255, 255, 0.72);
 }
 
@@ -2613,15 +2613,59 @@ button {
 
 .registry-spawn-line,
 .registry-stats {
-  margin: 0.8rem 0 0;
+  margin: 0.45rem 0 0;
+}
+
+.registry-card-hero {
+  display: grid;
+  grid-template-columns: minmax(140px, 184px) minmax(0, 1fr);
+  gap: 0.9rem;
+  align-items: center;
+  margin-top: 0.45rem;
+}
+
+.registry-card-hero-visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 172px;
+  border-radius: 18px;
+  background: rgba(226, 239, 246, 0.9);
+  padding: 0.35rem;
+}
+
+.registry-hero-sprite {
+  width: 172px;
+  height: 172px;
+  display: block;
+  max-width: 100%;
+}
+
+.registry-card-hero-copy {
+  min-width: 0;
+}
+
+.registry-card-hero-label {
+  margin: 0;
+  color: #66758c;
 }
 
 .registry-variants {
-  margin-top: 0.9rem;
+  margin-top: 0.6rem;
 }
 
-.registry-variants h4 {
-  margin: 0 0 0.55rem;
+.registry-variants summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.registry-variants summary::-webkit-details-marker {
+  color: #66758c;
+}
+
+.registry-variant-list {
+  margin-top: 0.55rem;
 }
 
 .registry-variant-row {
@@ -2631,7 +2675,7 @@ button {
 .registry-variant-identity {
   display: flex;
   align-items: center;
-  gap: 0.8rem;
+  gap: 0.7rem;
 }
 
 .registry-variant-identity strong {
@@ -2647,9 +2691,9 @@ button {
 
 .registry-variant-sprite,
 .registry-variant-fallback {
-  width: 56px;
-  height: 56px;
-  border-radius: 14px;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
   background: rgba(226, 239, 246, 0.9);
   display: inline-flex;
   align-items: center;
@@ -2661,6 +2705,22 @@ button {
 .registry-variant-fallback {
   font-weight: 700;
   color: #1f4d73;
+}
+
+@media (max-width: 780px) {
+  .registry-card-hero {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+  }
+
+  .registry-card-hero-visual {
+    min-height: 148px;
+  }
+
+  .registry-hero-sprite {
+    width: 148px;
+    height: 148px;
+  }
 }
 
 .compact-list li.compact-list-selected {

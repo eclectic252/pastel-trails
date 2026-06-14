@@ -41,7 +41,69 @@
         "width": 0,
         "height": 0
       },
-      "visibleSpawns": [],
+      "visibleSpawns": [
+        {
+          "id": "spawn-1",
+          "speciesId": "equira",
+          "spawnChance": 100,
+          "x": 704,
+          "y": 1088,
+          "levelMin": 2,
+          "levelMax": 4,
+          "walkRange": 300,
+          "respawnSeconds": 120,
+          "monsterOptions": [
+            {
+              "speciesId": "equira",
+              "weight": 25,
+              "variantId": "Equira-snow"
+            },
+            {
+              "speciesId": "Ruffin",
+              "weight": 25,
+              "variantId": "Ruffin-Snow"
+            },
+            {
+              "speciesId": "Fluffram",
+              "weight": 25,
+              "variantId": "fluffram-snow"
+            },
+            {
+              "speciesId": "monster-8",
+              "weight": 25,
+              "variantId": "default-snow"
+            }
+          ]
+        },
+        {
+          "id": "spawn-2",
+          "speciesId": "Owlet",
+          "spawnChance": 100,
+          "x": 3136,
+          "y": 832,
+          "levelMin": 2,
+          "levelMax": 4,
+          "walkRange": 300,
+          "respawnSeconds": 120,
+          "monsterOptions": [
+            {
+              "speciesId": "Owlet",
+              "weight": 100,
+              "variantId": "owlet-snow"
+            },
+            {
+              "speciesId": "pawlit",
+              "weight": 100,
+              "variantId": "default-snow"
+            },
+            {
+              "speciesId": "Caniri",
+              "weight": 100,
+              "variantId": "Caniri-snow"
+            }
+          ]
+        }
+      ],
       "spawnTable": []
     }
   ],

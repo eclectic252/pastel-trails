@@ -247,6 +247,43 @@
           "variantId": "owlet-snow"
         }
       ]
+    },
+    {
+      "id": "arena-8",
+      "name": "Moonflower Woods Arena",
+      "leaderName": "Brian",
+      "leaderTitle": "Leader",
+      "crestId": "crest-8",
+      "crestName": "Moonflower Crest",
+      "crestImagePath": "assets/Crests/crest9.png",
+      "recommendedLevel": 5,
+      "partySize": 2,
+      "rewardMoney": 50,
+      "rewardText": "",
+      "description": "",
+      "mapId": "",
+      "team": [
+        {
+          "speciesId": "Owlet",
+          "variantId": "owlet-lavender",
+          "level": 5
+        },
+        {
+          "speciesId": "Ruffin",
+          "variantId": "Ruffin-Lavender",
+          "level": 5
+        }
+      ],
+      "pool": [
+        {
+          "speciesId": "equira",
+          "variantId": "Equira-Lavender"
+        },
+        {
+          "speciesId": "pawlit",
+          "variantId": "default-lavvender"
+        }
+      ]
     }
   ]
 }

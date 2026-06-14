@@ -30,7 +30,38 @@
       }
     }
   ],
-  "interactions": [],
+  "interactions": [
+    {
+      "id": "interaction-1",
+      "type": "arena",
+      "x": 1280,
+      "y": 512,
+      "width": 256,
+      "height": 128,
+      "label": "Moonflower Arena",
+      "text": "Add interaction text here.",
+      "data": {
+        "shopId": "",
+        "arenaId": "arena-8",
+        "crestId": ""
+      }
+    },
+    {
+      "id": "interaction-2",
+      "type": "healing-center",
+      "x": 2176,
+      "y": 896,
+      "width": 256,
+      "height": 128,
+      "label": "Moonflower Healing Center",
+      "text": "Add interaction text here.",
+      "data": {
+        "shopId": "",
+        "arenaId": "",
+        "crestId": ""
+      }
+    }
+  ],
   "spawnZones": [
     {
       "id": "default-zone",

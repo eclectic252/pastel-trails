@@ -8,12 +8,17 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       "playerSpriteRenderWidth": 155,
       "monsterSpriteRenderWidth": 128,
       "playerSpriteAnchorOffsetY": 20,
+      "shareExperience": true,
+      "encounterPreview": false,
+      "encounterPreviewMode": "available",
       "arenaLeaderMinLevel": 1,
       "arenaLeaderMaxLevel": 10,
       "arenaLeaderPartySize": 3,
       "trainerRefightMinLevel": 1,
       "trainerRefightMaxLevel": 5,
       "trainerRefightPartySize": 2,
+      "trainerRefightCooldownSeconds": 180,
+      "wildMonsterMaxLevel": 5,
       "crestLevelCaps": [
         {
           "crestMin": 0,
@@ -27,15 +32,95 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         },
         {
           "crestMin": 5,
-          "crestMax": 99,
+          "crestMax": 6,
           "levelCap": 15
+        },
+        {
+          "crestMin": 7,
+          "crestMax": 100,
+          "levelCap": 20
         }
       ],
-      "shareExperience": true,
-      "mapDetails": true,
-      "encounterPreview": false,
-      "encounterPreviewMode": "available",
-      "devMode": false
+      "battleModel": {
+        "skillAttackScale": 0.6,
+        "skillDefenseScale": 0.35,
+        "basicDefenseDivisor": 2,
+        "randomVarianceMax": 3,
+        "affinityDamageBonusPerPointPercent": 1,
+        "elementalAdvantageMultiplier": 2,
+        "elementalResistanceMultiplier": 0.5,
+        "elementalAdvantagePointPercent": 0,
+        "elementalResistancePointPercent": 0,
+        "elementalMatchupChart": {
+          "Air": {
+            "Air": "normal",
+            "Fire": "strong",
+            "Earth": "normal",
+            "Water": "weak",
+            "Light": "normal",
+            "Dark": "normal"
+          },
+          "Fire": {
+            "Air": "weak",
+            "Fire": "normal",
+            "Earth": "normal",
+            "Water": "strong",
+            "Light": "normal",
+            "Dark": "normal"
+          },
+          "Earth": {
+            "Air": "normal",
+            "Fire": "normal",
+            "Earth": "normal",
+            "Water": "normal",
+            "Light": "weak",
+            "Dark": "strong"
+          },
+          "Water": {
+            "Air": "strong",
+            "Fire": "weak",
+            "Earth": "normal",
+            "Water": "normal",
+            "Light": "normal",
+            "Dark": "normal"
+          },
+          "Light": {
+            "Air": "normal",
+            "Fire": "normal",
+            "Earth": "strong",
+            "Water": "normal",
+            "Light": "normal",
+            "Dark": "normal"
+          },
+          "Dark": {
+            "Air": "normal",
+            "Fire": "normal",
+            "Earth": "weak",
+            "Water": "normal",
+            "Light": "strong",
+            "Dark": "weak"
+          }
+        },
+        "statModifierPercentPerStage": 12,
+        "accuracyModifierPerStage": 5,
+        "burnDamagePenaltyPercent": 15,
+        "monsterXpCurveBase": 24,
+        "monsterXpCurveLinear": 10,
+        "monsterXpCurveQuadratic": 0.6,
+        "wildMonsterXpBase": 4,
+        "wildMonsterXpPerLevel": 2.5,
+        "trainerMonsterXpBase": 7,
+        "trainerMonsterXpPerLevel": 3.5,
+        "arenaMonsterXpBase": 10,
+        "arenaMonsterXpPerLevel": 4.5,
+        "skillXpCurveBase": 16,
+        "skillXpCurveLinear": 8,
+        "skillXpCurveQuadratic": 2,
+        "skillUseXpReward": 1,
+        "skillVictoryXpReward": 1
+      },
+      "devMode": false,
+      "mapDetails": true
     },
     "allowedZoomLevels": [
       100,
@@ -81,7 +166,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "id": "basic-attack",
         "name": "Tackle",
         "kind": "attack",
-        "power": 4,
+        "power": 3,
         "description": "A simple physical strike.",
         "element": "Neutral",
         "accuracy": 100,
@@ -107,14 +192,14 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       },
       {
         "id": "skill-2",
-        "name": "Gust",
+        "name": "Air Attack",
         "kind": "attack",
         "element": "Air",
         "maxLevel": 2,
         "levelOverrides": [
           {
             "level": 2,
-            "power": 8,
+            "power": 5,
             "accuracy": null,
             "element": "",
             "description": ""
@@ -130,19 +215,19 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "foe": []
         },
         "statusEffects": [],
-        "power": 5,
-        "description": ""
+        "power": 4,
+        "description": "Basic Air Attack. "
       },
       {
         "id": "skill-3",
-        "name": "Whirlwind",
+        "name": "Air Strike",
         "kind": "attack",
         "element": "Air",
         "maxLevel": 2,
         "levelOverrides": [
           {
             "level": 2,
-            "power": 15,
+            "power": 7,
             "accuracy": null,
             "element": "",
             "description": ""
@@ -167,12 +252,12 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "foe": []
         },
         "statusEffects": [],
-        "power": 8,
-        "description": ""
+        "power": 6,
+        "description": "Moderate Air Attack."
       },
       {
         "id": "skill-4",
-        "name": "Dust Stun",
+        "name": "Air Stun",
         "kind": "Status",
         "element": "Air",
         "maxLevel": 1,
@@ -183,15 +268,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "requiredSkillLevels": []
         },
         "statModifiers": {
-          "self": [
-            {
-              "type": "modify",
-              "stat": "attack",
-              "amount": 1,
-              "label": "",
-              "showLabel": true
-            }
-          ],
+          "self": [],
           "foe": [
             {
               "type": "modify",
@@ -204,11 +281,11 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         },
         "statusEffects": [],
         "power": 0,
-        "description": ""
+        "description": "Reduce enemy attack. "
       },
       {
         "id": "skill-5",
-        "name": "Wind Guard",
+        "name": "Air Guard",
         "kind": "Status",
         "element": "Air",
         "maxLevel": 1,
@@ -232,11 +309,11 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         },
         "statusEffects": [],
         "power": 0,
-        "description": ""
+        "description": "Increase Speed"
       },
       {
         "id": "skill-6",
-        "name": "Terra Spike",
+        "name": "Earth Stun",
         "kind": "Status",
         "element": "Earth",
         "maxLevel": 1,
@@ -260,11 +337,11 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         },
         "statusEffects": [],
         "power": 0,
-        "description": ""
+        "description": "Reduce enemy defense. "
       },
       {
         "id": "skill-7",
-        "name": "Iron Spike",
+        "name": "Earth Guard",
         "kind": "Status",
         "element": "Earth",
         "maxLevel": 1,
@@ -280,7 +357,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               "type": "modify",
               "stat": "attack",
               "amount": 1,
-              "label": "",
+              "label": "Attack Up",
               "showLabel": true
             }
           ],
@@ -288,15 +365,23 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         },
         "statusEffects": [],
         "power": 0,
-        "description": ""
+        "description": "Increase Attack"
       },
       {
         "id": "skill-8",
-        "name": "Rock Tumble",
+        "name": "Earth Attack",
         "kind": "attack",
-        "element": "Neutral",
+        "element": "Earth",
         "maxLevel": 2,
-        "levelOverrides": [],
+        "levelOverrides": [
+          {
+            "level": 2,
+            "power": 5,
+            "accuracy": null,
+            "element": "",
+            "description": ""
+          }
+        ],
         "accuracy": 100,
         "unlockRequirements": {
           "arenaClears": [],
@@ -307,17 +392,25 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "foe": []
         },
         "statusEffects": [],
-        "power": 5,
-        "description": ""
+        "power": 4,
+        "description": "Basic Earth Attack"
       },
       {
         "id": "skill-9",
-        "name": "Earthquake",
+        "name": "Earth Strike",
         "kind": "attack",
-        "element": "Neutral",
-        "maxLevel": 1,
-        "levelOverrides": [],
-        "accuracy": 100,
+        "element": "Earth",
+        "maxLevel": 2,
+        "levelOverrides": [
+          {
+            "level": 2,
+            "power": 7,
+            "accuracy": null,
+            "element": "",
+            "description": ""
+          }
+        ],
+        "accuracy": 95,
         "unlockRequirements": {
           "arenaClears": [],
           "requiredSkillLevels": [
@@ -332,7 +425,368 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "foe": []
         },
         "statusEffects": [],
-        "power": 8,
+        "power": 6,
+        "description": "Moderate Earth Attack"
+      },
+      {
+        "id": "skill-10",
+        "name": "Fire Attack",
+        "kind": "attack",
+        "element": "Neutral",
+        "maxLevel": 1,
+        "levelOverrides": [],
+        "accuracy": 100,
+        "unlockRequirements": {
+          "arenaClears": [],
+          "requiredSkillLevels": []
+        },
+        "statModifiers": {
+          "self": [],
+          "foe": []
+        },
+        "statusEffects": [],
+        "power": 4,
+        "description": "Basic Fire Attack"
+      },
+      {
+        "id": "skill-11",
+        "name": "Fire Strike",
+        "kind": "attack",
+        "element": "Fire",
+        "maxLevel": 1,
+        "levelOverrides": [],
+        "accuracy": 100,
+        "unlockRequirements": {
+          "arenaClears": [],
+          "requiredSkillLevels": []
+        },
+        "statModifiers": {
+          "self": [],
+          "foe": []
+        },
+        "statusEffects": [],
+        "power": 6,
+        "description": "Moderate Fire Attack."
+      },
+      {
+        "id": "skill-12",
+        "name": "Fire Stun",
+        "kind": "Status",
+        "element": "Fire",
+        "maxLevel": 1,
+        "levelOverrides": [],
+        "accuracy": 100,
+        "unlockRequirements": {
+          "arenaClears": [],
+          "requiredSkillLevels": []
+        },
+        "statModifiers": {
+          "self": [],
+          "foe": []
+        },
+        "statusEffects": [
+          {
+            "type": "burn",
+            "target": "foe",
+            "chance": 70,
+            "tickChance": 100,
+            "power": 2,
+            "duration": 3,
+            "label": "",
+            "showLabel": true
+          }
+        ],
+        "power": 0,
+        "description": "Burn enemy each turn. "
+      },
+      {
+        "id": "skill-13",
+        "name": "Fire Guard",
+        "kind": "Status",
+        "element": "Neutral",
+        "maxLevel": 1,
+        "levelOverrides": [],
+        "accuracy": 100,
+        "unlockRequirements": {
+          "arenaClears": [],
+          "requiredSkillLevels": []
+        },
+        "statModifiers": {
+          "self": [
+            {
+              "type": "modify",
+              "stat": "accuracy",
+              "amount": 1,
+              "label": "Accuracy Up",
+              "showLabel": true
+            }
+          ],
+          "foe": []
+        },
+        "statusEffects": [],
+        "power": 0,
+        "description": "Increase Accuracy. "
+      },
+      {
+        "id": "skill-14",
+        "name": "Water Attack",
+        "kind": "attack",
+        "element": "Water",
+        "maxLevel": 2,
+        "levelOverrides": [
+          {
+            "level": 2,
+            "power": 5,
+            "accuracy": null,
+            "element": "Water",
+            "description": ""
+          }
+        ],
+        "accuracy": 100,
+        "unlockRequirements": {
+          "arenaClears": [],
+          "requiredSkillLevels": []
+        },
+        "statModifiers": {
+          "self": [],
+          "foe": []
+        },
+        "statusEffects": [],
+        "power": 4,
+        "description": "Basic Water Attack."
+      },
+      {
+        "id": "skill-15",
+        "name": "Water Strike",
+        "kind": "attack",
+        "element": "Water",
+        "maxLevel": 2,
+        "levelOverrides": [
+          {
+            "level": 2,
+            "power": 7,
+            "accuracy": null,
+            "element": "Water",
+            "description": ""
+          }
+        ],
+        "accuracy": 100,
+        "unlockRequirements": {
+          "arenaClears": [],
+          "requiredSkillLevels": [
+            {
+              "skillId": "skill-14",
+              "level": 2
+            }
+          ]
+        },
+        "statModifiers": {
+          "self": [],
+          "foe": []
+        },
+        "statusEffects": [],
+        "power": 6,
+        "description": "Moderate Water Attack."
+      },
+      {
+        "id": "skill-16",
+        "name": "Water Stun",
+        "kind": "Status",
+        "element": "Water",
+        "maxLevel": 1,
+        "levelOverrides": [],
+        "accuracy": 100,
+        "unlockRequirements": {
+          "arenaClears": [],
+          "requiredSkillLevels": []
+        },
+        "statModifiers": {
+          "self": [],
+          "foe": [
+            {
+              "type": "modify",
+              "stat": "speed",
+              "amount": -1,
+              "label": "",
+              "showLabel": true
+            }
+          ]
+        },
+        "statusEffects": [],
+        "power": 0,
+        "description": "Reduce Enemy Speed."
+      },
+      {
+        "id": "skill-17",
+        "name": "Water Guard",
+        "kind": "Status",
+        "element": "Water",
+        "maxLevel": 1,
+        "levelOverrides": [],
+        "accuracy": 100,
+        "unlockRequirements": {
+          "arenaClears": [],
+          "requiredSkillLevels": []
+        },
+        "statModifiers": {
+          "self": [
+            {
+              "type": "modify",
+              "stat": "defense",
+              "amount": 1,
+              "label": "Defense Up",
+              "showLabel": true
+            }
+          ],
+          "foe": []
+        },
+        "statusEffects": [],
+        "power": 0,
+        "description": "Increase Defense. "
+      },
+      {
+        "id": "skill-18",
+        "name": "Light Attack",
+        "kind": "attack",
+        "element": "Light",
+        "maxLevel": 2,
+        "levelOverrides": [
+          {
+            "level": 2,
+            "power": 5,
+            "accuracy": null,
+            "element": "Light",
+            "description": ""
+          }
+        ],
+        "accuracy": 100,
+        "unlockRequirements": {
+          "arenaClears": [],
+          "requiredSkillLevels": []
+        },
+        "statModifiers": {
+          "self": [],
+          "foe": []
+        },
+        "statusEffects": [],
+        "power": 4,
+        "description": "Basic Light Attack"
+      },
+      {
+        "id": "skill-19",
+        "name": "Light Strike",
+        "kind": "attack",
+        "element": "Neutral",
+        "maxLevel": 1,
+        "levelOverrides": [],
+        "accuracy": 100,
+        "unlockRequirements": {
+          "arenaClears": [],
+          "requiredSkillLevels": [
+            {
+              "skillId": "skill-18",
+              "level": 2
+            }
+          ]
+        },
+        "statModifiers": {
+          "self": [],
+          "foe": []
+        },
+        "statusEffects": [],
+        "power": 0,
+        "description": "Moderate Light Attack."
+      },
+      {
+        "id": "skill-20",
+        "name": "Dark Stun",
+        "kind": "Status",
+        "element": "Light",
+        "maxLevel": 1,
+        "levelOverrides": [],
+        "accuracy": 100,
+        "unlockRequirements": {
+          "arenaClears": [],
+          "requiredSkillLevels": []
+        },
+        "statModifiers": {
+          "self": [],
+          "foe": []
+        },
+        "statusEffects": [
+          {
+            "type": "confuse",
+            "target": "foe",
+            "chance": 70,
+            "tickChance": 100,
+            "power": 2,
+            "duration": 3,
+            "label": "Confused",
+            "showLabel": true
+          }
+        ],
+        "power": 0,
+        "description": "Confuse Enemy. "
+      },
+      {
+        "id": "skill-21",
+        "name": "Dark Attack",
+        "kind": "attack",
+        "element": "Dark",
+        "maxLevel": 2,
+        "levelOverrides": [
+          {
+            "level": 2,
+            "power": 5,
+            "accuracy": null,
+            "element": "Dark",
+            "description": ""
+          }
+        ],
+        "accuracy": 100,
+        "unlockRequirements": {
+          "arenaClears": [],
+          "requiredSkillLevels": []
+        },
+        "statModifiers": {
+          "self": [],
+          "foe": []
+        },
+        "statusEffects": [],
+        "power": 4,
+        "description": "Basic Dark Attack"
+      },
+      {
+        "id": "skill-22",
+        "name": "Dark Strike",
+        "kind": "attack",
+        "element": "Dark",
+        "maxLevel": 2,
+        "levelOverrides": [
+          {
+            "level": 2,
+            "power": 7,
+            "accuracy": null,
+            "element": "",
+            "description": ""
+          }
+        ],
+        "accuracy": 100,
+        "unlockRequirements": {
+          "arenaClears": [],
+          "requiredSkillLevels": [
+            {
+              "skillId": "skill-21",
+              "level": 2
+            }
+          ]
+        },
+        "statModifiers": {
+          "self": [],
+          "foe": []
+        },
+        "statusEffects": [],
+        "power": 6,
         "description": ""
       }
     ]
@@ -359,7 +813,20 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "skill-6",
           "skill-7",
           "skill-8",
-          "skill-9"
+          "skill-9",
+          "skill-10",
+          "skill-11",
+          "skill-12",
+          "skill-13",
+          "skill-14",
+          "skill-15",
+          "skill-16",
+          "skill-17",
+          "skill-18",
+          "skill-19",
+          "skill-20",
+          "skill-21",
+          "skill-22"
         ],
         "variants": [
           {
@@ -625,7 +1092,20 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "skill-4",
           "skill-7",
           "skill-8",
-          "skill-9"
+          "skill-9",
+          "skill-22",
+          "skill-21",
+          "skill-20",
+          "skill-19",
+          "skill-18",
+          "skill-17",
+          "skill-16",
+          "skill-15",
+          "skill-14",
+          "skill-13",
+          "skill-12",
+          "skill-11",
+          "skill-10"
         ],
         "variants": [
           {
@@ -891,7 +1371,20 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "skill-4",
           "skill-7",
           "skill-8",
-          "skill-9"
+          "skill-9",
+          "skill-10",
+          "skill-11",
+          "skill-12",
+          "skill-13",
+          "skill-14",
+          "skill-15",
+          "skill-16",
+          "skill-17",
+          "skill-18",
+          "skill-19",
+          "skill-20",
+          "skill-21",
+          "skill-22"
         ],
         "variants": [
           {
@@ -1085,6 +1578,54 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               "frameDurationMs": 180
             },
             "label": "Dark"
+          },
+          {
+            "id": "fluffram-dark-copy",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Fluffram/fluffram_galaxy.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180
+            },
+            "label": "Galaxy"
+          },
+          {
+            "id": "fluffram-lavender",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Fluffram/fluffram_lavender.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180
+            },
+            "label": "Lavender"
           }
         ]
       },
@@ -1108,7 +1649,20 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "skill-6",
           "skill-7",
           "skill-8",
-          "skill-9"
+          "skill-9",
+          "skill-22",
+          "skill-21",
+          "skill-20",
+          "skill-19",
+          "skill-18",
+          "skill-17",
+          "skill-16",
+          "skill-15",
+          "skill-14",
+          "skill-13",
+          "skill-12",
+          "skill-11",
+          "skill-10"
         ],
         "variants": [
           {
@@ -1382,7 +1936,20 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "skill-4",
           "skill-7",
           "skill-8",
-          "skill-9"
+          "skill-9",
+          "skill-10",
+          "skill-11",
+          "skill-12",
+          "skill-13",
+          "skill-14",
+          "skill-15",
+          "skill-16",
+          "skill-17",
+          "skill-18",
+          "skill-19",
+          "skill-20",
+          "skill-21",
+          "skill-22"
         ],
         "variants": [
           {
@@ -1657,7 +2224,20 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "skill-6",
           "skill-7",
           "skill-8",
-          "skill-9"
+          "skill-9",
+          "skill-22",
+          "skill-21",
+          "skill-20",
+          "skill-19",
+          "skill-18",
+          "skill-17",
+          "skill-16",
+          "skill-15",
+          "skill-14",
+          "skill-13",
+          "skill-12",
+          "skill-10",
+          "skill-11"
         ],
         "variants": [
           {
@@ -1922,7 +2502,20 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "skill-4",
           "skill-7",
           "skill-8",
-          "skill-9"
+          "skill-9",
+          "skill-10",
+          "skill-11",
+          "skill-12",
+          "skill-13",
+          "skill-14",
+          "skill-15",
+          "skill-17",
+          "skill-16",
+          "skill-18",
+          "skill-19",
+          "skill-20",
+          "skill-21",
+          "skill-22"
         ],
         "variants": [
           {
@@ -2186,35 +2779,24 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "skill-6",
           "skill-7",
           "skill-8",
-          "skill-9"
+          "skill-9",
+          "skill-22",
+          "skill-21",
+          "skill-20",
+          "skill-19",
+          "skill-18",
+          "skill-17",
+          "skill-16",
+          "skill-15",
+          "skill-14",
+          "skill-13",
+          "skill-12",
+          "skill-11",
+          "skill-10"
         ],
         "variants": [
           {
             "id": "default",
-            "sprite": "assets/monsters/new-monster.png",
-            "portrait": {
-              "imagePath": "assets/Monsters/Torvyn/torvyn_default.png",
-              "sheetId": "",
-              "row": 0,
-              "frame": 0
-            },
-            "overworld": {
-              "displayMode": "",
-              "sheetId": "",
-              "row": 0,
-              "idleFrame": 0,
-              "walkFrames": [
-                0,
-                1,
-                2,
-                3
-              ],
-              "frameDurationMs": 180
-            },
-            "label": "Default"
-          },
-          {
-            "id": "default-copy",
             "sprite": "assets/monsters/new-monster.png",
             "portrait": {
               "imagePath": "assets/Monsters/Torvyn/torvyn_default.png",
@@ -2332,6 +2914,30 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               "frameDurationMs": 180
             },
             "label": "Water"
+          },
+          {
+            "id": "default-fire",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Torvyn/torvyn_fire.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180
+            },
+            "label": "Fire"
           }
         ]
       }
@@ -2833,6 +3439,43 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           {
             "speciesId": "Owlet",
             "variantId": "owlet-snow"
+          }
+        ]
+      },
+      {
+        "id": "arena-8",
+        "name": "Moonflower Woods Arena",
+        "leaderName": "Brian",
+        "leaderTitle": "Leader",
+        "crestId": "crest-8",
+        "crestName": "Moonflower Crest",
+        "crestImagePath": "assets/Crests/crest9.png",
+        "recommendedLevel": 5,
+        "partySize": 2,
+        "rewardMoney": 50,
+        "rewardText": "",
+        "description": "",
+        "mapId": "",
+        "team": [
+          {
+            "speciesId": "Owlet",
+            "variantId": "owlet-lavender",
+            "level": 5
+          },
+          {
+            "speciesId": "Ruffin",
+            "variantId": "Ruffin-Lavender",
+            "level": 5
+          }
+        ],
+        "pool": [
+          {
+            "speciesId": "equira",
+            "variantId": "Equira-Lavender"
+          },
+          {
+            "speciesId": "pawlit",
+            "variantId": "default-lavvender"
           }
         ]
       }
@@ -6386,6 +7029,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       "assets/Monsters/Kelpar/kelpar_pink.png",
       "assets/Monsters/Kelpar/kelpar_snow.png",
       "assets/Monsters/Kelpar/kelpar_water.png",
+      "assets/Monsters/Kitari/kitari_default.png",
       "assets/Monsters/Owlet/owlet_dark.png",
       "assets/Monsters/Owlet/owlet_default.png",
       "assets/Monsters/Owlet/owlet_electric.png",
@@ -6423,10 +7067,15 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       "assets/Monsters/Ruffin/ruffin_dark.png",
       "assets/Monsters/Ruffin/ruffin_fire.png",
       "assets/Monsters/Ruffin/ruffin_pink.png",
+      "assets/Monsters/Torvyn/torvyn_dark.png",
       "assets/Monsters/Torvyn/torvyn_default.png",
       "assets/Monsters/Torvyn/torvyn_electric.png",
+      "assets/Monsters/Torvyn/torvyn_fire.png",
       "assets/Monsters/Torvyn/torvyn_frost.png",
+      "assets/Monsters/Torvyn/torvyn_galaxy.png",
       "assets/Monsters/Torvyn/torvyn_grass.png",
+      "assets/Monsters/Torvyn/torvyn_lavender.png",
+      "assets/Monsters/Torvyn/torvyn_pink.png",
       "assets/Monsters/Torvyn/torvyn_water.png"
     ]
   },
@@ -72455,11 +73104,26 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "y": 896,
           "width": 256,
           "height": 128,
-          "label": "New Interaction",
+          "label": "Camelia Ranch Arena",
           "text": "Add interaction text here.",
           "data": {
             "shopId": "",
             "arenaId": "Camelia-Ranch-Arena",
+            "crestId": ""
+          }
+        },
+        {
+          "id": "interaction-2",
+          "type": "healing-center",
+          "x": 256,
+          "y": 1408,
+          "width": 256,
+          "height": 128,
+          "label": "New Interaction",
+          "text": "Add interaction text here.",
+          "data": {
+            "shopId": "",
+            "arenaId": "",
             "crestId": ""
           }
         }
@@ -72678,7 +73342,38 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           }
         }
       ],
-      "interactions": [],
+      "interactions": [
+        {
+          "id": "interaction-1",
+          "type": "arena",
+          "x": 1280,
+          "y": 512,
+          "width": 256,
+          "height": 128,
+          "label": "Moonflower Arena",
+          "text": "Add interaction text here.",
+          "data": {
+            "shopId": "",
+            "arenaId": "arena-8",
+            "crestId": ""
+          }
+        },
+        {
+          "id": "interaction-2",
+          "type": "healing-center",
+          "x": 2176,
+          "y": 896,
+          "width": 256,
+          "height": 128,
+          "label": "Moonflower Healing Center",
+          "text": "Add interaction text here.",
+          "data": {
+            "shopId": "",
+            "arenaId": "",
+            "crestId": ""
+          }
+        }
+      ],
       "spawnZones": [
         {
           "id": "default-zone",
@@ -72873,7 +73568,102 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "width": 0,
             "height": 0
           },
-          "visibleSpawns": [],
+          "visibleSpawns": [
+            {
+              "id": "spawn-1",
+              "speciesId": "Kelpar",
+              "spawnChance": 100,
+              "x": 3008,
+              "y": 832,
+              "levelMin": 2,
+              "levelMax": 4,
+              "walkRange": 300,
+              "respawnSeconds": 120,
+              "monsterOptions": [
+                {
+                  "speciesId": "Kelpar",
+                  "weight": 25,
+                  "variantId": "kelpar-default"
+                },
+                {
+                  "speciesId": "Kelpar",
+                  "weight": 25,
+                  "variantId": "kelpar-water"
+                },
+                {
+                  "speciesId": "Kelpar",
+                  "weight": 25,
+                  "variantId": "kelpar-galaxy"
+                },
+                {
+                  "speciesId": "Kelpar",
+                  "weight": 25,
+                  "variantId": "kelpar-snow"
+                }
+              ]
+            },
+            {
+              "id": "spawn-2",
+              "speciesId": "Kelpar",
+              "spawnChance": 100,
+              "x": 832,
+              "y": 1216,
+              "levelMin": 2,
+              "levelMax": 4,
+              "walkRange": 0,
+              "respawnSeconds": 120,
+              "monsterOptions": [
+                {
+                  "speciesId": "Kelpar",
+                  "weight": 25,
+                  "variantId": "kelpar-grass"
+                },
+                {
+                  "speciesId": "Kelpar",
+                  "weight": 25,
+                  "variantId": "kelpar-electric"
+                },
+                {
+                  "speciesId": "Kelpar",
+                  "weight": 25,
+                  "variantId": "kelpar-fire"
+                },
+                {
+                  "speciesId": "Kelpar",
+                  "weight": 25,
+                  "variantId": "kelpar-pink"
+                }
+              ]
+            },
+            {
+              "id": "spawn-3",
+              "speciesId": "pawlit",
+              "spawnChance": 100,
+              "x": 1856,
+              "y": 1216,
+              "levelMin": 2,
+              "levelMax": 4,
+              "walkRange": 60,
+              "respawnSeconds": 120,
+              "monsterOptions": [
+                {
+                  "speciesId": "pawlit",
+                  "weight": 25,
+                  "variantId": "default-water"
+                },
+                {
+                  "speciesId": "Ruffin",
+                  "weight": 25,
+                  "variantId": "Ruffin-Water"
+                },
+                {
+                  "speciesId": "Ruffin",
+                  "weight": 25,
+                  "variantId": "Ruffin-Water"
+                }
+              ]
+            }
+          ],
           "spawnTable": []
         }
       ],
@@ -73422,7 +74212,69 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "width": 0,
             "height": 0
           },
-          "visibleSpawns": [],
+          "visibleSpawns": [
+            {
+              "id": "spawn-1",
+              "speciesId": "equira",
+              "spawnChance": 100,
+              "x": 704,
+              "y": 1088,
+              "levelMin": 2,
+              "levelMax": 4,
+              "walkRange": 300,
+              "respawnSeconds": 120,
+              "monsterOptions": [
+                {
+                  "speciesId": "equira",
+                  "weight": 25,
+                  "variantId": "Equira-snow"
+                },
+                {
+                  "speciesId": "Ruffin",
+                  "weight": 25,
+                  "variantId": "Ruffin-Snow"
+                },
+                {
+                  "speciesId": "Fluffram",
+                  "weight": 25,
+                  "variantId": "fluffram-snow"
+                },
+                {
+                  "speciesId": "monster-8",
+                  "weight": 25,
+                  "variantId": "default-snow"
+                }
+              ]
+            },
+            {
+              "id": "spawn-2",
+              "speciesId": "Owlet",
+              "spawnChance": 100,
+              "x": 3136,
+              "y": 832,
+              "levelMin": 2,
+              "levelMax": 4,
+              "walkRange": 300,
+              "respawnSeconds": 120,
+              "monsterOptions": [
+                {
+                  "speciesId": "Owlet",
+                  "weight": 100,
+                  "variantId": "owlet-snow"
+                },
+                {
+                  "speciesId": "pawlit",
+                  "weight": 100,
+                  "variantId": "default-snow"
+                },
+                {
+                  "speciesId": "Caniri",
+                  "weight": 100,
+                  "variantId": "Caniri-snow"
+                }
+              ]
+            }
+          ],
           "spawnTable": []
         }
       ],

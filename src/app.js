@@ -148,6 +148,20 @@
           statModifierPercentPerStage: 12,
           accuracyModifierPerStage: 5,
           burnDamagePenaltyPercent: 15,
+          monsterXpCurveBase: 24,
+          monsterXpCurveLinear: 10,
+          monsterXpCurveQuadratic: 0.6,
+          wildMonsterXpBase: 4,
+          wildMonsterXpPerLevel: 2.5,
+          trainerMonsterXpBase: 7,
+          trainerMonsterXpPerLevel: 3.5,
+          arenaMonsterXpBase: 10,
+          arenaMonsterXpPerLevel: 4.5,
+          skillXpCurveBase: 16,
+          skillXpCurveLinear: 8,
+          skillXpCurveQuadratic: 2,
+          skillUseXpReward: 1,
+          skillVictoryXpReward: 1,
         },
         devMode: false,
       },
@@ -1035,6 +1049,41 @@
     return Math.max(0, total - getSpentElementalAffinityPoints(monster));
   }
 
+  function buildElementalAffinityPointMap(level, primaryElement, options) {
+    const totalPoints = getTotalElementalAffinityPointsForLevel(level);
+    const resolvedPrimary = ELEMENTAL_AFFINITIES.includes(primaryElement) ? primaryElement : pickRandomElementalAffinity();
+    const points = createEmptyElementalPointMap();
+
+    for (let index = 0; index < totalPoints; index += 1) {
+      let pickedElement = resolvedPrimary;
+      if (options?.randomize) {
+        const weightedPool = [resolvedPrimary, resolvedPrimary].concat(ELEMENTAL_AFFINITIES);
+        pickedElement = weightedPool[Math.floor(Math.random() * weightedPool.length)] || resolvedPrimary;
+      }
+      points[pickedElement] += 1;
+    }
+
+    return points;
+  }
+
+  function ensureGeneratedElementalAffinityPoints(monster, options) {
+    if (!monster || typeof monster !== "object") {
+      return monster;
+    }
+
+    ensureElementalAffinityState(monster, { primaryElement: options?.primaryElement });
+    if (getSpentElementalAffinityPoints(monster) > 0) {
+      return monster;
+    }
+
+    monster.elementalAffinityPoints = buildElementalAffinityPointMap(
+      monster.level || 1,
+      monster.primaryElementalAffinity,
+      { randomize: options?.randomize === true }
+    );
+    return monster;
+  }
+
   function getAssignedElementalAffinities(monster) {
     ensureElementalAffinityState(monster);
     return ELEMENTAL_AFFINITIES.filter(function (element) {
@@ -1192,16 +1241,63 @@
       statModifierPercentPerStage: Math.max(0, Number(source.statModifierPercentPerStage ?? fallback.statModifierPercentPerStage)),
       accuracyModifierPerStage: Math.max(0, Number(source.accuracyModifierPerStage ?? fallback.accuracyModifierPerStage)),
       burnDamagePenaltyPercent: Math.max(0, Number(source.burnDamagePenaltyPercent ?? fallback.burnDamagePenaltyPercent)),
+      monsterXpCurveBase: Math.max(1, Number(source.monsterXpCurveBase ?? fallback.monsterXpCurveBase)),
+      monsterXpCurveLinear: Math.max(0, Number(source.monsterXpCurveLinear ?? fallback.monsterXpCurveLinear)),
+      monsterXpCurveQuadratic: Math.max(0, Number(source.monsterXpCurveQuadratic ?? fallback.monsterXpCurveQuadratic)),
+      wildMonsterXpBase: Math.max(0, Number(source.wildMonsterXpBase ?? fallback.wildMonsterXpBase)),
+      wildMonsterXpPerLevel: Math.max(0, Number(source.wildMonsterXpPerLevel ?? fallback.wildMonsterXpPerLevel)),
+      trainerMonsterXpBase: Math.max(0, Number(source.trainerMonsterXpBase ?? fallback.trainerMonsterXpBase)),
+      trainerMonsterXpPerLevel: Math.max(0, Number(source.trainerMonsterXpPerLevel ?? fallback.trainerMonsterXpPerLevel)),
+      arenaMonsterXpBase: Math.max(0, Number(source.arenaMonsterXpBase ?? fallback.arenaMonsterXpBase)),
+      arenaMonsterXpPerLevel: Math.max(0, Number(source.arenaMonsterXpPerLevel ?? fallback.arenaMonsterXpPerLevel)),
+      skillXpCurveBase: Math.max(1, Number(source.skillXpCurveBase ?? fallback.skillXpCurveBase)),
+      skillXpCurveLinear: Math.max(0, Number(source.skillXpCurveLinear ?? fallback.skillXpCurveLinear)),
+      skillXpCurveQuadratic: Math.max(0, Number(source.skillXpCurveQuadratic ?? fallback.skillXpCurveQuadratic)),
+      skillUseXpReward: Math.max(0, Number(source.skillUseXpReward ?? fallback.skillUseXpReward)),
+      skillVictoryXpReward: Math.max(0, Number(source.skillVictoryXpReward ?? fallback.skillVictoryXpReward)),
     };
     return defaults.battleModel;
   }
 
-  function getMonsterXpThreshold(monster) {
-    return Math.max(30, Math.round(Math.max(1, Number(monster?.level || 1)) * 30));
+  function getBattleModelConfig(source) {
+    if (
+      source
+      && typeof source === "object"
+      && !source.settings
+      && (
+        Object.prototype.hasOwnProperty.call(source, "skillAttackScale")
+        || Object.prototype.hasOwnProperty.call(source, "monsterXpCurveBase")
+        || Object.prototype.hasOwnProperty.call(source, "skillXpCurveBase")
+      )
+    ) {
+      return source;
+    }
+    if (source?.settings) {
+      return ensureBattleModelSettings(source);
+    }
+    return ensureBattleModelSettings(ACTIVE_APP?.content || fallbackContent);
   }
 
-  function getMonsterXpProgress(monster) {
-    const threshold = getMonsterXpThreshold(monster);
+  function getMonsterXpThresholdForLevel(level, source) {
+    const battleModel = getBattleModelConfig(source);
+    const targetLevel = Math.max(1, Number(level || 1));
+    const levelIndex = Math.max(0, targetLevel - 1);
+    return Math.max(
+      1,
+      Math.round(
+        Number(battleModel.monsterXpCurveBase || 1)
+        + Number(battleModel.monsterXpCurveLinear || 0) * levelIndex
+        + Number(battleModel.monsterXpCurveQuadratic || 0) * levelIndex * levelIndex
+      )
+    );
+  }
+
+  function getMonsterXpThreshold(monster, source) {
+    return getMonsterXpThresholdForLevel(monster?.level || 1, source);
+  }
+
+  function getMonsterXpProgress(monster, source) {
+    const threshold = getMonsterXpThreshold(monster, source);
     const xp = Math.max(0, Number(monster?.xp || 0));
     return {
       current: Math.min(threshold, xp),
@@ -1326,8 +1422,8 @@
     monster.xp = Math.max(0, Number(monster.xp || 0) + Number(amount || 0));
     let levelsGained = 0;
 
-    while (monster.xp >= getMonsterXpThreshold(monster)) {
-      monster.xp -= getMonsterXpThreshold(monster);
+    while (monster.xp >= getMonsterXpThreshold(monster, content)) {
+      monster.xp -= getMonsterXpThreshold(monster, content);
       monster.level = Math.max(1, Number(monster.level || 1) + 1);
       levelsGained += 1;
     }
@@ -2124,20 +2220,29 @@
     return Math.max(0, Number(getPlayerSkillProgressEntry(state, skillId)?.level || 0));
   }
 
-  function getSkillXpThreshold(skill, level) {
+  function getSkillXpThreshold(skill, level, source) {
     const maxLevel = getSkillMaxLevel(skill);
     const currentLevel = Math.max(1, Math.min(maxLevel, Number(level || 1) || 1));
     if (currentLevel >= maxLevel) {
       return 0;
     }
-    return Math.max(1, currentLevel * 5);
+    const battleModel = getBattleModelConfig(source);
+    const levelIndex = Math.max(0, currentLevel - 1);
+    return Math.max(
+      1,
+      Math.round(
+        Number(battleModel.skillXpCurveBase || 1)
+        + Number(battleModel.skillXpCurveLinear || 0) * levelIndex
+        + Number(battleModel.skillXpCurveQuadratic || 0) * levelIndex * levelIndex
+      )
+    );
   }
 
   function getPlayerSkillXpProgress(state, content, skillId) {
     const skill = getSkill(content, skillId);
     const level = getPlayerSkillLevel(state, content, skillId);
     const xp = getPlayerSkillXp(state, content, skillId);
-    const threshold = skill ? getSkillXpThreshold(skill, level) : 0;
+    const threshold = skill ? getSkillXpThreshold(skill, level, content) : 0;
     if (!skill || level >= getSkillMaxLevel(skill) || threshold <= 0) {
       return {
         current: 0,
@@ -2227,7 +2332,7 @@
         } else if (clampedLevel >= maxLevel) {
           entry.xp = 0;
         } else {
-          entry.xp = Math.max(0, Math.min(getSkillXpThreshold(skill, clampedLevel), Number(entry.xp || 0)));
+          entry.xp = Math.max(0, Math.min(getSkillXpThreshold(skill, clampedLevel, content), Number(entry.xp || 0)));
         }
       });
     }
@@ -2256,7 +2361,7 @@
     let gained = 0;
     let levelsGained = 0;
     while (remainingXp > 0 && Number(entry.level || 0) < getSkillMaxLevel(skill)) {
-      const threshold = getSkillXpThreshold(skill, entry.level);
+      const threshold = getSkillXpThreshold(skill, entry.level, content);
       if (threshold <= 0) {
         entry.xp = 0;
         break;
@@ -2929,15 +3034,21 @@
         });
       });
 
+      const variants = (species.variants || []).map(function (variant) {
+        return {
+          variant,
+          locations: Array.from(variantLocationMap.get(variant.id || "default") || []),
+        };
+      });
+      const heroVariant = variants.length
+        ? variants[Math.floor(Math.random() * variants.length)]
+        : null;
+
       return {
         species,
         locations: Array.from(speciesLocations),
-        variants: (species.variants || []).map(function (variant) {
-          return {
-            variant,
-            locations: Array.from(variantLocationMap.get(variant.id || "default") || []),
-          };
-        }),
+        variants,
+        heroVariant,
       };
     });
   }
@@ -3204,6 +3315,10 @@
     ensureMonsterStatPointState(wildMonster, species, { randomize: true });
     recalculateMonsterStats(wildMonster, species, { healToFull: true });
     ensureElementalAffinityState(wildMonster);
+    ensureGeneratedElementalAffinityPoints(wildMonster, {
+      randomize: true,
+      primaryElement: wildMonster.primaryElementalAffinity,
+    });
     return wildMonster;
   }
 
@@ -3582,7 +3697,12 @@
 
   function syncDevToolsCrestLevelCapSettings(content, devToolsState) {
     ensureGlobalCrestLevelCapSettings(content);
-    ensureDevToolsCrestLevelCapSettings(devToolsState, content);
+    if (!Array.isArray(devToolsState.crestLevelCaps) || !devToolsState.crestLevelCaps.length) {
+      ensureDevToolsCrestLevelCapSettings(devToolsState, content);
+    }
+    devToolsState.crestLevelCaps = devToolsState.crestLevelCaps.map(function (entry, index) {
+      return normalizeCrestLevelCapEntry(entry, DEFAULT_CREST_LEVEL_CAPS[index] || DEFAULT_CREST_LEVEL_CAPS[DEFAULT_CREST_LEVEL_CAPS.length - 1]);
+    });
     content.settings.defaults.crestLevelCaps = devToolsState.crestLevelCaps.map(function (entry, index) {
       return normalizeCrestLevelCapEntry(entry, DEFAULT_CREST_LEVEL_CAPS[index] || DEFAULT_CREST_LEVEL_CAPS[DEFAULT_CREST_LEVEL_CAPS.length - 1]);
     });
@@ -4722,6 +4842,11 @@
       varianceOverride: Math.max(0, Number(battleModel.randomVarianceMax || 0)),
     });
     const hitChance = Math.max(0, Math.min(100, Number(sampleSkill.accuracy ?? 100) + effectiveAccuracyBonus));
+    const rewardLevels = [1, 5, 10, 15];
+    const monsterXpLevels = [1, 5, 10, 15];
+    const skillXpLevels = [1, 2, 3].filter(function (level) {
+      return level < getSkillMaxLevel(selectedSkill);
+    });
     return {
       sampleSkill,
       effectiveAttack,
@@ -4735,6 +4860,26 @@
       minDamage,
       maxDamage,
       hitChance,
+      rewardSamples: rewardLevels.map(function (level) {
+        return {
+          level,
+          wild: getBattleMonsterXpRewardForEnemyLevel("wild", level, battleModel),
+          trainer: getBattleMonsterXpRewardForEnemyLevel("trainer", level, battleModel),
+          arena: getBattleMonsterXpRewardForEnemyLevel("arena", level, battleModel),
+        };
+      }),
+      monsterXpThresholdSamples: monsterXpLevels.map(function (level) {
+        return {
+          level,
+          threshold: getMonsterXpThresholdForLevel(level, battleModel),
+        };
+      }),
+      skillXpThresholdSamples: skillXpLevels.map(function (level) {
+        return {
+          level,
+          threshold: getSkillXpThreshold(selectedSkill, level, battleModel),
+        };
+      }),
     };
   }
 
@@ -4768,6 +4913,7 @@
       enemy,
       playerIndex: 0,
       participantMonsterIds: state.party[0]?.instanceId ? [state.party[0].instanceId] : [],
+      pendingMonsterXpReward: 0,
       log: ["A wild " + species.name + " approached in " + mapLabel + "."],
       menu: "root",
       outcome: null,
@@ -4788,7 +4934,7 @@
   }
 
   function grantVictoryRewards(state, content) {
-    grantBattleMonsterXp(state, content, 5);
+    return grantAccumulatedBattleMonsterXp(state, content);
   }
 
   function grantBattleVictorySkillXp(state, content, monster) {
@@ -4796,8 +4942,13 @@
       return;
     }
 
+    const battleModel = ensureBattleModelSettings(content);
+    const rewardAmount = Math.max(0, Number(battleModel.skillVictoryXpReward || 0));
+    if (rewardAmount <= 0) {
+      return;
+    }
     monster.skills.forEach(function (skillId) {
-      grantSkillXp(state, content, skillId, 2, { showBattleLog: true });
+      grantSkillXp(state, content, skillId, rewardAmount, { showBattleLog: true });
     });
   }
 
@@ -4863,6 +5014,47 @@
     });
   }
 
+  function getBattleMonsterXpRewardForEnemyLevel(battleType, enemyLevel, source) {
+    const battleModel = getBattleModelConfig(source);
+    const normalizedType = String(battleType || "wild").toLowerCase();
+    const targetLevel = Math.max(1, Number(enemyLevel || 1));
+    const fieldPrefix = normalizedType === "arena"
+      ? "arena"
+      : (normalizedType === "trainer" ? "trainer" : "wild");
+    return Math.max(
+      0,
+      Math.round(
+        Number(battleModel[fieldPrefix + "MonsterXpBase"] || 0)
+        + Number(battleModel[fieldPrefix + "MonsterXpPerLevel"] || 0) * targetLevel
+      )
+    );
+  }
+
+  function getBattleMonsterXpRewardForEnemy(battle, enemy, source) {
+    const battleType = battle?.battleSource === "npc-trainer"
+      ? "trainer"
+      : (battle?.type === "trainer" ? "arena" : "wild");
+    return getBattleMonsterXpRewardForEnemyLevel(battleType, enemy?.level || 1, source);
+  }
+
+  function queueBattleMonsterXpReward(state, content, enemy) {
+    if (!state?.battle || !enemy) {
+      return 0;
+    }
+    const reward = getBattleMonsterXpRewardForEnemy(state.battle, enemy, content);
+    state.battle.pendingMonsterXpReward = Math.max(0, Number(state.battle.pendingMonsterXpReward || 0)) + reward;
+    return reward;
+  }
+
+  function grantAccumulatedBattleMonsterXp(state, content) {
+    const total = Math.max(0, Number(state?.battle?.pendingMonsterXpReward || 0));
+    if (total > 0) {
+      grantBattleMonsterXp(state, content, total);
+      state.battle.pendingMonsterXpReward = 0;
+    }
+    return total;
+  }
+
   function grantBattleParticipantSkillXp(state, content) {
     getBattleParticipantMonsters(state).forEach(function (monster) {
       grantBattleVictorySkillXp(state, content, monster);
@@ -4887,6 +5079,10 @@
     });
     enemy.name = species.name;
     ensureElementalAffinityState(enemy, {
+      primaryElement: member?.primaryElementalAffinity,
+    });
+    ensureGeneratedElementalAffinityPoints(enemy, {
+      randomize: !member?.elementalAffinityPoints,
       primaryElement: member?.primaryElementalAffinity,
     });
     return enemy;
@@ -4919,6 +5115,7 @@
       enemy: team[0],
       playerIndex: 0,
       participantMonsterIds: state.party[0]?.instanceId ? [state.party[0].instanceId] : [],
+      pendingMonsterXpReward: 0,
       log: [(arena.leaderTitle || "Leader") + " " + (arena.leaderName || "Arena Leader") + " challenges you to a battle."],
       menu: "root",
       outcome: null,
@@ -4954,6 +5151,7 @@
       enemy: team[0],
       playerIndex: 0,
       participantMonsterIds: state.party[0]?.instanceId ? [state.party[0].instanceId] : [],
+      pendingMonsterXpReward: 0,
       log: [(trainer.title || "Trainer") + " " + (trainer.name || npc.label || "Trainer") + " challenges you to a battle."],
       menu: "root",
       outcome: null,
@@ -5134,6 +5332,11 @@
   }
 
   function handleEnemyDefeat(state, content, enemy, options) {
+    if (!state?.battle || !enemy || enemy._battleDefeatHandled) {
+      return;
+    }
+    enemy._battleDefeatHandled = true;
+    queueBattleMonsterXpReward(state, content, enemy);
     const enemySpecies = getSpecies(content, enemy.speciesId);
     if (!options?.skipLog) {
       addBattleLogEntry(state, enemySpecies.name + " fainted.");
@@ -5160,7 +5363,7 @@
         }
       } else {
         state.battle.outcome = "victory";
-        rewardStructuredBattleVictory(state, content, state.battle);
+        const totalXp = rewardStructuredBattleVictory(state, content, state.battle);
         grantBattleParticipantSkillXp(state, content);
         const rewardParts = [];
         if (state.battle.crestName) {
@@ -5168,6 +5371,9 @@
         }
         if (Number(state.battle.rewardMoney || 0) > 0) {
           rewardParts.push("$" + Number(state.battle.rewardMoney || 0));
+        }
+        if (totalXp > 0) {
+          rewardParts.push(totalXp + " XP");
         }
         if (rewardParts.length) {
           state.message = "Victory. You earned " + rewardParts.join(" and ") + ".";
@@ -5183,9 +5389,11 @@
     } else {
       state.battle.outcome = "victory";
       markWildMonsterDefeated(state, enemy.wildMonsterId);
-      grantVictoryRewards(state, content);
+      const totalXp = grantVictoryRewards(state, content);
       grantBattleParticipantSkillXp(state, content);
-      state.message = "Victory. Your party earned 5 XP.";
+      state.message = totalXp > 0
+        ? "Victory. Your party earned " + totalXp + " XP."
+        : "Victory.";
     }
   }
 
@@ -5240,7 +5448,7 @@
   }
 
   function rewardStructuredBattleVictory(state, content, battle) {
-    grantBattleMonsterXp(state, content, 10);
+    const totalXp = grantAccumulatedBattleMonsterXp(state, content);
     state.player.money += Number(battle.rewardMoney || 0);
 
     if (battle.arenaId || battle.crestId) {
@@ -5265,6 +5473,7 @@
     }
 
     normalizeCrestScaledWorldSettings(state);
+    return totalXp;
   }
 
   function returnToTown(state, content) {
@@ -5476,7 +5685,7 @@
     }
     const skill = getEffectiveSkillAtLevel(baseSkill, skillLevel);
 
-    grantSkillXp(state, content, skillId, 1, { showBattleLog: true });
+    grantSkillXp(state, content, skillId, Math.max(0, Number(ensureBattleModelSettings(content).skillUseXpReward || 0)), { showBattleLog: true });
     resolveBattleAttack(state, content, { skill });
   }
 
@@ -6466,8 +6675,8 @@
     const zoomScale = getEffectiveWorldZoomScale(state);
     const visibleWorldWidth = Math.min(worldWidth, viewport.width / zoomScale);
     const visibleWorldHeight = Math.min(worldHeight, viewport.height / zoomScale);
-    const sourceX = Math.max(0, Math.min(worldWidth - visibleWorldWidth, camera.x));
-    const sourceY = Math.max(0, Math.min(worldHeight - visibleWorldHeight, camera.y));
+    const sourceX = Math.round(Math.max(0, Math.min(worldWidth - visibleWorldWidth, camera.x)));
+    const sourceY = Math.round(Math.max(0, Math.min(worldHeight - visibleWorldHeight, camera.y)));
     const destWidth = Math.min(viewport.width, Math.round(visibleWorldWidth * zoomScale));
     const destHeight = Math.min(viewport.height, Math.round(visibleWorldHeight * zoomScale));
     const destOffsetX = Math.max(0, Math.round((viewport.width - destWidth) / 2));
@@ -7765,6 +7974,15 @@
         const isCaught = state.registry.caught.includes(entry.species.id);
         const stats = entry.species.baseStats || {};
         const locationText = entry.locations.length ? entry.locations.join(", ") : "No spawn locations assigned yet";
+        const heroVariantEntry = entry.heroVariant || entry.variants[0] || null;
+        const heroVariant = heroVariantEntry?.variant || getSpeciesVariant(entry.species, "default");
+        const heroVariantLabel = formatMonsterVariantLabel(heroVariant, "default");
+        const heroSpriteMarkup = renderMonsterVariantVisualMarkup(
+          entry.species.id,
+          heroVariant?.id || "default",
+          "registry-hero-sprite",
+          "default"
+        );
         const variantMarkup = entry.variants.map(function (variantEntry) {
           const variantLabel = formatMonsterVariantLabel(variantEntry.variant, "default");
           const variantLocationText = variantEntry.locations.length ? variantEntry.locations.join(", ") : "No available spawn locations assigned yet";
@@ -7780,9 +7998,8 @@
         return [
           '<article class="registry-card">',
           '<div class="registry-card-header"><div><h3>' + escapeHtml(entry.species.name) + '</h3><p>' + escapeHtml(entry.species.id) + '</p></div><span class="registry-status ' + (isCaught ? "registry-status-caught" : "registry-status-missing") + '">' + (isCaught ? "Caught" : "Not Caught") + "</span></div>",
-          '<p class="registry-spawn-line"><strong>Available Spawn Locations:</strong> ' + escapeHtml(locationText) + "</p>",
-          '<p class="registry-stats">HP ' + Number(stats.hp || 0) + " · ATK " + Number(stats.attack || 0) + " · DEF " + Number(stats.defense || 0) + " · SPD " + Number(stats.speed || 0) + "</p>",
-          '<div class="registry-variants"><h4>Variants</h4><ul class="compact-list">' + variantMarkup + "</ul></div>",
+          '<div class="registry-card-hero"><div class="registry-card-hero-visual">' + heroSpriteMarkup + '</div><div class="registry-card-hero-copy"><p class="registry-card-hero-label"><strong>Featured Variant:</strong> ' + escapeHtml(heroVariantLabel) + '</p><p class="registry-spawn-line"><strong>Available Spawn Locations:</strong> ' + escapeHtml(locationText) + "</p><p class=\"registry-stats\">HP " + Number(stats.hp || 0) + " · ATK " + Number(stats.attack || 0) + " · DEF " + Number(stats.defense || 0) + " · SPD " + Number(stats.speed || 0) + "</p></div></div>",
+          '<details class="registry-variants"><summary>Variants (' + entry.variants.length + ')</summary><ul class="compact-list registry-variant-list">' + variantMarkup + "</ul></details>",
           "</article>",
         ].join("");
       }).join("");
@@ -9508,6 +9725,7 @@
         '<p>The live direct-damage formula is currently <code>max(1, round((max(1, power + effectiveAttack * attackScale - effectiveDefense * defenseScale) + variance) * (1 + affinityBonus) * matchupMultiplier * statusMultiplier))</code>.</p>',
         '<p><strong>Effective stats</strong> now include active battle stat modifiers. Each modifier stage changes attack, defense, and speed by the configured per-stage percent, while accuracy stages add flat accuracy bonus. <strong>Burn</strong> reduces outgoing direct damage by the configured penalty percent, and burn damage-over-time still resolves separately at end of turn using the status effect power value.</p>',
         '<p><strong>Elemental damage</strong> now has two layers: the attacker gets its same-element affinity bonus, then the defender applies chart-based weakness or resistance for every spent affinity that matches the incoming element.</p>',
+        '<p><strong>XP pacing</strong> is also controlled here. Monster level-up thresholds use the monster XP curve below, battle rewards scale from defeated enemy level with separate wild, trainer, and arena values, and skill progression uses its own curve plus per-use and per-victory rewards.</p>',
         '<p><strong>Speed</strong> still decides turn order only. If the player monster speed is greater than or equal to the enemy speed, the player acts first; otherwise the enemy acts first.</p>',
         '<div class="form-grid">',
         '<label class="input-group"><span>Attack Scale</span><input type="number" step="0.05" data-dev-battle-model-field="skillAttackScale" value="' + Number(battleModel.skillAttackScale || 0) + '" /></label>',
@@ -9523,6 +9741,9 @@
         '<label class="input-group"><span>Accuracy Bonus Per Stage</span><input type="number" step="0.1" min="0" data-dev-battle-model-field="accuracyModifierPerStage" value="' + Number(battleModel.accuracyModifierPerStage || 0) + '" /></label>',
         '<label class="input-group"><span>Burn Damage Penalty %</span><input type="number" step="0.1" min="0" data-dev-battle-model-field="burnDamagePenaltyPercent" value="' + Number(battleModel.burnDamagePenaltyPercent || 0) + '" /></label>',
         '</div>',
+        '<div class="dev-subcard"><div class="section-heading"><h3>Monster XP Curve</h3></div><p class="dev-helper-text">XP needed to level a monster uses the target monster level as input. Higher linear and quadratic values slow later levels without requiring a full migration for existing saves.</p><div class="form-grid"><label class="input-group"><span>Monster XP Base</span><input type="number" step="1" min="1" data-dev-battle-model-field="monsterXpCurveBase" value="' + Number(battleModel.monsterXpCurveBase || 1) + '" /></label><label class="input-group"><span>Monster XP Linear</span><input type="number" step="0.1" min="0" data-dev-battle-model-field="monsterXpCurveLinear" value="' + Number(battleModel.monsterXpCurveLinear || 0) + '" /></label><label class="input-group"><span>Monster XP Quadratic</span><input type="number" step="0.05" min="0" data-dev-battle-model-field="monsterXpCurveQuadratic" value="' + Number(battleModel.monsterXpCurveQuadratic || 0) + '" /></label></div></div>',
+        '<div class="dev-subcard"><div class="section-heading"><h3>Battle XP Rewards</h3></div><p class="dev-helper-text">Battle rewards are totaled from each defeated enemy in the opposing roster. Wild, trainer, and arena battles each have their own level-scaled payout formula.</p><div class="form-grid"><label class="input-group"><span>Wild XP Base</span><input type="number" step="0.1" min="0" data-dev-battle-model-field="wildMonsterXpBase" value="' + Number(battleModel.wildMonsterXpBase || 0) + '" /></label><label class="input-group"><span>Wild XP Per Level</span><input type="number" step="0.1" min="0" data-dev-battle-model-field="wildMonsterXpPerLevel" value="' + Number(battleModel.wildMonsterXpPerLevel || 0) + '" /></label><label class="input-group"><span>Trainer XP Base</span><input type="number" step="0.1" min="0" data-dev-battle-model-field="trainerMonsterXpBase" value="' + Number(battleModel.trainerMonsterXpBase || 0) + '" /></label><label class="input-group"><span>Trainer XP Per Level</span><input type="number" step="0.1" min="0" data-dev-battle-model-field="trainerMonsterXpPerLevel" value="' + Number(battleModel.trainerMonsterXpPerLevel || 0) + '" /></label><label class="input-group"><span>Arena XP Base</span><input type="number" step="0.1" min="0" data-dev-battle-model-field="arenaMonsterXpBase" value="' + Number(battleModel.arenaMonsterXpBase || 0) + '" /></label><label class="input-group"><span>Arena XP Per Level</span><input type="number" step="0.1" min="0" data-dev-battle-model-field="arenaMonsterXpPerLevel" value="' + Number(battleModel.arenaMonsterXpPerLevel || 0) + '" /></label></div></div>',
+        '<div class="dev-subcard"><div class="section-heading"><h3>Skill XP Pace</h3></div><p class="dev-helper-text">Skill XP stays tied to battle participation and skill usage, but this curve and reward pair control how quickly skills catch up to the monsters using them.</p><div class="form-grid"><label class="input-group"><span>Skill XP Base</span><input type="number" step="1" min="1" data-dev-battle-model-field="skillXpCurveBase" value="' + Number(battleModel.skillXpCurveBase || 1) + '" /></label><label class="input-group"><span>Skill XP Linear</span><input type="number" step="0.1" min="0" data-dev-battle-model-field="skillXpCurveLinear" value="' + Number(battleModel.skillXpCurveLinear || 0) + '" /></label><label class="input-group"><span>Skill XP Quadratic</span><input type="number" step="0.05" min="0" data-dev-battle-model-field="skillXpCurveQuadratic" value="' + Number(battleModel.skillXpCurveQuadratic || 0) + '" /></label><label class="input-group"><span>Skill Use XP</span><input type="number" step="0.1" min="0" data-dev-battle-model-field="skillUseXpReward" value="' + Number(battleModel.skillUseXpReward || 0) + '" /></label><label class="input-group"><span>Skill Victory XP</span><input type="number" step="0.1" min="0" data-dev-battle-model-field="skillVictoryXpReward" value="' + Number(battleModel.skillVictoryXpReward || 0) + '" /></label></div></div>',
         '<div class="dev-subcard"><div class="section-heading"><h3>Elemental Matchup Chart</h3></div><p class="dev-helper-text">Set how each attack element interacts with each defender affinity. <strong>Strong</strong> uses the advantage multiplier and point scaling, <strong>Weak</strong> uses the resistance multiplier and point scaling, and <strong>Normal</strong> applies no extra defender modifier.</p><div class="table-scroll"><table class="dev-battle-model-grid"><thead><tr><th>Attack \\ Defense</th>' + ELEMENTAL_AFFINITIES.map(function (element) { return '<th>' + escapeHtml(element) + '</th>'; }).join("") + '</tr></thead><tbody>' + matchupGridRows + '</tbody></table></div></div>',
         '<div class="dev-subcard">',
         '<div class="section-heading"><h3>Sample Output</h3></div>',
@@ -9530,6 +9751,11 @@
         '<p><strong>Effective Attack:</strong> ' + Number(battleSample.effectiveAttack || 0) + ' · <strong>Effective Defense:</strong> ' + Number(battleSample.effectiveDefense || 0) + ' · <strong>Effective Speed:</strong> ' + Number(battleSample.effectiveSpeed || 0) + ' · <strong>Accuracy Bonus:</strong> +' + Number(battleSample.effectiveAccuracyBonus || 0) + '%</p>',
         '<p><strong>Base Formula Result:</strong> ' + Number(battleSample.rawBase || 0) + ' before variance · <strong>Affinity Bonus:</strong> +' + Number(battleSample.affinityBonusPercent || 0) + '% · <strong>Matchup Multiplier:</strong> x' + Number(battleSample.matchupMultiplier || 1).toFixed(2) + ' · <strong>Status Multiplier:</strong> x' + Number(battleSample.statusMultiplier || 1).toFixed(2) + '</p>',
         '<p><strong>Damage Range:</strong> ' + Number(battleSample.minDamage || 0) + ' - ' + Number(battleSample.maxDamage || 0) + ' · <strong>Hit Chance:</strong> ' + Number(battleSample.hitChance || 0) + '%</p>',
+        '<p><strong>Battle XP Examples:</strong> ' + battleSample.rewardSamples.map(function (entry) { return "Lv " + entry.level + " wild " + entry.wild + " / trainer " + entry.trainer + " / arena " + entry.arena; }).join(" · ") + '</p>',
+        '<p><strong>Monster XP Needed:</strong> ' + battleSample.monsterXpThresholdSamples.map(function (entry) { return "Lv " + entry.level + " " + entry.threshold + " XP"; }).join(" · ") + '</p>',
+        '<p><strong>Skill XP Needed:</strong> ' + (battleSample.skillXpThresholdSamples.length
+          ? battleSample.skillXpThresholdSamples.map(function (entry) { return "Lv " + entry.level + "→" + (entry.level + 1) + " " + entry.threshold + " XP"; }).join(" · ")
+          : "This skill maxes at Lv 1, so it has no further skill XP thresholds.") + '</p>',
         '<p class="dev-helper-text">This sample uses the currently selected skill and current battle model values. It shows a stable min/max range using variance 0 and variance max instead of rolling a random result.</p>',
         '</div>',
         '<p class="dev-helper-text">Basic attacks without a skill power still use the simpler fallback formula <code>effectiveAttack - effectiveDefense / divisor + variance</code>, then apply affinity, matchup, and status multipliers if relevant.</p>',
@@ -9560,7 +9786,7 @@
         '<section class="dev-screen-layout">',
         '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>' + (monsterSubMode === "species" ? "Monster Species" : "Skills") + '</h2><button class="secondary-button" type="button" data-action="' + addAction + '">' + addLabel + '</button></div><ul class="compact-list dev-map-list">' + (sidebarItems || "<li>No entries yet.</li>") + '</ul></aside>',
         '<section class="dev-main">',
-        '<section class="panel-block dev-preview-controls"><div class="section-heading"><h2>Monster Tools</h2></div><p>Edit monsters and skills in-memory, then export JSON into <code>data/</code> and rebuild local content before reloading the game.</p><div class="editor-mode-toggle"><button class="' + (monsterSubMode === "species" ? "primary-button" : "secondary-button") + '" type="button" data-action="monster-mode-species">Species</button><button class="' + (monsterSubMode === "skills" ? "primary-button" : "secondary-button") + '" type="button" data-action="monster-mode-skills">Skills</button></div>' + renderValidationBanner() + '<div class="title-actions"><button class="secondary-button" type="button" data-action="export-monsters-json">Export monsters.json</button><button class="secondary-button" type="button" data-action="export-skills-json">Export skills.json</button></div></section>',
+        '<section class="panel-block dev-preview-controls"><div class="section-heading"><h2>Monster Tools</h2></div><p>Edit monsters and skills in-memory, then export JSON into <code>data/</code> and rebuild local content before reloading the game.</p><div class="editor-mode-toggle"><button class="' + (monsterSubMode === "species" ? "primary-button" : "secondary-button") + '" type="button" data-action="monster-mode-species">Species</button><button class="' + (monsterSubMode === "skills" ? "primary-button" : "secondary-button") + '" type="button" data-action="monster-mode-skills">Skills</button></div>' + renderValidationBanner() + '<div class="title-actions"><button class="secondary-button" type="button" data-action="export-monsters-json">Export monsters.json</button><button class="secondary-button" type="button" data-action="export-skills-json">Export skills.json</button>' + (monsterSubMode === "skills" ? '<button class="secondary-button" type="button" data-action="export-settings-json">Export settings.json</button>' : '') + '</div>' + (monsterSubMode === "skills" ? '<p class="dev-helper-text">The elemental chart, damage model, and XP tuning are saved in <code>settings.json</code>, not in <code>skills.json</code>.</p>' : '') + '</section>',
         '<section class="panel-block dev-editor-panel">' + (monsterSubMode === "species" ? renderSpeciesEditor() : renderSkillsEditor()) + '</section>',
         '</section>',
         '</section>',
@@ -11672,6 +11898,18 @@
             app.setDevSection("progression");
             return;
           }
+          if (action === "add-crest-level-cap") {
+            event.preventDefault();
+            event.stopPropagation();
+            app.addCrestLevelCap();
+            return;
+          }
+          if (action === "delete-crest-level-cap") {
+            event.preventDefault();
+            event.stopPropagation();
+            app.deleteCrestLevelCap(Number(actionEl.getAttribute("data-crest-cap-index") || 0));
+            return;
+          }
           if (action === "mode-transitions") {
             event.preventDefault();
             event.stopPropagation();
@@ -13307,17 +13545,16 @@
         ensureSkillEffectCollections(skill);
         const usedLevels = new Set((skill.levelOverrides || []).map(function (entry) { return Number(entry.level || 0); }));
         let nextLevel = 2;
-        while (usedLevels.has(nextLevel) && nextLevel <= getSkillMaxLevel(skill)) {
+        while (usedLevels.has(nextLevel)) {
           nextLevel += 1;
         }
         if (nextLevel > getSkillMaxLevel(skill)) {
-          this.state.message = "Every skill level already has an override.";
-          this.render();
-          return;
+          skill.maxLevel = nextLevel;
         }
 
         skill.levelOverrides.push(createEmptySkillLevelOverride(nextLevel));
         ensureSkillEffectCollections(skill);
+        this.state.message = "Added a level " + nextLevel + " override for " + (skill.name || "the skill") + ".";
         this.render();
       },
       deleteSkillLevelOverride: function (overrideIndex) {
@@ -13886,6 +14123,20 @@
           || path === "statModifierPercentPerStage"
           || path === "accuracyModifierPerStage"
           || path === "burnDamagePenaltyPercent"
+          || path === "monsterXpCurveBase"
+          || path === "monsterXpCurveLinear"
+          || path === "monsterXpCurveQuadratic"
+          || path === "wildMonsterXpBase"
+          || path === "wildMonsterXpPerLevel"
+          || path === "trainerMonsterXpBase"
+          || path === "trainerMonsterXpPerLevel"
+          || path === "arenaMonsterXpBase"
+          || path === "arenaMonsterXpPerLevel"
+          || path === "skillXpCurveBase"
+          || path === "skillXpCurveLinear"
+          || path === "skillXpCurveQuadratic"
+          || path === "skillUseXpReward"
+          || path === "skillVictoryXpReward"
         ) {
           battleModel[path] = Math.max(0, numericValue || 0);
         } else {
@@ -14394,6 +14645,10 @@
         anchor.download = "skills.json";
         anchor.click();
         URL.revokeObjectURL(url);
+        this.state.message = "Exported skills.json. Battle model and elemental chart changes are in settings.json.";
+        if (this.state.screen === "world") {
+          this.render();
+        }
       },
       placeTargetSpawnFromDevCanvas: function (event) {
         if (this.state.screen !== "dev-tools" || this.devTools.editorMode !== "transitions") {

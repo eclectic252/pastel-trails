@@ -7,12 +7,17 @@
     "playerSpriteRenderWidth": 155,
     "monsterSpriteRenderWidth": 128,
     "playerSpriteAnchorOffsetY": 20,
+    "shareExperience": true,
+    "encounterPreview": false,
+    "encounterPreviewMode": "available",
     "arenaLeaderMinLevel": 1,
     "arenaLeaderMaxLevel": 10,
     "arenaLeaderPartySize": 3,
     "trainerRefightMinLevel": 1,
     "trainerRefightMaxLevel": 5,
     "trainerRefightPartySize": 2,
+    "trainerRefightCooldownSeconds": 180,
+    "wildMonsterMaxLevel": 5,
     "crestLevelCaps": [
       {
         "crestMin": 0,
@@ -26,15 +31,95 @@
       },
       {
         "crestMin": 5,
-        "crestMax": 99,
+        "crestMax": 6,
         "levelCap": 15
+      },
+      {
+        "crestMin": 7,
+        "crestMax": 100,
+        "levelCap": 20
       }
     ],
-    "shareExperience": true,
-    "mapDetails": true,
-    "encounterPreview": false,
-    "encounterPreviewMode": "available",
-    "devMode": false
+    "battleModel": {
+      "skillAttackScale": 0.6,
+      "skillDefenseScale": 0.35,
+      "basicDefenseDivisor": 2,
+      "randomVarianceMax": 3,
+      "affinityDamageBonusPerPointPercent": 1,
+      "elementalAdvantageMultiplier": 2,
+      "elementalResistanceMultiplier": 0.5,
+      "elementalAdvantagePointPercent": 0,
+      "elementalResistancePointPercent": 0,
+      "elementalMatchupChart": {
+        "Air": {
+          "Air": "normal",
+          "Fire": "strong",
+          "Earth": "normal",
+          "Water": "weak",
+          "Light": "normal",
+          "Dark": "normal"
+        },
+        "Fire": {
+          "Air": "weak",
+          "Fire": "normal",
+          "Earth": "normal",
+          "Water": "strong",
+          "Light": "normal",
+          "Dark": "normal"
+        },
+        "Earth": {
+          "Air": "normal",
+          "Fire": "normal",
+          "Earth": "normal",
+          "Water": "normal",
+          "Light": "weak",
+          "Dark": "strong"
+        },
+        "Water": {
+          "Air": "strong",
+          "Fire": "weak",
+          "Earth": "normal",
+          "Water": "normal",
+          "Light": "normal",
+          "Dark": "normal"
+        },
+        "Light": {
+          "Air": "normal",
+          "Fire": "normal",
+          "Earth": "strong",
+          "Water": "normal",
+          "Light": "normal",
+          "Dark": "normal"
+        },
+        "Dark": {
+          "Air": "normal",
+          "Fire": "normal",
+          "Earth": "weak",
+          "Water": "normal",
+          "Light": "strong",
+          "Dark": "weak"
+        }
+      },
+      "statModifierPercentPerStage": 12,
+      "accuracyModifierPerStage": 5,
+      "burnDamagePenaltyPercent": 15,
+      "monsterXpCurveBase": 24,
+      "monsterXpCurveLinear": 10,
+      "monsterXpCurveQuadratic": 0.6,
+      "wildMonsterXpBase": 4,
+      "wildMonsterXpPerLevel": 2.5,
+      "trainerMonsterXpBase": 7,
+      "trainerMonsterXpPerLevel": 3.5,
+      "arenaMonsterXpBase": 10,
+      "arenaMonsterXpPerLevel": 4.5,
+      "skillXpCurveBase": 16,
+      "skillXpCurveLinear": 8,
+      "skillXpCurveQuadratic": 2,
+      "skillUseXpReward": 1,
+      "skillVictoryXpReward": 1
+    },
+    "devMode": false,
+    "mapDetails": true
   },
   "allowedZoomLevels": [
     100,

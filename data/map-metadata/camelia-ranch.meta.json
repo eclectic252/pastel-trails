@@ -26,11 +26,26 @@
       "y": 896,
       "width": 256,
       "height": 128,
-      "label": "New Interaction",
+      "label": "Camelia Ranch Arena",
       "text": "Add interaction text here.",
       "data": {
         "shopId": "",
         "arenaId": "Camelia-Ranch-Arena",
+        "crestId": ""
+      }
+    },
+    {
+      "id": "interaction-2",
+      "type": "healing-center",
+      "x": 256,
+      "y": 1408,
+      "width": 256,
+      "height": 128,
+      "label": "New Interaction",
+      "text": "Add interaction text here.",
+      "data": {
+        "shopId": "",
+        "arenaId": "",
         "crestId": ""
       }
     }

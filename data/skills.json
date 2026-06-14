@@ -4,7 +4,7 @@
       "id": "basic-attack",
       "name": "Tackle",
       "kind": "attack",
-      "power": 4,
+      "power": 3,
       "description": "A simple physical strike.",
       "element": "Neutral",
       "accuracy": 100,
@@ -30,14 +30,14 @@
     },
     {
       "id": "skill-2",
-      "name": "Gust",
+      "name": "Air Attack",
       "kind": "attack",
       "element": "Air",
       "maxLevel": 2,
       "levelOverrides": [
         {
           "level": 2,
-          "power": 8,
+          "power": 5,
           "accuracy": null,
           "element": "",
           "description": ""
@@ -53,19 +53,19 @@
         "foe": []
       },
       "statusEffects": [],
-      "power": 5,
-      "description": ""
+      "power": 4,
+      "description": "Basic Air Attack. "
     },
     {
       "id": "skill-3",
-      "name": "Whirlwind",
+      "name": "Air Strike",
       "kind": "attack",
       "element": "Air",
       "maxLevel": 2,
       "levelOverrides": [
         {
           "level": 2,
-          "power": 15,
+          "power": 7,
           "accuracy": null,
           "element": "",
           "description": ""
@@ -90,12 +90,12 @@
         "foe": []
       },
       "statusEffects": [],
-      "power": 8,
-      "description": ""
+      "power": 6,
+      "description": "Moderate Air Attack."
     },
     {
       "id": "skill-4",
-      "name": "Dust Stun",
+      "name": "Air Stun",
       "kind": "Status",
       "element": "Air",
       "maxLevel": 1,
@@ -106,15 +106,7 @@
         "requiredSkillLevels": []
       },
       "statModifiers": {
-        "self": [
-          {
-            "type": "modify",
-            "stat": "attack",
-            "amount": 1,
-            "label": "",
-            "showLabel": true
-          }
-        ],
+        "self": [],
         "foe": [
           {
             "type": "modify",
@@ -127,11 +119,11 @@
       },
       "statusEffects": [],
       "power": 0,
-      "description": ""
+      "description": "Reduce enemy attack. "
     },
     {
       "id": "skill-5",
-      "name": "Wind Guard",
+      "name": "Air Guard",
       "kind": "Status",
       "element": "Air",
       "maxLevel": 1,
@@ -155,11 +147,11 @@
       },
       "statusEffects": [],
       "power": 0,
-      "description": ""
+      "description": "Increase Speed"
     },
     {
       "id": "skill-6",
-      "name": "Terra Spike",
+      "name": "Earth Stun",
       "kind": "Status",
       "element": "Earth",
       "maxLevel": 1,
@@ -183,11 +175,11 @@
       },
       "statusEffects": [],
       "power": 0,
-      "description": ""
+      "description": "Reduce enemy defense. "
     },
     {
       "id": "skill-7",
-      "name": "Iron Spike",
+      "name": "Earth Guard",
       "kind": "Status",
       "element": "Earth",
       "maxLevel": 1,
@@ -203,7 +195,7 @@
             "type": "modify",
             "stat": "attack",
             "amount": 1,
-            "label": "",
+            "label": "Attack Up",
             "showLabel": true
           }
         ],
@@ -211,15 +203,23 @@
       },
       "statusEffects": [],
       "power": 0,
-      "description": ""
+      "description": "Increase Attack"
     },
     {
       "id": "skill-8",
-      "name": "Rock Tumble",
+      "name": "Earth Attack",
       "kind": "attack",
-      "element": "Neutral",
+      "element": "Earth",
       "maxLevel": 2,
-      "levelOverrides": [],
+      "levelOverrides": [
+        {
+          "level": 2,
+          "power": 5,
+          "accuracy": null,
+          "element": "",
+          "description": ""
+        }
+      ],
       "accuracy": 100,
       "unlockRequirements": {
         "arenaClears": [],
@@ -230,17 +230,25 @@
         "foe": []
       },
       "statusEffects": [],
-      "power": 5,
-      "description": ""
+      "power": 4,
+      "description": "Basic Earth Attack"
     },
     {
       "id": "skill-9",
-      "name": "Earthquake",
+      "name": "Earth Strike",
       "kind": "attack",
-      "element": "Neutral",
-      "maxLevel": 1,
-      "levelOverrides": [],
-      "accuracy": 100,
+      "element": "Earth",
+      "maxLevel": 2,
+      "levelOverrides": [
+        {
+          "level": 2,
+          "power": 7,
+          "accuracy": null,
+          "element": "",
+          "description": ""
+        }
+      ],
+      "accuracy": 95,
       "unlockRequirements": {
         "arenaClears": [],
         "requiredSkillLevels": [
@@ -255,7 +263,368 @@
         "foe": []
       },
       "statusEffects": [],
-      "power": 8,
+      "power": 6,
+      "description": "Moderate Earth Attack"
+    },
+    {
+      "id": "skill-10",
+      "name": "Fire Attack",
+      "kind": "attack",
+      "element": "Neutral",
+      "maxLevel": 1,
+      "levelOverrides": [],
+      "accuracy": 100,
+      "unlockRequirements": {
+        "arenaClears": [],
+        "requiredSkillLevels": []
+      },
+      "statModifiers": {
+        "self": [],
+        "foe": []
+      },
+      "statusEffects": [],
+      "power": 4,
+      "description": "Basic Fire Attack"
+    },
+    {
+      "id": "skill-11",
+      "name": "Fire Strike",
+      "kind": "attack",
+      "element": "Fire",
+      "maxLevel": 1,
+      "levelOverrides": [],
+      "accuracy": 100,
+      "unlockRequirements": {
+        "arenaClears": [],
+        "requiredSkillLevels": []
+      },
+      "statModifiers": {
+        "self": [],
+        "foe": []
+      },
+      "statusEffects": [],
+      "power": 6,
+      "description": "Moderate Fire Attack."
+    },
+    {
+      "id": "skill-12",
+      "name": "Fire Stun",
+      "kind": "Status",
+      "element": "Fire",
+      "maxLevel": 1,
+      "levelOverrides": [],
+      "accuracy": 100,
+      "unlockRequirements": {
+        "arenaClears": [],
+        "requiredSkillLevels": []
+      },
+      "statModifiers": {
+        "self": [],
+        "foe": []
+      },
+      "statusEffects": [
+        {
+          "type": "burn",
+          "target": "foe",
+          "chance": 70,
+          "tickChance": 100,
+          "power": 2,
+          "duration": 3,
+          "label": "",
+          "showLabel": true
+        }
+      ],
+      "power": 0,
+      "description": "Burn enemy each turn. "
+    },
+    {
+      "id": "skill-13",
+      "name": "Fire Guard",
+      "kind": "Status",
+      "element": "Neutral",
+      "maxLevel": 1,
+      "levelOverrides": [],
+      "accuracy": 100,
+      "unlockRequirements": {
+        "arenaClears": [],
+        "requiredSkillLevels": []
+      },
+      "statModifiers": {
+        "self": [
+          {
+            "type": "modify",
+            "stat": "accuracy",
+            "amount": 1,
+            "label": "Accuracy Up",
+            "showLabel": true
+          }
+        ],
+        "foe": []
+      },
+      "statusEffects": [],
+      "power": 0,
+      "description": "Increase Accuracy. "
+    },
+    {
+      "id": "skill-14",
+      "name": "Water Attack",
+      "kind": "attack",
+      "element": "Water",
+      "maxLevel": 2,
+      "levelOverrides": [
+        {
+          "level": 2,
+          "power": 5,
+          "accuracy": null,
+          "element": "Water",
+          "description": ""
+        }
+      ],
+      "accuracy": 100,
+      "unlockRequirements": {
+        "arenaClears": [],
+        "requiredSkillLevels": []
+      },
+      "statModifiers": {
+        "self": [],
+        "foe": []
+      },
+      "statusEffects": [],
+      "power": 4,
+      "description": "Basic Water Attack."
+    },
+    {
+      "id": "skill-15",
+      "name": "Water Strike",
+      "kind": "attack",
+      "element": "Water",
+      "maxLevel": 2,
+      "levelOverrides": [
+        {
+          "level": 2,
+          "power": 7,
+          "accuracy": null,
+          "element": "Water",
+          "description": ""
+        }
+      ],
+      "accuracy": 100,
+      "unlockRequirements": {
+        "arenaClears": [],
+        "requiredSkillLevels": [
+          {
+            "skillId": "skill-14",
+            "level": 2
+          }
+        ]
+      },
+      "statModifiers": {
+        "self": [],
+        "foe": []
+      },
+      "statusEffects": [],
+      "power": 6,
+      "description": "Moderate Water Attack."
+    },
+    {
+      "id": "skill-16",
+      "name": "Water Stun",
+      "kind": "Status",
+      "element": "Water",
+      "maxLevel": 1,
+      "levelOverrides": [],
+      "accuracy": 100,
+      "unlockRequirements": {
+        "arenaClears": [],
+        "requiredSkillLevels": []
+      },
+      "statModifiers": {
+        "self": [],
+        "foe": [
+          {
+            "type": "modify",
+            "stat": "speed",
+            "amount": -1,
+            "label": "",
+            "showLabel": true
+          }
+        ]
+      },
+      "statusEffects": [],
+      "power": 0,
+      "description": "Reduce Enemy Speed."
+    },
+    {
+      "id": "skill-17",
+      "name": "Water Guard",
+      "kind": "Status",
+      "element": "Water",
+      "maxLevel": 1,
+      "levelOverrides": [],
+      "accuracy": 100,
+      "unlockRequirements": {
+        "arenaClears": [],
+        "requiredSkillLevels": []
+      },
+      "statModifiers": {
+        "self": [
+          {
+            "type": "modify",
+            "stat": "defense",
+            "amount": 1,
+            "label": "Defense Up",
+            "showLabel": true
+          }
+        ],
+        "foe": []
+      },
+      "statusEffects": [],
+      "power": 0,
+      "description": "Increase Defense. "
+    },
+    {
+      "id": "skill-18",
+      "name": "Light Attack",
+      "kind": "attack",
+      "element": "Light",
+      "maxLevel": 2,
+      "levelOverrides": [
+        {
+          "level": 2,
+          "power": 5,
+          "accuracy": null,
+          "element": "Light",
+          "description": ""
+        }
+      ],
+      "accuracy": 100,
+      "unlockRequirements": {
+        "arenaClears": [],
+        "requiredSkillLevels": []
+      },
+      "statModifiers": {
+        "self": [],
+        "foe": []
+      },
+      "statusEffects": [],
+      "power": 4,
+      "description": "Basic Light Attack"
+    },
+    {
+      "id": "skill-19",
+      "name": "Light Strike",
+      "kind": "attack",
+      "element": "Neutral",
+      "maxLevel": 1,
+      "levelOverrides": [],
+      "accuracy": 100,
+      "unlockRequirements": {
+        "arenaClears": [],
+        "requiredSkillLevels": [
+          {
+            "skillId": "skill-18",
+            "level": 2
+          }
+        ]
+      },
+      "statModifiers": {
+        "self": [],
+        "foe": []
+      },
+      "statusEffects": [],
+      "power": 0,
+      "description": "Moderate Light Attack."
+    },
+    {
+      "id": "skill-20",
+      "name": "Dark Stun",
+      "kind": "Status",
+      "element": "Light",
+      "maxLevel": 1,
+      "levelOverrides": [],
+      "accuracy": 100,
+      "unlockRequirements": {
+        "arenaClears": [],
+        "requiredSkillLevels": []
+      },
+      "statModifiers": {
+        "self": [],
+        "foe": []
+      },
+      "statusEffects": [
+        {
+          "type": "confuse",
+          "target": "foe",
+          "chance": 70,
+          "tickChance": 100,
+          "power": 2,
+          "duration": 3,
+          "label": "Confused",
+          "showLabel": true
+        }
+      ],
+      "power": 0,
+      "description": "Confuse Enemy. "
+    },
+    {
+      "id": "skill-21",
+      "name": "Dark Attack",
+      "kind": "attack",
+      "element": "Dark",
+      "maxLevel": 2,
+      "levelOverrides": [
+        {
+          "level": 2,
+          "power": 5,
+          "accuracy": null,
+          "element": "Dark",
+          "description": ""
+        }
+      ],
+      "accuracy": 100,
+      "unlockRequirements": {
+        "arenaClears": [],
+        "requiredSkillLevels": []
+      },
+      "statModifiers": {
+        "self": [],
+        "foe": []
+      },
+      "statusEffects": [],
+      "power": 4,
+      "description": "Basic Dark Attack"
+    },
+    {
+      "id": "skill-22",
+      "name": "Dark Strike",
+      "kind": "attack",
+      "element": "Dark",
+      "maxLevel": 2,
+      "levelOverrides": [
+        {
+          "level": 2,
+          "power": 7,
+          "accuracy": null,
+          "element": "",
+          "description": ""
+        }
+      ],
+      "accuracy": 100,
+      "unlockRequirements": {
+        "arenaClears": [],
+        "requiredSkillLevels": [
+          {
+            "skillId": "skill-21",
+            "level": 2
+          }
+        ]
+      },
+      "statModifiers": {
+        "self": [],
+        "foe": []
+      },
+      "statusEffects": [],
+      "power": 6,
       "description": ""
     }
   ]
