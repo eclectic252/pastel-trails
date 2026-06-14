@@ -39,7 +39,7 @@
           "level": 2,
           "power": 5,
           "accuracy": null,
-          "element": "",
+          "element": "Air",
           "description": ""
         }
       ],
@@ -67,7 +67,7 @@
           "level": 2,
           "power": 7,
           "accuracy": null,
-          "element": "",
+          "element": "Air",
           "description": ""
         }
       ],
@@ -216,7 +216,7 @@
           "level": 2,
           "power": 5,
           "accuracy": null,
-          "element": "",
+          "element": "Earth",
           "description": ""
         }
       ],
@@ -244,7 +244,7 @@
           "level": 2,
           "power": 7,
           "accuracy": null,
-          "element": "",
+          "element": "Earth",
           "description": ""
         }
       ],
@@ -270,9 +270,17 @@
       "id": "skill-10",
       "name": "Fire Attack",
       "kind": "attack",
-      "element": "Neutral",
-      "maxLevel": 1,
-      "levelOverrides": [],
+      "element": "Fire",
+      "maxLevel": 2,
+      "levelOverrides": [
+        {
+          "level": 2,
+          "power": 5,
+          "accuracy": null,
+          "element": "Fire",
+          "description": ""
+        }
+      ],
       "accuracy": 100,
       "unlockRequirements": {
         "arenaClears": [],
@@ -291,12 +299,25 @@
       "name": "Fire Strike",
       "kind": "attack",
       "element": "Fire",
-      "maxLevel": 1,
-      "levelOverrides": [],
+      "maxLevel": 2,
+      "levelOverrides": [
+        {
+          "level": 2,
+          "power": 7,
+          "accuracy": null,
+          "element": "Fire",
+          "description": ""
+        }
+      ],
       "accuracy": 100,
       "unlockRequirements": {
         "arenaClears": [],
-        "requiredSkillLevels": []
+        "requiredSkillLevels": [
+          {
+            "skillId": "skill-10",
+            "level": 2
+          }
+        ]
       },
       "statModifiers": {
         "self": [],

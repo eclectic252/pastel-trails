@@ -1054,10 +1054,19 @@
     const resolvedPrimary = ELEMENTAL_AFFINITIES.includes(primaryElement) ? primaryElement : pickRandomElementalAffinity();
     const points = createEmptyElementalPointMap();
 
-    for (let index = 0; index < totalPoints; index += 1) {
+    if (totalPoints > 0) {
+      points[resolvedPrimary] += 1;
+    }
+
+    for (let index = 1; index < totalPoints; index += 1) {
       let pickedElement = resolvedPrimary;
       if (options?.randomize) {
-        const weightedPool = [resolvedPrimary, resolvedPrimary].concat(ELEMENTAL_AFFINITIES);
+        const weightedPool = [
+          resolvedPrimary,
+          resolvedPrimary,
+          resolvedPrimary,
+          resolvedPrimary,
+        ].concat(ELEMENTAL_AFFINITIES);
         pickedElement = weightedPool[Math.floor(Math.random() * weightedPool.length)] || resolvedPrimary;
       }
       points[pickedElement] += 1;

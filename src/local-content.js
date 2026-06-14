@@ -201,7 +201,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "level": 2,
             "power": 5,
             "accuracy": null,
-            "element": "",
+            "element": "Air",
             "description": ""
           }
         ],
@@ -229,7 +229,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "level": 2,
             "power": 7,
             "accuracy": null,
-            "element": "",
+            "element": "Air",
             "description": ""
           }
         ],
@@ -378,7 +378,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "level": 2,
             "power": 5,
             "accuracy": null,
-            "element": "",
+            "element": "Earth",
             "description": ""
           }
         ],
@@ -406,7 +406,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "level": 2,
             "power": 7,
             "accuracy": null,
-            "element": "",
+            "element": "Earth",
             "description": ""
           }
         ],
@@ -432,9 +432,17 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "id": "skill-10",
         "name": "Fire Attack",
         "kind": "attack",
-        "element": "Neutral",
-        "maxLevel": 1,
-        "levelOverrides": [],
+        "element": "Fire",
+        "maxLevel": 2,
+        "levelOverrides": [
+          {
+            "level": 2,
+            "power": 5,
+            "accuracy": null,
+            "element": "Fire",
+            "description": ""
+          }
+        ],
         "accuracy": 100,
         "unlockRequirements": {
           "arenaClears": [],
@@ -453,12 +461,25 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "name": "Fire Strike",
         "kind": "attack",
         "element": "Fire",
-        "maxLevel": 1,
-        "levelOverrides": [],
+        "maxLevel": 2,
+        "levelOverrides": [
+          {
+            "level": 2,
+            "power": 7,
+            "accuracy": null,
+            "element": "Fire",
+            "description": ""
+          }
+        ],
         "accuracy": 100,
         "unlockRequirements": {
           "arenaClears": [],
-          "requiredSkillLevels": []
+          "requiredSkillLevels": [
+            {
+              "skillId": "skill-10",
+              "level": 2
+            }
+          ]
         },
         "statModifiers": {
           "self": [],
