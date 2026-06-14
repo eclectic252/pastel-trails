@@ -6090,7 +6090,7 @@
     });
   }
 
-  function pickMonsterWalkTarget(monster) {
+  function pickMonsterWalkTarget(map, monster) {
     const range = Math.max(0, Number(monster.walkRange || 0));
     if (!range) {
       monster.walkTargetX = Number(monster.homeX || monster.x || 0);
@@ -6112,7 +6112,14 @@
     const validDirections = directions.filter(function (direction) {
       const targetX = originX + direction.dx;
       const targetY = originY + direction.dy;
-      return Math.hypot(targetX - homeX, targetY - homeY) <= range + 1;
+      if (Math.hypot(targetX - homeX, targetY - homeY) > range + 1) {
+        return false;
+      }
+      if (!map) {
+        return true;
+      }
+      const resolved = tryMoveAlongAxis(map, originX, originY, targetX, targetY);
+      return Math.abs(resolved.x - targetX) < 0.01 && Math.abs(resolved.y - targetY) < 0.01;
     });
     const pool = validDirections.length ? validDirections : directions;
     const choice = pool[Math.floor(Math.random() * pool.length)] || directions[0];
@@ -6160,7 +6167,7 @@
       }
 
       if (!Number.isFinite(monster.walkTargetX) || !Number.isFinite(monster.walkTargetY)) {
-        pickMonsterWalkTarget(monster);
+        pickMonsterWalkTarget(map, monster);
       }
 
       const dx = Number(monster.walkTargetX || monster.homeX) - monster.x;
@@ -6176,7 +6183,7 @@
         monster.y = Number(monster.walkTargetY || monster.y || 0);
         monster.isWalking = false;
         monster.walkPauseUntil = now + MONSTER_WALK_PAUSE_MS + Math.floor(Math.random() * 700);
-        pickMonsterWalkTarget(monster);
+        pickMonsterWalkTarget(map, monster);
         return;
       }
 
@@ -6196,7 +6203,7 @@
       } else {
         monster.isWalking = false;
         monster.walkPauseUntil = now + 250;
-        pickMonsterWalkTarget(monster);
+        pickMonsterWalkTarget(map, monster);
       }
     });
   }

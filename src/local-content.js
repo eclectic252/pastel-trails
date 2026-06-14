@@ -697,7 +697,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "id": "skill-19",
         "name": "Light Strike",
         "kind": "attack",
-        "element": "Neutral",
+        "element": "Light",
         "maxLevel": 1,
         "levelOverrides": [],
         "accuracy": 100,
@@ -3523,6 +3523,44 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "partySize": 1,
         "refightPartyMode": "fixed",
         "recommendedLevel": 4
+      },
+      {
+        "id": "trainer-2",
+        "name": "Cowboy Roy",
+        "title": "Trainer",
+        "introText": "Let's battle.",
+        "rewardMoney": 24,
+        "rewardText": "",
+        "victoryText": "",
+        "recommendedLevel": 5,
+        "partySize": 2,
+        "refightPartyMode": "fixed",
+        "team": [
+          {
+            "speciesId": "equira",
+            "variantId": "Equira-Electric",
+            "level": 5
+          },
+          {
+            "speciesId": "monster-8",
+            "variantId": "default-fire",
+            "level": 5
+          }
+        ],
+        "pool": [
+          {
+            "speciesId": "equira",
+            "variantId": "Equira-default"
+          },
+          {
+            "speciesId": "Fluffram",
+            "variantId": "fluffram-dark"
+          },
+          {
+            "speciesId": "monster-8",
+            "variantId": "default-grass"
+          }
+        ]
       }
     ]
   },
@@ -73780,8 +73818,18 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               "monsterOptions": [
                 {
                   "speciesId": "Ruffin",
-                  "weight": 50,
+                  "weight": 33,
                   "variantId": "Ruffin-Grass"
+                },
+                {
+                  "speciesId": "pawlit",
+                  "weight": 33,
+                  "variantId": "default-grass"
+                },
+                {
+                  "speciesId": "Caniri",
+                  "weight": 33,
+                  "variantId": "Caniri-grass"
                 }
               ],
               "walkRange": 300
@@ -73798,8 +73846,18 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               "monsterOptions": [
                 {
                   "speciesId": "Ruffin",
-                  "weight": 50,
-                  "variantId": "Ruffin-Snow"
+                  "weight": 33,
+                  "variantId": "default"
+                },
+                {
+                  "speciesId": "Ruffin",
+                  "weight": 33,
+                  "variantId": "Ruffin-Grass"
+                },
+                {
+                  "speciesId": "monster-8",
+                  "weight": 33,
+                  "variantId": "default-grass"
                 }
               ],
               "walkRange": 550
@@ -73817,13 +73875,46 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               "monsterOptions": [
                 {
                   "speciesId": "Owlet",
-                  "weight": 50,
+                  "weight": 33,
                   "variantId": "owlet-grass"
                 },
                 {
                   "speciesId": "Owlet",
-                  "weight": 50,
+                  "weight": 33,
                   "variantId": "owlet-default"
+                },
+                {
+                  "speciesId": "Owlet",
+                  "weight": 33,
+                  "variantId": "owlet-pink"
+                }
+              ]
+            },
+            {
+              "id": "spawn-4",
+              "speciesId": "equira",
+              "spawnChance": 95,
+              "x": 3136,
+              "y": 1472,
+              "levelMin": 2,
+              "levelMax": 4,
+              "walkRange": 300,
+              "respawnSeconds": 120,
+              "monsterOptions": [
+                {
+                  "speciesId": "equira",
+                  "weight": 25,
+                  "variantId": "Equira-water"
+                },
+                {
+                  "speciesId": "Fluffram",
+                  "weight": 25,
+                  "variantId": "default"
+                },
+                {
+                  "speciesId": "pawlit",
+                  "weight": 25,
+                  "variantId": "default-pink"
                 }
               ]
             }
@@ -74100,8 +74191,11 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "facing": "down",
           "interactionRadius": 88,
           "data": {
-            "trainerId": ""
-          }
+            "trainerId": "trainer-2"
+          },
+          "moveRadius": 150,
+          "moveSpeed": 80,
+          "movementMode": "wander"
         }
       ],
       "mapMonstersPanel": []

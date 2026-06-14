@@ -246,8 +246,11 @@
       "facing": "down",
       "interactionRadius": 88,
       "data": {
-        "trainerId": ""
-      }
+        "trainerId": "trainer-2"
+      },
+      "moveRadius": 150,
+      "moveSpeed": 80,
+      "movementMode": "wander"
     }
   ],
   "mapMonstersPanel": []

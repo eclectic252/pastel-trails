@@ -78,8 +78,18 @@
           "monsterOptions": [
             {
               "speciesId": "Ruffin",
-              "weight": 50,
+              "weight": 33,
               "variantId": "Ruffin-Grass"
+            },
+            {
+              "speciesId": "pawlit",
+              "weight": 33,
+              "variantId": "default-grass"
+            },
+            {
+              "speciesId": "Caniri",
+              "weight": 33,
+              "variantId": "Caniri-grass"
             }
           ],
           "walkRange": 300
@@ -96,8 +106,18 @@
           "monsterOptions": [
             {
               "speciesId": "Ruffin",
-              "weight": 50,
-              "variantId": "Ruffin-Snow"
+              "weight": 33,
+              "variantId": "default"
+            },
+            {
+              "speciesId": "Ruffin",
+              "weight": 33,
+              "variantId": "Ruffin-Grass"
+            },
+            {
+              "speciesId": "monster-8",
+              "weight": 33,
+              "variantId": "default-grass"
             }
           ],
           "walkRange": 550
@@ -115,13 +135,46 @@
           "monsterOptions": [
             {
               "speciesId": "Owlet",
-              "weight": 50,
+              "weight": 33,
               "variantId": "owlet-grass"
             },
             {
               "speciesId": "Owlet",
-              "weight": 50,
+              "weight": 33,
               "variantId": "owlet-default"
+            },
+            {
+              "speciesId": "Owlet",
+              "weight": 33,
+              "variantId": "owlet-pink"
+            }
+          ]
+        },
+        {
+          "id": "spawn-4",
+          "speciesId": "equira",
+          "spawnChance": 95,
+          "x": 3136,
+          "y": 1472,
+          "levelMin": 2,
+          "levelMax": 4,
+          "walkRange": 300,
+          "respawnSeconds": 120,
+          "monsterOptions": [
+            {
+              "speciesId": "equira",
+              "weight": 25,
+              "variantId": "Equira-water"
+            },
+            {
+              "speciesId": "Fluffram",
+              "weight": 25,
+              "variantId": "default"
+            },
+            {
+              "speciesId": "pawlit",
+              "weight": 25,
+              "variantId": "default-pink"
             }
           ]
         }

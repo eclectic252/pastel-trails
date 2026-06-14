@@ -535,7 +535,7 @@
       "id": "skill-19",
       "name": "Light Strike",
       "kind": "attack",
-      "element": "Neutral",
+      "element": "Light",
       "maxLevel": 1,
       "levelOverrides": [],
       "accuracy": 100,

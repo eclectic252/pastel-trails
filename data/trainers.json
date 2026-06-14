@@ -19,6 +19,44 @@
       "partySize": 1,
       "refightPartyMode": "fixed",
       "recommendedLevel": 4
+    },
+    {
+      "id": "trainer-2",
+      "name": "Cowboy Roy",
+      "title": "Trainer",
+      "introText": "Let's battle.",
+      "rewardMoney": 24,
+      "rewardText": "",
+      "victoryText": "",
+      "recommendedLevel": 5,
+      "partySize": 2,
+      "refightPartyMode": "fixed",
+      "team": [
+        {
+          "speciesId": "equira",
+          "variantId": "Equira-Electric",
+          "level": 5
+        },
+        {
+          "speciesId": "monster-8",
+          "variantId": "default-fire",
+          "level": 5
+        }
+      ],
+      "pool": [
+        {
+          "speciesId": "equira",
+          "variantId": "Equira-default"
+        },
+        {
+          "speciesId": "Fluffram",
+          "variantId": "fluffram-dark"
+        },
+        {
+          "speciesId": "monster-8",
+          "variantId": "default-grass"
+        }
+      ]
     }
   ]
 }
