@@ -3062,6 +3062,117 @@
     });
   }
 
+  function buildSpawnIndexRows(content) {
+    const rowMap = new Map();
+
+    Object.keys(content.mapMetadata || {}).forEach(function (mapId) {
+      const mapMeta = content.mapMetadata[mapId] || {};
+      const mapName = mapMeta.displayName || mapId;
+      (mapMeta.spawnZones || []).forEach(function (zone) {
+        (zone.visibleSpawns || []).forEach(function (spawn) {
+          ensureSpawnOptions(spawn, content).forEach(function (option, optionIndex) {
+            const species = getSpecies(content, option.speciesId || spawn.speciesId || "");
+            if (!species) {
+              return;
+            }
+            const resolvedVariant = getSpeciesVariant(species, getSpawnOptionVariantId(species, option) || "") || species.variants?.[0] || null;
+            if (!resolvedVariant) {
+              return;
+            }
+
+            const rowKey = species.id + "::" + resolvedVariant.id;
+            if (!rowMap.has(rowKey)) {
+              rowMap.set(rowKey, {
+                key: rowKey,
+                species,
+                speciesId: species.id,
+                speciesName: species.name || species.id,
+                variant: resolvedVariant,
+                variantId: resolvedVariant.id || "default",
+                variantLabel: formatMonsterVariantLabel(resolvedVariant, resolvedVariant.id || "default"),
+                locations: [],
+                mapIds: new Set(),
+                spawnEntries: [],
+              });
+            }
+
+            const row = rowMap.get(rowKey);
+            row.mapIds.add(mapId);
+            row.locations.push({
+              mapId,
+              mapName,
+              spawnId: String(spawn.id || ""),
+            });
+            row.spawnEntries.push({
+              key: rowKey + "::" + mapId + "::" + String(spawn.id || "") + "::" + optionIndex,
+              mapId,
+              mapName,
+              spawnId: String(spawn.id || ""),
+              optionIndex,
+              x: Number(spawn.x || 0),
+              y: Number(spawn.y || 0),
+              spawnChance: Number(spawn.spawnChance ?? 100),
+              levelMin: Number(spawn.levelMin || 1),
+              levelMax: Number(spawn.levelMax || spawn.levelMin || 1),
+              walkRange: Number(spawn.walkRange || 0),
+              respawnSeconds: Number(spawn.respawnSeconds || 120),
+              weight: Number(option.weight || 0),
+            });
+          });
+        });
+      });
+    });
+
+    return Array.from(rowMap.values()).map(function (row) {
+      const uniqueLocations = Array.from(new Map(row.locations.map(function (entry) {
+        return [entry.mapId + "::" + entry.spawnId, entry];
+      })).values());
+      uniqueLocations.sort(function (left, right) {
+        return left.mapName.localeCompare(right.mapName) || left.spawnId.localeCompare(right.spawnId);
+      });
+      row.locations = uniqueLocations;
+      row.locationNames = Array.from(new Set(uniqueLocations.map(function (entry) {
+        return entry.mapName;
+      })));
+      row.spawnEntries.sort(function (left, right) {
+        return left.mapName.localeCompare(right.mapName)
+          || left.spawnId.localeCompare(right.spawnId)
+          || left.optionIndex - right.optionIndex;
+      });
+      row.spawnCount = row.spawnEntries.length;
+      row.mapCount = row.mapIds.size;
+      row.searchText = [
+        row.speciesName,
+        row.speciesId,
+        row.variantLabel,
+        row.variantId,
+      ].concat(row.locationNames).join(" ").toLowerCase();
+      return row;
+    }).sort(function (left, right) {
+      return left.speciesName.localeCompare(right.speciesName)
+        || left.variantLabel.localeCompare(right.variantLabel)
+        || left.variantId.localeCompare(right.variantId);
+    });
+  }
+
+  function filterSpawnIndexRows(rows, devToolsState) {
+    const search = String(devToolsState.spawnIndexSearch || "").trim().toLowerCase();
+    const mapFilter = String(devToolsState.spawnIndexMapFilter || "");
+    const speciesFilter = String(devToolsState.spawnIndexSpeciesFilter || "");
+    return (rows || []).filter(function (row) {
+      if (search && !row.searchText.includes(search)) {
+        return false;
+      }
+      if (mapFilter && !row.mapIds.has(mapFilter)) {
+        return false;
+      }
+      if (speciesFilter && row.speciesId !== speciesFilter) {
+        return false;
+      }
+      return true;
+    });
+  }
+
   function getAvailableEncounterPreviewEntries(state, content) {
     const mapMeta = content.mapMetadata[state.world.currentMapId];
     const entries = [];
@@ -9810,6 +9921,72 @@
     return rendered.validation;
   }
 
+  function renderSpawnIndexDevToolsScreen(root, content, devToolsState) {
+    const allRows = buildSpawnIndexRows(content);
+    const filteredRows = filterSpawnIndexRows(allRows, devToolsState);
+    const mapOptions = ['<option value="">All maps</option>'].concat(
+      Object.keys(content.mapMetadata || {}).map(function (mapId) {
+        const selected = String(devToolsState.spawnIndexMapFilter || "") === mapId ? " selected" : "";
+        return '<option value="' + escapeHtml(mapId) + '"' + selected + '>' + escapeHtml(content.mapMetadata[mapId]?.displayName || mapId) + '</option>';
+      }).sort()
+    ).join("");
+    const speciesOptions = ['<option value="">All species</option>'].concat(
+      (content.monsters?.species || []).slice().sort(function (left, right) {
+        return String(left.name || left.id).localeCompare(String(right.name || right.id));
+      }).map(function (species) {
+        const selected = String(devToolsState.spawnIndexSpeciesFilter || "") === String(species.id) ? " selected" : "";
+        return '<option value="' + escapeHtml(species.id) + '"' + selected + '>' + escapeHtml(species.name || species.id) + '</option>';
+      })
+    ).join("");
+    const expandedKeys = new Set(devToolsState.spawnIndexExpandedKeys || []);
+    const tableRows = filteredRows.map(function (row) {
+      const expanded = expandedKeys.has(row.key);
+      const locationCopy = row.locationNames.join(", ");
+      const detailCards = row.spawnEntries.map(function (entry) {
+        return [
+          '<div class="dev-subcard spawn-index-detail-card">',
+          '<div class="section-heading"><h3>' + escapeHtml(entry.mapName) + ' · ' + escapeHtml(entry.spawnId) + '</h3><div class="topbar-stats">',
+          '<button class="secondary-button" type="button" data-action="spawn-index-open-map-spawn" data-map-id="' + escapeHtml(entry.mapId) + '" data-spawn-id="' + escapeHtml(entry.spawnId) + '">Open Map Spawn</button>',
+          '</div></div>',
+          '<p class="dev-helper-text">Coordinates: <strong>' + Number(entry.x) + ', ' + Number(entry.y) + '</strong> · Variant weight in this spawn: <strong>' + Number(entry.weight) + '</strong></p>',
+          '<div class="form-grid">',
+          '<label class="input-group"><span>Spawn Chance %</span><input type="number" min="0" max="100" step="1" data-dev-spawn-index-spawn-field="spawnChance" data-map-id="' + escapeHtml(entry.mapId) + '" data-spawn-id="' + escapeHtml(entry.spawnId) + '" value="' + Number(entry.spawnChance) + '" /></label>',
+          '<label class="input-group"><span>Min Level</span><input type="number" min="1" step="1" data-dev-spawn-index-spawn-field="levelMin" data-map-id="' + escapeHtml(entry.mapId) + '" data-spawn-id="' + escapeHtml(entry.spawnId) + '" value="' + Number(entry.levelMin) + '" /></label>',
+          '<label class="input-group"><span>Max Level</span><input type="number" min="1" step="1" data-dev-spawn-index-spawn-field="levelMax" data-map-id="' + escapeHtml(entry.mapId) + '" data-spawn-id="' + escapeHtml(entry.spawnId) + '" value="' + Number(entry.levelMax) + '" /></label>',
+          '<label class="input-group"><span>Walk Range</span><input type="number" min="0" step="1" data-dev-spawn-index-spawn-field="walkRange" data-map-id="' + escapeHtml(entry.mapId) + '" data-spawn-id="' + escapeHtml(entry.spawnId) + '" value="' + Number(entry.walkRange) + '" /></label>',
+          '<label class="input-group"><span>Respawn Seconds</span><input type="number" min="0" step="1" data-dev-spawn-index-spawn-field="respawnSeconds" data-map-id="' + escapeHtml(entry.mapId) + '" data-spawn-id="' + escapeHtml(entry.spawnId) + '" value="' + Number(entry.respawnSeconds) + '" /></label>',
+          '<label class="input-group"><span>Option Weight</span><input type="number" min="0" step="1" data-dev-spawn-index-option-field="weight" data-map-id="' + escapeHtml(entry.mapId) + '" data-spawn-id="' + escapeHtml(entry.spawnId) + '" data-option-index="' + Number(entry.optionIndex) + '" value="' + Number(entry.weight) + '" /></label>',
+          '</div>',
+          '</div>',
+        ].join("");
+      }).join("");
+
+      return [
+        '<tr>',
+        '<td><div class="spawn-index-name-cell">' + renderMonsterVariantVisualMarkup(row.speciesId, row.variantId || "default", "spawn-index-sprite", "default") + '<div><strong>' + escapeHtml(row.speciesName) + '</strong><span>' + escapeHtml(row.speciesId) + '</span></div></div></td>',
+        '<td><strong>' + escapeHtml(row.variantLabel) + '</strong><span class="spawn-index-secondary">' + escapeHtml(row.variantId) + '</span></td>',
+        '<td>' + escapeHtml(locationCopy) + '</td>',
+        '<td>' + Number(row.spawnCount) + '</td>',
+        '<td><div class="spawn-index-actions"><button class="secondary-button" type="button" data-action="spawn-index-open-species" data-species-id="' + escapeHtml(row.speciesId) + '">Open Species</button><button class="secondary-button" type="button" data-action="toggle-spawn-index-row" data-spawn-index-row="' + escapeHtml(row.key) + '">' + (expanded ? "Hide Spawns" : "Show Spawns") + '</button></div></td>',
+        '</tr>',
+        '<tr class="spawn-index-details-row"' + (expanded ? "" : ' hidden') + '><td colspan="5"><div class="spawn-index-details">' + detailCards + '</div></td></tr>',
+      ].join("");
+    }).join("");
+
+    root.innerHTML = [
+      '<main class="dev-screen">',
+      renderDevToolsTopbar(devToolsState.section, "Spawn Index"),
+      '<section class="dev-screen-layout">',
+      '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>Spawn Summary</h2></div><p class="dev-helper-text">Track wild spawn coverage by monster variant, then jump back into the map or species editors when you need deeper edits.</p><ul class="compact-list"><li><span>Variant rows</span><strong>' + filteredRows.length + '</strong></li><li><span>Total variants with wild spawns</span><strong>' + allRows.length + '</strong></li><li><span>Total maps with wild spawns</span><strong>' + Object.keys(content.mapMetadata || {}).filter(function (mapId) { return getEditableVisibleSpawns(content.mapMetadata[mapId] || {}).length > 0; }).length + '</strong></li></ul></aside>',
+      '<section class="dev-main">',
+      '<section class="panel-block dev-preview-controls"><div class="section-heading"><h2>Spawn Index</h2></div><p>One row per monster variant, with expandable wild spawn entries for inline tuning. Export changes from the Maps tab using the existing map metadata export.</p><div class="form-grid"><label class="input-group"><span>Search</span><input data-dev-spawn-index-filter="search" value="' + escapeHtml(devToolsState.spawnIndexSearch || "") + '" placeholder="Species, variant, or map" /></label><label class="input-group"><span>Map</span><select data-dev-spawn-index-filter="map">' + mapOptions + '</select></label><label class="input-group"><span>Species</span><select data-dev-spawn-index-filter="species">' + speciesOptions + '</select></label></div></section>',
+      '<section class="panel-block dev-editor-panel"><div class="section-heading"><h2>Wild Spawn Variant Index</h2></div><div class="table-scroll"><table class="spawn-index-table"><thead><tr><th>Species</th><th>Variant</th><th>Maps / Locations</th><th>Spawn Count</th><th>Quick Actions</th></tr></thead><tbody>' + (tableRows || '<tr><td colspan="5">No matching wild spawn variants found.</td></tr>') + '</tbody></table></div></section>',
+      '</section>',
+      '</section>',
+      '</main>',
+    ].join("");
+  }
+
   function renderArenaDevToolsScreen(root, content, devToolsState) {
     const arenas = ensureArenaCatalog(content);
     syncArenaDevSelection(content, devToolsState);
@@ -10754,6 +10931,7 @@
       '<div><span class="eyebrow">Dev Tools</span><strong>' + escapeHtml(title) + '</strong></div>',
       '<div class="topbar-stats">',
       '<button class="' + (section === "maps" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-maps">Maps</button>',
+      '<button class="' + (section === "spawn-index" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-spawn-index">Spawn Index</button>',
       '<button class="' + (section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button>',
       '<button class="' + (section === "arenas" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-arenas">Arenas</button>',
       '<button class="' + (section === "trainers" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-trainers">Trainers</button>',
@@ -10809,6 +10987,10 @@
 
     if (devToolsState.section === "towns") {
       return renderTownDevToolsScreen(root, content, devToolsState);
+    }
+
+    if (devToolsState.section === "spawn-index") {
+      return renderSpawnIndexDevToolsScreen(root, content, devToolsState);
     }
 
     if (devToolsState.section === "arenas") {
@@ -11106,6 +11288,9 @@
 
     root.querySelector('[data-action="dev-section-maps"]')?.addEventListener("click", function () {
       app.setDevSection("maps");
+    });
+    root.querySelector('[data-action="dev-section-spawn-index"]')?.addEventListener("click", function () {
+      app.setDevSection("spawn-index");
     });
     root.querySelector('[data-action="dev-section-towns"]')?.addEventListener("click", function () {
       app.setDevSection("towns");
@@ -11424,6 +11609,24 @@
         app.selectCharacterSheet(button.getAttribute("data-dev-select-character-sheet"));
       });
     });
+    root.querySelectorAll('[data-action="toggle-spawn-index-row"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.toggleSpawnIndexRow(button.getAttribute("data-spawn-index-row"));
+      });
+    });
+    root.querySelectorAll('[data-action="spawn-index-open-species"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.openSpeciesFromSpawnIndex(button.getAttribute("data-species-id") || "");
+      });
+    });
+    root.querySelectorAll('[data-action="spawn-index-open-map-spawn"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.openMapSpawnFromSpawnIndex(
+          button.getAttribute("data-map-id") || "",
+          button.getAttribute("data-spawn-id") || ""
+        );
+      });
+    });
 
     root.querySelectorAll("[data-dev-field]").forEach(function (field) {
       const useDeferredRender = isDeferredDevTextField(field);
@@ -11474,6 +11677,82 @@
           app.updateSpawnOptionField(
             Number(field.getAttribute("data-option-index")),
             field.getAttribute("data-dev-spawn-option-field"),
+            field.value
+          );
+        });
+      }
+    });
+    root.querySelectorAll("[data-dev-spawn-index-filter]").forEach(function (field) {
+      const useDeferredRender = isDeferredDevTextField(field);
+      const eventName = field.tagName === "SELECT" ? "change" : "input";
+      field.addEventListener(eventName, function () {
+        app.updateSpawnIndexFilter(
+          field.getAttribute("data-dev-spawn-index-filter"),
+          field.value,
+          !useDeferredRender
+        );
+        if (useDeferredRender) {
+          app.clearDeferredRender();
+        }
+      });
+      if (useDeferredRender) {
+        field.addEventListener("change", function () {
+          app.updateSpawnIndexFilter(
+            field.getAttribute("data-dev-spawn-index-filter"),
+            field.value
+          );
+        });
+      }
+    });
+    root.querySelectorAll("[data-dev-spawn-index-spawn-field]").forEach(function (field) {
+      const useDeferredRender = isDeferredDevTextField(field);
+      const eventName = field.tagName === "SELECT" ? "change" : "input";
+      field.addEventListener(eventName, function () {
+        app.updateSpawnIndexSpawnField(
+          field.getAttribute("data-map-id") || "",
+          field.getAttribute("data-spawn-id") || "",
+          field.getAttribute("data-dev-spawn-index-spawn-field"),
+          field.value,
+          !useDeferredRender
+        );
+        if (useDeferredRender) {
+          app.clearDeferredRender();
+        }
+      });
+      if (useDeferredRender) {
+        field.addEventListener("change", function () {
+          app.updateSpawnIndexSpawnField(
+            field.getAttribute("data-map-id") || "",
+            field.getAttribute("data-spawn-id") || "",
+            field.getAttribute("data-dev-spawn-index-spawn-field"),
+            field.value
+          );
+        });
+      }
+    });
+    root.querySelectorAll("[data-dev-spawn-index-option-field]").forEach(function (field) {
+      const useDeferredRender = isDeferredDevTextField(field);
+      const eventName = field.tagName === "SELECT" ? "change" : "input";
+      field.addEventListener(eventName, function () {
+        app.updateSpawnIndexOptionField(
+          field.getAttribute("data-map-id") || "",
+          field.getAttribute("data-spawn-id") || "",
+          Number(field.getAttribute("data-option-index") || 0),
+          field.getAttribute("data-dev-spawn-index-option-field"),
+          field.value,
+          !useDeferredRender
+        );
+        if (useDeferredRender) {
+          app.clearDeferredRender();
+        }
+      });
+      if (useDeferredRender) {
+        field.addEventListener("change", function () {
+          app.updateSpawnIndexOptionField(
+            field.getAttribute("data-map-id") || "",
+            field.getAttribute("data-spawn-id") || "",
+            Number(field.getAttribute("data-option-index") || 0),
+            field.getAttribute("data-dev-spawn-index-option-field"),
             field.value
           );
         });
@@ -11877,6 +12156,12 @@
             app.setDevSection("maps");
             return;
           }
+          if (action === "dev-section-spawn-index") {
+            event.preventDefault();
+            event.stopPropagation();
+            app.setDevSection("spawn-index");
+            return;
+          }
           if (action === "dev-section-towns") {
             event.preventDefault();
             event.stopPropagation();
@@ -12096,6 +12381,10 @@
         selectedSpeciesId: content.monsters?.species?.[0]?.id || "",
         selectedSkillId: ensureSkillCatalog(content)[0]?.id || "",
         selectedPreviewVariantId: content.monsters?.species?.[0]?.variants?.[0]?.id || "",
+        spawnIndexSearch: "",
+        spawnIndexMapFilter: "",
+        spawnIndexSpeciesFilter: "",
+        spawnIndexExpandedKeys: [],
         selectedCharacterSheetId: getCharacterSheetConfig(content, CHARACTER_SHEET_OPTIONS[0]?.id || "")?.id || CHARACTER_SHEET_OPTIONS[0]?.id || "",
         characterSheetColumns: getCharacterSheetConfig(content, CHARACTER_SHEET_OPTIONS[0]?.id || "")?.columns || CHARACTER_SHEET_OPTIONS[0]?.columns || 4,
         characterSheetRows: getCharacterSheetConfig(content, CHARACTER_SHEET_OPTIONS[0]?.id || "")?.rows || CHARACTER_SHEET_OPTIONS[0]?.rows || 4,
@@ -13108,6 +13397,57 @@
         applyCharacterSheetToDevTools(this.content, this.devTools, this.devTools.selectedCharacterSheetId);
         this.render();
       },
+      updateSpawnIndexFilter: function (field, rawValue, shouldRender) {
+        if (field === "search") {
+          this.devTools.spawnIndexSearch = String(rawValue || "");
+        } else if (field === "map") {
+          this.devTools.spawnIndexMapFilter = String(rawValue || "");
+        } else if (field === "species") {
+          this.devTools.spawnIndexSpeciesFilter = String(rawValue || "");
+        }
+        if (shouldRender !== false) {
+          this.render();
+        }
+      },
+      toggleSpawnIndexRow: function (rowKey) {
+        const key = String(rowKey || "");
+        if (!key) {
+          return;
+        }
+        const expanded = new Set(this.devTools.spawnIndexExpandedKeys || []);
+        if (expanded.has(key)) {
+          expanded.delete(key);
+        } else {
+          expanded.add(key);
+        }
+        this.devTools.spawnIndexExpandedKeys = Array.from(expanded);
+        this.render();
+      },
+      openSpeciesFromSpawnIndex: function (speciesId) {
+        this.devTools.section = "monsters";
+        this.devTools.monsterSubMode = "species";
+        this.devTools.selectedSpeciesId = String(speciesId || "");
+        const species = this.content.monsters.species.find((entry) => entry.id === this.devTools.selectedSpeciesId);
+        this.devTools.selectedPreviewVariantId = species?.variants?.[0]?.id || "";
+        this.render();
+      },
+      openMapSpawnFromSpawnIndex: function (mapId, spawnId) {
+        this.devTools.section = "maps";
+        this.devTools.selectedMapId = String(mapId || "");
+        const transitions = this.content.mapMetadata[this.devTools.selectedMapId]?.transitions || [];
+        this.devTools.selectedTransitionId = transitions[0]?.id || "";
+        const visibleSpawns = getEditableVisibleSpawns(this.content.mapMetadata[this.devTools.selectedMapId]);
+        this.devTools.selectedSpawnId = String(spawnId || "");
+        const interactions = getEditableInteractions(this.content.mapMetadata[this.devTools.selectedMapId]);
+        this.devTools.selectedInteractionId = interactions[0]?.id || "";
+        const npcs = getEditableNpcs(this.content.mapMetadata[this.devTools.selectedMapId]);
+        this.devTools.selectedNpcId = npcs[0]?.id || "";
+        if (!visibleSpawns.some(function (entry) { return String(entry.id) === String(spawnId || ""); })) {
+          this.devTools.selectedSpawnId = visibleSpawns[0]?.id || "";
+        }
+        this.devTools.editorMode = "spawns";
+        this.render();
+      },
       selectCharacterSheet: function (sheetId) {
         applyCharacterSheetToDevTools(this.content, this.devTools, sheetId);
         this.render();
@@ -13905,6 +14245,33 @@
           const species = getSpecies(this.content, rawValue);
           option.variantId = getSpeciesVariant(species, option.variantId)?.id || "";
         }
+        spawn.speciesId = getSpawnDisplaySpeciesId(spawn, this.content);
+        if (shouldRender !== false) {
+          this.render();
+        }
+      },
+      updateSpawnIndexSpawnField: function (mapId, spawnId, field, rawValue, shouldRender) {
+        const visibleSpawns = getEditableVisibleSpawns(this.content.mapMetadata[mapId]);
+        const spawn = visibleSpawns.find((entry) => String(entry.id) === String(spawnId));
+        if (!spawn) {
+          return;
+        }
+        spawn[field] = Number(rawValue || 0);
+        if (shouldRender !== false) {
+          this.render();
+        }
+      },
+      updateSpawnIndexOptionField: function (mapId, spawnId, optionIndex, field, rawValue, shouldRender) {
+        const visibleSpawns = getEditableVisibleSpawns(this.content.mapMetadata[mapId]);
+        const spawn = visibleSpawns.find((entry) => String(entry.id) === String(spawnId));
+        if (!spawn) {
+          return;
+        }
+        const option = ensureSpawnOptions(spawn, this.content)[Number(optionIndex || 0)];
+        if (!option) {
+          return;
+        }
+        option[field] = field === "weight" ? Number(rawValue || 0) : rawValue;
         spawn.speciesId = getSpawnDisplaySpeciesId(spawn, this.content);
         if (shouldRender !== false) {
           this.render();

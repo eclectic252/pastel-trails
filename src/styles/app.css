@@ -2498,6 +2498,80 @@ button {
   border: 1px solid rgba(57, 79, 91, 0.08);
 }
 
+.spawn-index-table {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.spawn-index-table th,
+.spawn-index-table td {
+  padding: 0.75rem 0.8rem;
+  border-bottom: 1px solid rgba(57, 79, 91, 0.12);
+  vertical-align: top;
+  text-align: left;
+}
+
+.spawn-index-table th {
+  font-size: 0.82rem;
+  color: #355564;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: rgba(214, 237, 246, 0.4);
+}
+
+.spawn-index-name-cell {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 0.8rem;
+  align-items: center;
+}
+
+.spawn-index-name-cell strong,
+.spawn-index-name-cell span {
+  display: block;
+}
+
+.spawn-index-sprite {
+  width: 72px;
+  min-height: 72px;
+  object-fit: contain;
+  border-radius: 14px;
+  background: rgba(214, 237, 246, 0.45);
+  border: 1px solid rgba(57, 79, 91, 0.12);
+  padding: 0.35rem;
+}
+
+.spawn-index-secondary {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.spawn-index-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.spawn-index-details-row td {
+  padding: 0;
+  border-bottom: 1px solid rgba(57, 79, 91, 0.12);
+}
+
+.spawn-index-details {
+  display: grid;
+  gap: 0.85rem;
+  padding: 0.85rem;
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.spawn-index-detail-card {
+  margin-top: 0;
+}
+
 .dev-editor h3,
 .panel-block h3 {
   margin: 0 0 0.8rem;

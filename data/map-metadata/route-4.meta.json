@@ -32,7 +32,7 @@
     {
       "id": "route4-to-route5",
       "x": 3456,
-      "y": 1024,
+      "y": 1152,
       "width": 1536,
       "height": 128,
       "targetMapId": "route-5",
@@ -65,7 +65,115 @@
         "width": 0,
         "height": 0
       },
-      "visibleSpawns": [],
+      "visibleSpawns": [
+        {
+          "id": "spawn-1",
+          "speciesId": "equira",
+          "spawnChance": 90,
+          "x": 960,
+          "y": 1088,
+          "levelMin": 2,
+          "levelMax": 4,
+          "walkRange": 350,
+          "respawnSeconds": 120,
+          "monsterOptions": [
+            {
+              "speciesId": "equira",
+              "weight": 50,
+              "variantId": "Equira-Lavender"
+            },
+            {
+              "speciesId": "pawlit",
+              "weight": 50,
+              "variantId": "default-lavvender"
+            },
+            {
+              "speciesId": "pawlit",
+              "weight": 33,
+              "variantId": "default-grass"
+            }
+          ]
+        },
+        {
+          "id": "spawn-2",
+          "speciesId": "Ruffin",
+          "spawnChance": 100,
+          "x": 4672,
+          "y": 448,
+          "levelMin": 2,
+          "levelMax": 4,
+          "walkRange": 350,
+          "respawnSeconds": 120,
+          "monsterOptions": [
+            {
+              "speciesId": "Ruffin",
+              "weight": 33,
+              "variantId": "Ruffin-Lavender"
+            },
+            {
+              "speciesId": "Owlet",
+              "weight": 33,
+              "variantId": "owlet-lavender"
+            },
+            {
+              "speciesId": "Owlet",
+              "weight": 33,
+              "variantId": "owlet-grass"
+            }
+          ]
+        },
+        {
+          "id": "spawn-3",
+          "speciesId": "Fluffram",
+          "spawnChance": 100,
+          "x": 1472,
+          "y": 448,
+          "levelMin": 2,
+          "levelMax": 4,
+          "walkRange": 350,
+          "respawnSeconds": 120,
+          "monsterOptions": [
+            {
+              "speciesId": "Fluffram",
+              "weight": 33,
+              "variantId": "fluffram-lavender"
+            },
+            {
+              "speciesId": "Fluffram",
+              "weight": 33,
+              "variantId": "fluffram-dark-copy"
+            },
+            {
+              "speciesId": "equira",
+              "weight": 33,
+              "variantId": "Equira-Lavender"
+            }
+          ]
+        },
+        {
+          "id": "spawn-4",
+          "speciesId": "Caniri",
+          "spawnChance": 90,
+          "x": 4032,
+          "y": 704,
+          "levelMin": 2,
+          "levelMax": 4,
+          "walkRange": 200,
+          "respawnSeconds": 120,
+          "monsterOptions": [
+            {
+              "speciesId": "Caniri",
+              "weight": 50,
+              "variantId": "Caniri-lavender"
+            },
+            {
+              "speciesId": "Caniri",
+              "weight": 50,
+              "variantId": "Caniri-snow"
+            }
+          ]
+        }
+      ],
       "spawnTable": []
     }
   ],

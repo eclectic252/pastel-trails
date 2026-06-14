@@ -7050,7 +7050,15 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       "assets/Monsters/Kelpar/kelpar_pink.png",
       "assets/Monsters/Kelpar/kelpar_snow.png",
       "assets/Monsters/Kelpar/kelpar_water.png",
+      "assets/Monsters/Kitari/kitari_dark.png",
       "assets/Monsters/Kitari/kitari_default.png",
+      "assets/Monsters/Kitari/kitari_electric.png",
+      "assets/Monsters/Kitari/kitari_galaxy.png",
+      "assets/Monsters/Kitari/kitari_grass.png",
+      "assets/Monsters/Kitari/kitari_pink.png",
+      "assets/Monsters/Kitari/kitari_snow.png",
+      "assets/Monsters/Kitari/kitari_water.png",
+      "assets/Monsters/Kitari/kitarilavender.png",
       "assets/Monsters/Owlet/owlet_dark.png",
       "assets/Monsters/Owlet/owlet_default.png",
       "assets/Monsters/Owlet/owlet_electric.png",
@@ -73960,13 +73968,23 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               "monsterOptions": [
                 {
                   "speciesId": "equira",
-                  "weight": 30,
+                  "weight": 25,
                   "variantId": "default"
                 },
                 {
                   "speciesId": "Fluffram",
-                  "weight": 70,
+                  "weight": 25,
                   "variantId": "default"
+                },
+                {
+                  "speciesId": "equira",
+                  "weight": 100,
+                  "variantId": "Equira-grass"
+                },
+                {
+                  "speciesId": "Fluffram",
+                  "weight": 100,
+                  "variantId": "fluffram-electric"
                 }
               ],
               "walkRange": 400
@@ -73989,12 +74007,12 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
                 {
                   "speciesId": "equira",
                   "weight": 30,
-                  "variantId": "Equira-Electric"
+                  "variantId": "Equira-snow"
                 },
                 {
                   "speciesId": "equira",
                   "weight": 30,
-                  "variantId": "Equira-grass"
+                  "variantId": "Equira-Fire"
                 }
               ],
               "walkRange": 300
@@ -74012,8 +74030,56 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               "monsterOptions": [
                 {
                   "speciesId": "equira",
-                  "weight": 100,
+                  "weight": 25,
                   "variantId": "Equira-water"
+                },
+                {
+                  "speciesId": "Fluffram",
+                  "weight": 25,
+                  "variantId": "fluffram-water"
+                },
+                {
+                  "speciesId": "Owlet",
+                  "weight": 25,
+                  "variantId": "owlet-Water"
+                },
+                {
+                  "speciesId": "equira",
+                  "weight": 25,
+                  "variantId": "Equira-Galaxy"
+                }
+              ]
+            },
+            {
+              "id": "spawn-4",
+              "speciesId": "Fluffram",
+              "spawnChance": 100,
+              "x": 1088,
+              "y": 5056,
+              "levelMin": 2,
+              "levelMax": 4,
+              "walkRange": 0,
+              "respawnSeconds": 120,
+              "monsterOptions": [
+                {
+                  "speciesId": "Fluffram",
+                  "weight": 25,
+                  "variantId": "fluffram-pink"
+                },
+                {
+                  "speciesId": "equira",
+                  "weight": 25,
+                  "variantId": "Equira-Pink"
+                },
+                {
+                  "speciesId": "pawlit",
+                  "weight": 25,
+                  "variantId": "default-pink"
+                },
+                {
+                  "speciesId": "Fluffram",
+                  "weight": 25,
+                  "variantId": "fluffram-dark-copy"
                 }
               ]
             }
@@ -74074,7 +74140,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         {
           "id": "route4-to-route5",
           "x": 3456,
-          "y": 1024,
+          "y": 1152,
           "width": 1536,
           "height": 128,
           "targetMapId": "route-5",
@@ -74107,7 +74173,115 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "width": 0,
             "height": 0
           },
-          "visibleSpawns": [],
+          "visibleSpawns": [
+            {
+              "id": "spawn-1",
+              "speciesId": "equira",
+              "spawnChance": 90,
+              "x": 960,
+              "y": 1088,
+              "levelMin": 2,
+              "levelMax": 4,
+              "walkRange": 350,
+              "respawnSeconds": 120,
+              "monsterOptions": [
+                {
+                  "speciesId": "equira",
+                  "weight": 50,
+                  "variantId": "Equira-Lavender"
+                },
+                {
+                  "speciesId": "pawlit",
+                  "weight": 50,
+                  "variantId": "default-lavvender"
+                },
+                {
+                  "speciesId": "pawlit",
+                  "weight": 33,
+                  "variantId": "default-grass"
+                }
+              ]
+            },
+            {
+              "id": "spawn-2",
+              "speciesId": "Ruffin",
+              "spawnChance": 100,
+              "x": 4672,
+              "y": 448,
+              "levelMin": 2,
+              "levelMax": 4,
+              "walkRange": 350,
+              "respawnSeconds": 120,
+              "monsterOptions": [
+                {
+                  "speciesId": "Ruffin",
+                  "weight": 33,
+                  "variantId": "Ruffin-Lavender"
+                },
+                {
+                  "speciesId": "Owlet",
+                  "weight": 33,
+                  "variantId": "owlet-lavender"
+                },
+                {
+                  "speciesId": "Owlet",
+                  "weight": 33,
+                  "variantId": "owlet-grass"
+                }
+              ]
+            },
+            {
+              "id": "spawn-3",
+              "speciesId": "Fluffram",
+              "spawnChance": 100,
+              "x": 1472,
+              "y": 448,
+              "levelMin": 2,
+              "levelMax": 4,
+              "walkRange": 350,
+              "respawnSeconds": 120,
+              "monsterOptions": [
+                {
+                  "speciesId": "Fluffram",
+                  "weight": 33,
+                  "variantId": "fluffram-lavender"
+                },
+                {
+                  "speciesId": "Fluffram",
+                  "weight": 33,
+                  "variantId": "fluffram-dark-copy"
+                },
+                {
+                  "speciesId": "equira",
+                  "weight": 33,
+                  "variantId": "Equira-Lavender"
+                }
+              ]
+            },
+            {
+              "id": "spawn-4",
+              "speciesId": "Caniri",
+              "spawnChance": 90,
+              "x": 4032,
+              "y": 704,
+              "levelMin": 2,
+              "levelMax": 4,
+              "walkRange": 200,
+              "respawnSeconds": 120,
+              "monsterOptions": [
+                {
+                  "speciesId": "Caniri",
+                  "weight": 50,
+                  "variantId": "Caniri-lavender"
+                },
+                {
+                  "speciesId": "Caniri",
+                  "weight": 50,
+                  "variantId": "Caniri-snow"
+                }
+              ]
+            }
+          ],
           "spawnTable": []
         }
       ],
@@ -74247,23 +74421,28 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               "monsterOptions": [
                 {
                   "speciesId": "equira",
-                  "weight": 25,
+                  "weight": 20,
                   "variantId": "Equira-snow"
                 },
                 {
                   "speciesId": "Ruffin",
-                  "weight": 25,
+                  "weight": 20,
                   "variantId": "Ruffin-Snow"
                 },
                 {
                   "speciesId": "Fluffram",
-                  "weight": 25,
+                  "weight": 20,
                   "variantId": "fluffram-snow"
                 },
                 {
                   "speciesId": "monster-8",
-                  "weight": 25,
+                  "weight": 20,
                   "variantId": "default-snow"
+                },
+                {
+                  "speciesId": "equira",
+                  "weight": 20,
+                  "variantId": "Equira-dark"
                 }
               ]
             },
@@ -74271,7 +74450,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               "id": "spawn-2",
               "speciesId": "Owlet",
               "spawnChance": 100,
-              "x": 3136,
+              "x": 3008,
               "y": 832,
               "levelMin": 2,
               "levelMax": 4,
@@ -74280,18 +74459,74 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               "monsterOptions": [
                 {
                   "speciesId": "Owlet",
-                  "weight": 100,
+                  "weight": 25,
                   "variantId": "owlet-snow"
                 },
                 {
                   "speciesId": "pawlit",
-                  "weight": 100,
+                  "weight": 25,
                   "variantId": "default-snow"
                 },
                 {
                   "speciesId": "Caniri",
-                  "weight": 100,
+                  "weight": 25,
                   "variantId": "Caniri-snow"
+                },
+                {
+                  "speciesId": "pawlit",
+                  "weight": 25,
+                  "variantId": "default-dark"
+                }
+              ]
+            },
+            {
+              "id": "spawn-3",
+              "speciesId": "Owlet",
+              "spawnChance": 100,
+              "x": 4032,
+              "y": 704,
+              "levelMin": 2,
+              "levelMax": 4,
+              "walkRange": 300,
+              "respawnSeconds": 120,
+              "monsterOptions": [
+                {
+                  "speciesId": "Owlet",
+                  "weight": 33,
+                  "variantId": "owlet-dark"
+                },
+                {
+                  "speciesId": "Caniri",
+                  "weight": 33,
+                  "variantId": "Caniri-dark"
+                },
+                {
+                  "speciesId": "Fluffram",
+                  "weight": 33,
+                  "variantId": "fluffram-snow"
+                }
+              ]
+            },
+            {
+              "id": "spawn-4",
+              "speciesId": "monster-8",
+              "spawnChance": 100,
+              "x": 320,
+              "y": 576,
+              "levelMin": 2,
+              "levelMax": 4,
+              "walkRange": 250,
+              "respawnSeconds": 120,
+              "monsterOptions": [
+                {
+                  "speciesId": "monster-8",
+                  "weight": 100,
+                  "variantId": "default-snow"
+                },
+                {
+                  "speciesId": "Ruffin",
+                  "weight": 100,
+                  "variantId": "Ruffin-Dark"
                 }
               ]
             }

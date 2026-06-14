@@ -114,13 +114,23 @@
           "monsterOptions": [
             {
               "speciesId": "equira",
-              "weight": 30,
+              "weight": 25,
               "variantId": "default"
             },
             {
               "speciesId": "Fluffram",
-              "weight": 70,
+              "weight": 25,
               "variantId": "default"
+            },
+            {
+              "speciesId": "equira",
+              "weight": 100,
+              "variantId": "Equira-grass"
+            },
+            {
+              "speciesId": "Fluffram",
+              "weight": 100,
+              "variantId": "fluffram-electric"
             }
           ],
           "walkRange": 400
@@ -143,12 +153,12 @@
             {
               "speciesId": "equira",
               "weight": 30,
-              "variantId": "Equira-Electric"
+              "variantId": "Equira-snow"
             },
             {
               "speciesId": "equira",
               "weight": 30,
-              "variantId": "Equira-grass"
+              "variantId": "Equira-Fire"
             }
           ],
           "walkRange": 300
@@ -166,8 +176,56 @@
           "monsterOptions": [
             {
               "speciesId": "equira",
-              "weight": 100,
+              "weight": 25,
               "variantId": "Equira-water"
+            },
+            {
+              "speciesId": "Fluffram",
+              "weight": 25,
+              "variantId": "fluffram-water"
+            },
+            {
+              "speciesId": "Owlet",
+              "weight": 25,
+              "variantId": "owlet-Water"
+            },
+            {
+              "speciesId": "equira",
+              "weight": 25,
+              "variantId": "Equira-Galaxy"
+            }
+          ]
+        },
+        {
+          "id": "spawn-4",
+          "speciesId": "Fluffram",
+          "spawnChance": 100,
+          "x": 1088,
+          "y": 5056,
+          "levelMin": 2,
+          "levelMax": 4,
+          "walkRange": 0,
+          "respawnSeconds": 120,
+          "monsterOptions": [
+            {
+              "speciesId": "Fluffram",
+              "weight": 25,
+              "variantId": "fluffram-pink"
+            },
+            {
+              "speciesId": "equira",
+              "weight": 25,
+              "variantId": "Equira-Pink"
+            },
+            {
+              "speciesId": "pawlit",
+              "weight": 25,
+              "variantId": "default-pink"
+            },
+            {
+              "speciesId": "Fluffram",
+              "weight": 25,
+              "variantId": "fluffram-dark-copy"
             }
           ]
         }
