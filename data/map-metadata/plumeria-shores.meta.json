@@ -18,7 +18,53 @@
       }
     }
   ],
-  "interactions": [],
+  "interactions": [
+    {
+      "id": "interaction-1",
+      "type": "arena",
+      "x": 1536,
+      "y": 1408,
+      "width": 256,
+      "height": 128,
+      "label": "Plumeria Shores Arena",
+      "text": "Add interaction text here.",
+      "data": {
+        "shopId": "",
+        "arenaId": "Plumeria-Arena",
+        "crestId": ""
+      }
+    },
+    {
+      "id": "interaction-2",
+      "type": "healing-center",
+      "x": 2048,
+      "y": 768,
+      "width": 256,
+      "height": 128,
+      "label": "Plumeria Shores Healing Center",
+      "text": "Add interaction text here.",
+      "data": {
+        "shopId": "",
+        "arenaId": "",
+        "crestId": ""
+      }
+    },
+    {
+      "id": "interaction-3",
+      "type": "shop",
+      "x": 768,
+      "y": 1024,
+      "width": 256,
+      "height": 128,
+      "label": "Plumeria Shores Shop",
+      "text": "Add interaction text here.",
+      "data": {
+        "shopId": "",
+        "arenaId": "",
+        "crestId": ""
+      }
+    }
+  ],
   "spawnZones": [
     {
       "id": "default-zone",
@@ -34,5 +80,6 @@
     }
   ],
   "trainers": [],
+  "npcs": [],
   "mapMonstersPanel": []
 }

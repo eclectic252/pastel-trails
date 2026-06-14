@@ -4,7 +4,7 @@
       "id": "basic-attack",
       "name": "Tackle",
       "kind": "attack",
-      "power": 3,
+      "power": 2,
       "description": "A simple physical strike.",
       "element": "Neutral",
       "accuracy": 100,
@@ -12,7 +12,7 @@
       "levelOverrides": [
         {
           "level": 2,
-          "power": 10,
+          "power": 4,
           "accuracy": null,
           "element": "",
           "description": ""

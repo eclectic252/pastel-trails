@@ -44,9 +44,9 @@
   const NPC_WALK_PAUSE_MS = 700;
   const NPC_DEFAULT_MOVE_SPEED = 72;
   const DEFAULT_CREST_LEVEL_CAPS = [
-    { crestMin: 0, crestMax: 2, levelCap: 5 },
-    { crestMin: 3, crestMax: 4, levelCap: 10 },
-    { crestMin: 5, crestMax: 99, levelCap: 15 },
+    { crestMin: 0, crestMax: 2, levelCap: 5, arenaMinLevel: 1, arenaMaxLevel: 5, leaderBonusStatPoints: 0 },
+    { crestMin: 3, crestMax: 4, levelCap: 10, arenaMinLevel: 6, arenaMaxLevel: 10, leaderBonusStatPoints: 0 },
+    { crestMin: 5, crestMax: 99, levelCap: 15, arenaMinLevel: 11, arenaMaxLevel: 15, leaderBonusStatPoints: 0 },
   ];
   const OVERWORLD_LABEL_STYLE = {
     background: "rgba(252, 246, 232, 0.96)",
@@ -3999,7 +3999,10 @@
     const crestMin = Math.max(0, Number(entry?.crestMin ?? fallback.crestMin) || 0);
     const crestMax = Math.max(crestMin, Number(entry?.crestMax ?? fallback.crestMax) || crestMin);
     const levelCap = Math.max(1, Number(entry?.levelCap ?? fallback.levelCap) || 1);
-    return { crestMin, crestMax, levelCap };
+    const arenaMinLevel = Math.max(1, Number(entry?.arenaMinLevel ?? fallback.arenaMinLevel ?? 1) || 1);
+    const arenaMaxLevel = Math.max(arenaMinLevel, Math.min(levelCap, Number(entry?.arenaMaxLevel ?? fallback.arenaMaxLevel ?? levelCap) || levelCap));
+    const leaderBonusStatPoints = Math.max(0, Number(entry?.leaderBonusStatPoints ?? fallback.leaderBonusStatPoints ?? 0) || 0);
+    return { crestMin, crestMax, levelCap, arenaMinLevel: Math.min(arenaMinLevel, arenaMaxLevel), arenaMaxLevel, leaderBonusStatPoints };
   }
 
   function ensureGlobalCrestLevelCapSettings(content) {
@@ -4064,12 +4067,40 @@
     return fallbackCap;
   }
 
+  function getCrestLevelCapEntryForCount(crestCount, content) {
+    const count = Math.max(0, Number(crestCount || 0));
+    const configuredCaps = ensureGlobalCrestLevelCapSettings(content || ACTIVE_APP?.content || fallbackContent);
+    let fallbackEntry = configuredCaps[0] || normalizeCrestLevelCapEntry(DEFAULT_CREST_LEVEL_CAPS[0], DEFAULT_CREST_LEVEL_CAPS[0]);
+    for (let index = 0; index < configuredCaps.length; index += 1) {
+      const entry = configuredCaps[index];
+      if (count >= entry.crestMin) {
+        fallbackEntry = entry;
+      }
+      if (count >= entry.crestMin && count <= entry.crestMax) {
+        return entry;
+      }
+    }
+    return fallbackEntry;
+  }
+
+  function getArenaProgressionLevelRange(state, content) {
+    const entry = getCrestLevelCapEntryForCount(getCollectedCrestCount(state), content || ACTIVE_APP?.content || fallbackContent);
+    const max = Math.max(1, Math.min(Number(entry?.arenaMaxLevel || entry?.levelCap || 1), Number(entry?.levelCap || 1)));
+    const min = Math.max(1, Math.min(Number(entry?.arenaMinLevel || 1), max));
+    return { min, max };
+  }
+
+  function getArenaLeaderProgressionBonusStatPoints(state, content) {
+    const entry = getCrestLevelCapEntryForCount(getCollectedCrestCount(state), content || ACTIVE_APP?.content || fallbackContent);
+    return Math.max(0, Number(entry?.leaderBonusStatPoints || 0));
+  }
+
   function formatCrestLevelCapSummary(content) {
     return ensureGlobalCrestLevelCapSettings(content).map(function (entry) {
       const crestRange = entry.crestMin === entry.crestMax
         ? String(entry.crestMin)
         : (entry.crestMax >= 99 ? (entry.crestMin + "+") : (entry.crestMin + "-" + entry.crestMax));
-      return crestRange + " crest" + (entry.crestMin === 1 && entry.crestMax === 1 ? "" : "s") + ": Lv " + entry.levelCap;
+      return crestRange + " crest" + (entry.crestMin === 1 && entry.crestMax === 1 ? "" : "s") + ": wild/refight cap Lv " + entry.levelCap + ", arena Lv " + entry.arenaMinLevel + "-" + entry.arenaMaxLevel + ", leader bonus +" + entry.leaderBonusStatPoints + " stat";
     }).join(", ");
   }
 
@@ -4346,15 +4377,18 @@
       : Math.max(1, Number(arena?.partySize || authoredTeam.length || 1));
     const roster = authoredTeam.slice(0, requestedSize);
     const refightRange = getRefightArenaLeaderLevelRange(state);
+    const progressionRange = getArenaProgressionLevelRange(state, content);
+    const leaderBonusStatPoints = getArenaLeaderProgressionBonusStatPoints(state, content);
 
     while (roster.length < requestedSize && fallbackPool.length) {
       const picked = fallbackPool[Math.floor(Math.random() * fallbackPool.length)];
       roster.push({
         speciesId: picked.speciesId,
         variantId: picked.variantId || "default",
+        bonusStatPoints: Math.max(0, Number(picked.bonusStatPoints || 0)) + leaderBonusStatPoints,
         level: isRefight
           ? rollArenaLeaderLevel(refightRange, arena?.recommendedLevel || 5)
-          : clampArenaAuthoredLevelToProgression(state, picked.level, arena?.recommendedLevel || 5),
+          : rollArenaLeaderLevel(progressionRange, picked.level || arena?.recommendedLevel || 5),
       });
     }
 
@@ -4362,7 +4396,8 @@
       const nextMember = Object.assign({}, member);
       nextMember.level = isRefight
         ? rollArenaLeaderLevel(refightRange, member.level || arena?.recommendedLevel || 5)
-        : clampArenaAuthoredLevelToProgression(state, member.level, arena?.recommendedLevel || 5);
+        : rollArenaLeaderLevel(progressionRange, clampArenaAuthoredLevelToProgression(state, member.level, arena?.recommendedLevel || 5));
+      nextMember.bonusStatPoints = Math.max(0, Number(member?.bonusStatPoints || 0)) + leaderBonusStatPoints;
       return nextMember;
     });
   }
@@ -11291,6 +11326,9 @@
         '<label class="input-group"><span>Crests Min</span><input type="number" min="0" step="1" data-dev-progression-field="crestLevelCapMin:' + index + '" value="' + Number(entry.crestMin) + '" /></label>' +
         '<label class="input-group"><span>Crests Max</span><input type="number" min="0" step="1" data-dev-progression-field="crestLevelCapMax:' + index + '" value="' + Number(entry.crestMax) + '" /></label>' +
         '<label class="input-group"><span>Level Cap</span><input type="number" min="1" step="1" data-dev-progression-field="crestLevelCapLevel:' + index + '" value="' + Number(entry.levelCap) + '" /></label>' +
+        '<label class="input-group"><span>Arena Min Level</span><input type="number" min="1" step="1" data-dev-progression-field="crestArenaMinLevel:' + index + '" value="' + Number(entry.arenaMinLevel) + '" /></label>' +
+        '<label class="input-group"><span>Arena Max Level</span><input type="number" min="1" step="1" data-dev-progression-field="crestArenaMaxLevel:' + index + '" value="' + Number(entry.arenaMaxLevel) + '" /></label>' +
+        '<label class="input-group"><span>Leader Bonus Stat Points</span><input type="number" min="0" step="1" data-dev-progression-field="crestLeaderBonusStatPoints:' + index + '" value="' + Number(entry.leaderBonusStatPoints || 0) + '" /></label>' +
         '</div>' +
       '</section>';
     }).join("");
@@ -11299,12 +11337,12 @@
       '<main class="dev-screen">',
       renderDevToolsTopbar(devToolsState.section, "Progression Settings"),
       '<section class="dev-screen-layout">',
-      '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>Progression</h2></div><p class="dev-helper-text">Manage crest milestones and the level caps they unlock for wild monsters plus arena and trainer refights.</p></aside>',
+      '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>Progression</h2></div><p class="dev-helper-text">Manage crest milestones, wild/refight level caps, first-battle arena leader level ranges, and any extra arena leader stat-point bonus unlocked by each tier.</p></aside>',
       '<section class="dev-main">',
       '<section class="panel-block dev-editor-panel">',
       '<div class="section-heading"><h2>Crest Progression Level Caps</h2><div class="topbar-stats"><button class="secondary-button" type="button" data-action="add-crest-level-cap">Add Tier</button></div></div>',
       crestLevelCapMarkup,
-      '<p class="dev-helper-text">These tiers control the player wild/refight level cap based on earned crests, and the default cap range used for arena and trainer refights. They are saved to <code>settings.json</code>.</p>',
+      '<p class="dev-helper-text">These tiers control the player wild/refight level cap based on earned crests, plus the min/max range and extra stat points used for arena leaders. Collected arena refights still use the player arena settings for levels and size, but they also receive the current tier&apos;s leader bonus stat points. They are saved to <code>settings.json</code>.</p>',
       '<div class="title-actions"><button class="secondary-button" type="button" data-action="export-settings-json">Export settings.json</button></div>',
       '</section>',
       '</section>',
@@ -12436,6 +12474,9 @@
       }
     });
     root.querySelectorAll("[data-dev-progression-field]").forEach(function (field) {
+      field.addEventListener("input", function () {
+        app.updateProgressionField(field.getAttribute("data-dev-progression-field"), field.value, false);
+      });
       field.addEventListener("change", function () {
         app.updateProgressionField(field.getAttribute("data-dev-progression-field"), field.value);
       });
@@ -13889,6 +13930,12 @@
               entry.crestMax = Math.max(0, Number(rawValue || 0));
             } else if (crestField === "crestLevelCapLevel") {
               entry.levelCap = Math.max(1, Number(rawValue || 1));
+            } else if (crestField === "crestArenaMinLevel") {
+              entry.arenaMinLevel = Math.max(1, Number(rawValue || 1));
+            } else if (crestField === "crestArenaMaxLevel") {
+              entry.arenaMaxLevel = Math.max(1, Number(rawValue || 1));
+            } else if (crestField === "crestLeaderBonusStatPoints") {
+              entry.leaderBonusStatPoints = Math.max(0, Number(rawValue || 0));
             }
             this.devTools.crestLevelCaps[crestIndex] = normalizeCrestLevelCapEntry(entry, DEFAULT_CREST_LEVEL_CAPS[crestIndex] || DEFAULT_CREST_LEVEL_CAPS[DEFAULT_CREST_LEVEL_CAPS.length - 1]);
           }
@@ -15104,6 +15151,9 @@
           crestMin: nextMin,
           crestMax: nextMin + 1,
           levelCap: Math.max(1, Number(lastEntry.levelCap || DEFAULT_CREST_LEVEL_CAPS[0].levelCap)),
+          arenaMinLevel: Math.max(1, Number(lastEntry.arenaMinLevel || DEFAULT_CREST_LEVEL_CAPS[0].arenaMinLevel)),
+          arenaMaxLevel: Math.max(1, Number(lastEntry.arenaMaxLevel || DEFAULT_CREST_LEVEL_CAPS[0].arenaMaxLevel)),
+          leaderBonusStatPoints: Math.max(0, Number(lastEntry.leaderBonusStatPoints || DEFAULT_CREST_LEVEL_CAPS[0].leaderBonusStatPoints || 0)),
         });
         syncDevToolsCrestLevelCapSettings(this.content, this.devTools);
         this.render();

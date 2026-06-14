@@ -45,6 +45,36 @@
         "arenaId": "arena-4",
         "crestId": ""
       }
+    },
+    {
+      "id": "interaction-2",
+      "type": "healing-center",
+      "x": 640,
+      "y": 1152,
+      "width": 256,
+      "height": 128,
+      "label": "Jasmine Bay Healing Center",
+      "text": "Add interaction text here.",
+      "data": {
+        "shopId": "",
+        "arenaId": "",
+        "crestId": ""
+      }
+    },
+    {
+      "id": "interaction-3",
+      "type": "shop",
+      "x": 1152,
+      "y": 1536,
+      "width": 256,
+      "height": 128,
+      "label": "Jasmine Bay Shop",
+      "text": "Add interaction text here.",
+      "data": {
+        "shopId": "",
+        "arenaId": "",
+        "crestId": ""
+      }
     }
   ],
   "spawnZones": [

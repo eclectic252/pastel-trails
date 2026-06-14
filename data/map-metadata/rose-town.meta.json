@@ -48,6 +48,21 @@
         "arenaId": "",
         "crestId": ""
       }
+    },
+    {
+      "id": "interaction-3",
+      "type": "shop",
+      "x": 1152,
+      "y": 1536,
+      "width": 256,
+      "height": 128,
+      "label": "Rose Town Shop",
+      "text": "Add interaction text here.",
+      "data": {
+        "shopId": "",
+        "arenaId": "",
+        "crestId": ""
+      }
     }
   ],
   "spawnZones": [

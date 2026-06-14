@@ -17,32 +17,48 @@
     "trainerRefightMaxLevel": 5,
     "trainerRefightPartySize": 2,
     "trainerRefightCooldownSeconds": 180,
+    "wildMonsterMinLevel": 1,
     "wildMonsterMaxLevel": 5,
     "crestLevelCaps": [
       {
         "crestMin": 0,
         "crestMax": 1,
-        "levelCap": 5
+        "levelCap": 5,
+        "arenaMinLevel": 1,
+        "arenaMaxLevel": 5,
+        "leaderBonusStatPoints": 0
       },
       {
         "crestMin": 2,
         "crestMax": 3,
-        "levelCap": 10
+        "levelCap": 10,
+        "arenaMinLevel": 6,
+        "arenaMaxLevel": 10,
+        "leaderBonusStatPoints": 0
       },
       {
         "crestMin": 4,
         "crestMax": 5,
-        "levelCap": 15
+        "levelCap": 15,
+        "arenaMinLevel": 11,
+        "arenaMaxLevel": 15,
+        "leaderBonusStatPoints": 0
       },
       {
         "crestMin": 6,
         "crestMax": 7,
-        "levelCap": 20
+        "levelCap": 20,
+        "arenaMinLevel": 11,
+        "arenaMaxLevel": 15,
+        "leaderBonusStatPoints": 0
       },
       {
         "crestMin": 8,
         "crestMax": 9,
-        "levelCap": 25
+        "levelCap": 25,
+        "arenaMinLevel": 11,
+        "arenaMaxLevel": 15,
+        "leaderBonusStatPoints": 0
       }
     ],
     "battleModel": {
