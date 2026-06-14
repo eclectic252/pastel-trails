@@ -536,8 +536,16 @@
       "name": "Light Strike",
       "kind": "attack",
       "element": "Light",
-      "maxLevel": 1,
-      "levelOverrides": [],
+      "maxLevel": 2,
+      "levelOverrides": [
+        {
+          "level": 2,
+          "power": 7,
+          "accuracy": null,
+          "element": "Light",
+          "description": ""
+        }
+      ],
       "accuracy": 100,
       "unlockRequirements": {
         "arenaClears": [],
@@ -553,7 +561,7 @@
         "foe": []
       },
       "statusEffects": [],
-      "power": 0,
+      "power": 6,
       "description": "Moderate Light Attack."
     },
     {
@@ -626,7 +634,7 @@
           "level": 2,
           "power": 7,
           "accuracy": null,
-          "element": "",
+          "element": "Dark",
           "description": ""
         }
       ],

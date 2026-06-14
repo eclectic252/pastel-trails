@@ -54,17 +54,17 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "elementalMatchupChart": {
           "Air": {
             "Air": "normal",
-            "Fire": "strong",
+            "Fire": "weak",
             "Earth": "normal",
-            "Water": "weak",
+            "Water": "strong",
             "Light": "normal",
             "Dark": "normal"
           },
           "Fire": {
-            "Air": "weak",
+            "Air": "strong",
             "Fire": "normal",
             "Earth": "normal",
-            "Water": "strong",
+            "Water": "weak",
             "Light": "normal",
             "Dark": "normal"
           },
@@ -73,12 +73,12 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "Fire": "normal",
             "Earth": "normal",
             "Water": "normal",
-            "Light": "weak",
-            "Dark": "strong"
+            "Light": "strong",
+            "Dark": "weak"
           },
           "Water": {
-            "Air": "strong",
-            "Fire": "weak",
+            "Air": "weak",
+            "Fire": "strong",
             "Earth": "normal",
             "Water": "normal",
             "Light": "normal",
@@ -87,18 +87,18 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "Light": {
             "Air": "normal",
             "Fire": "normal",
-            "Earth": "strong",
+            "Earth": "weak",
             "Water": "normal",
             "Light": "normal",
-            "Dark": "normal"
+            "Dark": "strong"
           },
           "Dark": {
             "Air": "normal",
             "Fire": "normal",
-            "Earth": "weak",
+            "Earth": "strong",
             "Water": "normal",
-            "Light": "strong",
-            "Dark": "weak"
+            "Light": "weak",
+            "Dark": "normal"
           }
         },
         "statModifierPercentPerStage": 12,
@@ -698,8 +698,16 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "name": "Light Strike",
         "kind": "attack",
         "element": "Light",
-        "maxLevel": 1,
-        "levelOverrides": [],
+        "maxLevel": 2,
+        "levelOverrides": [
+          {
+            "level": 2,
+            "power": 7,
+            "accuracy": null,
+            "element": "Light",
+            "description": ""
+          }
+        ],
         "accuracy": 100,
         "unlockRequirements": {
           "arenaClears": [],
@@ -715,7 +723,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "foe": []
         },
         "statusEffects": [],
-        "power": 0,
+        "power": 6,
         "description": "Moderate Light Attack."
       },
       {
@@ -788,7 +796,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "level": 2,
             "power": 7,
             "accuracy": null,
-            "element": "",
+            "element": "Dark",
             "description": ""
           }
         ],
@@ -73158,7 +73166,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "height": 384,
           "targetMapId": "route-3",
           "targetSpawn": {
-            "x": 704,
+            "x": 1216,
             "y": 448
           }
         }

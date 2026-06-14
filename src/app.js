@@ -1205,11 +1205,16 @@
     ensureElementalAffinityState(defender);
     const attackElement = normalizeSkillElement(skill.element);
     const assignedAffinities = getAssignedElementalAffinities(defender);
-    if (!assignedAffinities.length) {
+    const relevantAffinities = assignedAffinities.length
+      ? assignedAffinities
+      : [defender.primaryElementalAffinity].filter(function (entry) {
+          return ELEMENTAL_AFFINITIES.includes(entry);
+        });
+    if (!relevantAffinities.length) {
       return 1;
     }
 
-    return assignedAffinities.reduce(function (multiplier, defenderAffinity) {
+    return relevantAffinities.reduce(function (multiplier, defenderAffinity) {
       const result = getElementalMatchupResult(battleModel, attackElement, defenderAffinity);
       const spentPoints = Math.max(0, Number(defender.elementalAffinityPoints?.[defenderAffinity] || 0));
       if (result === "strong") {
@@ -4282,7 +4287,7 @@
       rewardText: arena?.rewardText || "Defeat the arena leader to earn this crest.",
       introText: interaction.text || arena?.description || "The arena leader is ready when you are.",
       arenaStatus: isCleared
-        ? "Crest earned"
+        ? "Crest earned. Arena refight available."
         : "Arena challenge ready.",
     };
   }
@@ -5026,6 +5031,10 @@
     enemy.wildMonsterId = wildMonster.id;
     enemy.name = species.name;
     ensureElementalAffinityState(enemy, {
+      primaryElement: wildMonster.primaryElementalAffinity,
+    });
+    ensureGeneratedElementalAffinityPoints(enemy, {
+      randomize: true,
       primaryElement: wildMonster.primaryElementalAffinity,
     });
 
@@ -7900,11 +7909,9 @@
       };
       const linkedArena = arenaView.arena || null;
       const hasTeam = Array.isArray(linkedArena?.team) && linkedArena.team.length > 0;
-      const actionRow = arenaView.isCleared
-        ? '<div class="battle-actions"><button class="primary-button" type="button" data-action="close-interaction">Close</button></div>'
-        : hasTeam
-          ? '<div class="battle-actions"><button class="primary-button" type="button" data-action="start-arena-battle">Start Arena Battle</button><button class="secondary-button" type="button" data-action="close-interaction">Not Now</button></div>'
-          : '<div class="battle-actions"><button class="primary-button" type="button" data-action="close-interaction">Close</button></div>';
+      const actionRow = hasTeam
+        ? '<div class="battle-actions"><button class="primary-button" type="button" data-action="start-arena-battle">' + (arenaView.isCleared ? "Start Refight" : "Start Arena Battle") + '</button><button class="secondary-button" type="button" data-action="close-interaction">Not Now</button></div>'
+        : '<div class="battle-actions"><button class="primary-button" type="button" data-action="close-interaction">Close</button></div>';
 
       return [
         '<div class="battle-overlay">',
