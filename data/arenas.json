@@ -205,6 +205,48 @@
           "variantId": "Equira-Fire"
         }
       ]
+    },
+    {
+      "id": "arena-7",
+      "name": "Snowdrop Arena",
+      "leaderName": "Frostbite",
+      "leaderTitle": "Leader",
+      "crestId": "crest-7",
+      "crestName": "Snowdrop Crest",
+      "crestImagePath": "assets/Crests/crest8.png",
+      "recommendedLevel": 5,
+      "partySize": 3,
+      "rewardMoney": 50,
+      "rewardText": "",
+      "description": "",
+      "mapId": "",
+      "team": [
+        {
+          "speciesId": "Caniri",
+          "variantId": "Caniri-snow",
+          "level": 5
+        },
+        {
+          "speciesId": "monster-8",
+          "variantId": "default-snow",
+          "level": 5
+        },
+        {
+          "speciesId": "equira",
+          "variantId": "Equira-snow",
+          "level": 5
+        }
+      ],
+      "pool": [
+        {
+          "speciesId": "pawlit",
+          "variantId": "default-snow"
+        },
+        {
+          "speciesId": "Owlet",
+          "variantId": "owlet-snow"
+        }
+      ]
     }
   ]
 }

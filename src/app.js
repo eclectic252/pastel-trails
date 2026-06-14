@@ -8473,6 +8473,7 @@
     pushSelector("data-dev-interaction-field");
     pushSelector("data-dev-npc-field");
     pushSelector("data-dev-character-field");
+    pushSelector("data-dev-progression-field");
     pushSelector("data-dev-arena-field");
     pushSelector("data-dev-arena-team-field");
     pushSelector("data-dev-arena-pool-field");
@@ -10537,9 +10538,9 @@
       return '<section class="panel-block dev-editor-panel">' +
         '<div class="section-heading"><h3>Tier ' + (index + 1) + '</h3><div class="topbar-stats"><button class="secondary-button" type="button" data-action="delete-crest-level-cap" data-crest-cap-index="' + index + '"' + (crestLevelCaps.length <= 1 ? " disabled" : "") + '>Delete</button></div></div>' +
         '<div class="form-grid">' +
-        '<label class="input-group"><span>Crests Min</span><input type="number" min="0" step="1" data-dev-character-field="crestLevelCapMin:' + index + '" value="' + Number(entry.crestMin) + '" /></label>' +
-        '<label class="input-group"><span>Crests Max</span><input type="number" min="0" step="1" data-dev-character-field="crestLevelCapMax:' + index + '" value="' + Number(entry.crestMax) + '" /></label>' +
-        '<label class="input-group"><span>Level Cap</span><input type="number" min="1" step="1" data-dev-character-field="crestLevelCapLevel:' + index + '" value="' + Number(entry.levelCap) + '" /></label>' +
+        '<label class="input-group"><span>Crests Min</span><input type="number" min="0" step="1" data-dev-progression-field="crestLevelCapMin:' + index + '" value="' + Number(entry.crestMin) + '" /></label>' +
+        '<label class="input-group"><span>Crests Max</span><input type="number" min="0" step="1" data-dev-progression-field="crestLevelCapMax:' + index + '" value="' + Number(entry.crestMax) + '" /></label>' +
+        '<label class="input-group"><span>Level Cap</span><input type="number" min="1" step="1" data-dev-progression-field="crestLevelCapLevel:' + index + '" value="' + Number(entry.levelCap) + '" /></label>' +
         '</div>' +
       '</section>';
     }).join("");
@@ -11573,6 +11574,11 @@
         });
       }
     });
+    root.querySelectorAll("[data-dev-progression-field]").forEach(function (field) {
+      field.addEventListener("change", function () {
+        app.updateProgressionField(field.getAttribute("data-dev-progression-field"), field.value);
+      });
+    });
     root.querySelectorAll('[data-action="toggle-species-skill"]').forEach(function (field) {
       field.addEventListener("change", function () {
         app.toggleSpeciesSkill(field.getAttribute("data-skill-id"), field.checked);
@@ -11808,6 +11814,12 @@
       if (target.matches("[data-dev-character-field]")) {
         event.stopPropagation();
         app.updateCharacterSheetField(target.getAttribute("data-dev-character-field"), target.value);
+        return;
+      }
+
+      if (target.matches("[data-dev-progression-field]")) {
+        event.stopPropagation();
+        app.updateProgressionField(target.getAttribute("data-dev-progression-field"), target.value);
         return;
       }
     }, true);
@@ -12928,6 +12940,12 @@
         syncDevToolsMonsterSpriteSettings(this.content, this.devTools);
         syncDevToolsCrestLevelCapSettings(this.content, this.devTools);
         syncDevToolsCharacterSheet(this.content, this.devTools);
+        if (shouldRender !== false) {
+          this.render();
+        }
+      },
+      updateProgressionField: function (field, rawValue, shouldRender) {
+        this.updateCharacterSheetField(field, rawValue, false);
         if (shouldRender !== false) {
           this.render();
         }

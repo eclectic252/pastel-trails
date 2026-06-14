@@ -18,7 +18,38 @@
       }
     }
   ],
-  "interactions": [],
+  "interactions": [
+    {
+      "id": "interaction-1",
+      "type": "arena",
+      "x": 1664,
+      "y": 1024,
+      "width": 256,
+      "height": 128,
+      "label": "Snowdrop Arena",
+      "text": "Add interaction text here.",
+      "data": {
+        "shopId": "",
+        "arenaId": "arena-7",
+        "crestId": ""
+      }
+    },
+    {
+      "id": "interaction-2",
+      "type": "healing-center",
+      "x": 768,
+      "y": 1792,
+      "width": 256,
+      "height": 128,
+      "label": "New Interaction",
+      "text": "Add interaction text here.",
+      "data": {
+        "shopId": "",
+        "arenaId": "",
+        "crestId": ""
+      }
+    }
+  ],
   "spawnZones": [
     {
       "id": "default-zone",

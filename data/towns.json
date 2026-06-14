@@ -218,11 +218,11 @@
     {
       "id": "snowdrop-town",
       "name": "Snowdrop Town",
-      "cardSubtitle": "",
+      "cardSubtitle": "Snowy Pass",
       "mapId": "snowdrop-town",
       "spawn": {
-        "x": 128,
-        "y": 128
+        "x": 1728,
+        "y": 1600
       },
       "includeInStarterSelection": true,
       "cardBackgrounds": {
