@@ -130,6 +130,7 @@
         trainerRefightMaxLevel: 5,
         trainerRefightPartySize: 2,
         trainerRefightCooldownSeconds: 180,
+        wildMonsterMinLevel: 1,
         wildMonsterMaxLevel: 5,
         crestLevelCaps: DEFAULT_CREST_LEVEL_CAPS.map(function (entry) {
           return Object.assign({}, entry);
@@ -140,7 +141,7 @@
           basicDefenseDivisor: 2,
           randomVarianceMax: 3,
           affinityDamageBonusPerPointPercent: 1,
-          elementalAdvantageMultiplier: 2,
+          elementalAdvantageMultiplier: 1.5,
           elementalResistanceMultiplier: 0.5,
           elementalAdvantagePointPercent: 0,
           elementalResistancePointPercent: 0,
@@ -1324,8 +1325,29 @@
     return Math.max(0, Math.max(1, Number(level || 1)) - 1);
   }
 
-  function getMonsterStatPointBudget(monster) {
-    return getTotalMonsterStatPointsForLevel(monster?.level || 1) + Math.max(0, Number(monster?.bonusStatPoints || 0));
+  function getMonsterCrestBonusStatPoints(state) {
+    if (!state) {
+      return 0;
+    }
+    return Math.max(0, getCollectedCrestCount(state));
+  }
+
+  function getVisitedTownCount(state) {
+    return Array.from(new Set(ensureTownProgress(state).visitedTownIds || [])).length;
+  }
+
+  function getMonsterTownBonusStatPoints(state) {
+    if (!state) {
+      return 0;
+    }
+    return Math.max(0, getVisitedTownCount(state));
+  }
+
+  function getMonsterStatPointBudget(monster, state) {
+    return getTotalMonsterStatPointsForLevel(monster?.level || 1)
+      + Math.max(0, Number(monster?.bonusStatPoints || 0))
+      + getMonsterCrestBonusStatPoints(state)
+      + getMonsterTownBonusStatPoints(state);
   }
 
   function getSpentMonsterStatPoints(monster) {
@@ -1334,8 +1356,8 @@
     }, 0);
   }
 
-  function getAvailableMonsterStatPoints(monster) {
-    return Math.max(0, getMonsterStatPointBudget(monster) - getSpentMonsterStatPoints(monster));
+  function getAvailableMonsterStatPoints(monster, state) {
+    return Math.max(0, getMonsterStatPointBudget(monster, state) - getSpentMonsterStatPoints(monster));
   }
 
   function buildRandomMonsterStatPoints(level) {
@@ -1388,10 +1410,15 @@
     });
     monster.statPoints = normalizedPoints;
 
-    const spentPoints = getSpentMonsterStatPoints(monster);
-    const levelBudget = getTotalMonsterStatPointsForLevel(monster.level || 1);
-    const legacyBonus = Math.max(0, spentPoints - levelBudget);
-    monster.bonusStatPoints = Math.max(legacyBonus, Number(monster.bonusStatPoints || 0));
+    const existingBonusStatPoints = Number(monster.bonusStatPoints);
+    if (Number.isFinite(existingBonusStatPoints)) {
+      monster.bonusStatPoints = Math.max(0, existingBonusStatPoints);
+    } else {
+      const spentPoints = getSpentMonsterStatPoints(monster);
+      const levelBudget = getTotalMonsterStatPointsForLevel(monster.level || 1);
+      const legacyBonus = Math.max(0, spentPoints - levelBudget);
+      monster.bonusStatPoints = legacyBonus;
+    }
     return monster;
   }
 
@@ -1445,7 +1472,7 @@
     recalculateMonsterStats(monster, species, { preserveHpByMaxDelta: true });
     if (levelsGained > 0) {
       const speciesName = species.name || monster.speciesId || "Monster";
-      const availablePoints = getAvailableMonsterStatPoints(monster);
+      const availablePoints = getAvailableMonsterStatPoints(monster, state);
       const levelMessage = speciesName + " leveled up to Lv " + Number(monster.level || 1) + ".";
       if (state.battle && options?.showBattleLog !== false) {
         addBattleLogEntry(state, levelMessage);
@@ -2688,9 +2715,12 @@
     const species = getSpecies(content, monster.speciesId);
     ensureMonsterStatPointState(monster, species);
     recalculateMonsterStats(monster, species);
-    const availablePoints = getAvailableMonsterStatPoints(monster);
+    const availablePoints = getAvailableMonsterStatPoints(monster, ACTIVE_APP?.state);
     const spentPoints = getSpentMonsterStatPoints(monster);
-    const totalPoints = getMonsterStatPointBudget(monster);
+    const totalPoints = getMonsterStatPointBudget(monster, ACTIVE_APP?.state);
+    const crestBonusPoints = getMonsterCrestBonusStatPoints(ACTIVE_APP?.state);
+    const townBonusPoints = getMonsterTownBonusStatPoints(ACTIVE_APP?.state);
+    const passiveBonusPoints = crestBonusPoints + townBonusPoints;
     const location = options?.collection === "bank" ? "Bank" : "Party";
     const controls = MONSTER_STAT_KEYS.map(function (stat) {
       const currentPoints = Math.max(0, Number(monster.statPoints?.[stat] || 0));
@@ -2712,7 +2742,7 @@
       '<section class="monster-moves-panel monster-affinity-panel">',
       '<div class="monster-affinity-panel-topline"><strong>Stats</strong><span>' + spentPoints + "/" + totalPoints + ' spent · ' + availablePoints + ' available</span></div>',
       '<div class="monster-affinity-grid">' + controls + "</div>",
-      '<p class="monster-moves-note">Base stats are this species at level 1. Each level grants 1 stat point to spend on Health, Attack, Defense, or Speed.</p>',
+      '<p class="monster-moves-note">Base stats are this species at level 1. Each level grants 1 stat point to spend on Health, Attack, Defense, or Speed' + (passiveBonusPoints > 0 ? ", and passive bonuses add +" + passiveBonusPoints + " total point" + (passiveBonusPoints === 1 ? "" : "s") + " to every player monster (" + crestBonusPoints + " from crests, " + townBonusPoints + " from towns)." : ".") + "</p>",
       "</section>",
     ].join("");
   }
@@ -2732,7 +2762,7 @@
     const hpPercent = Math.max(0, Math.min(100, (currentHp / maxHp) * 100));
     const xp = getMonsterXpProgress(monster);
     const spentStatPoints = getSpentMonsterStatPoints(monster);
-    const totalStatPoints = getMonsterStatPointBudget(monster);
+    const totalStatPoints = getMonsterStatPointBudget(monster, ACTIVE_APP?.state);
     const spentAffinityPoints = getSpentElementalAffinityPoints(monster);
     const totalAffinityPoints = getTotalElementalAffinityPointsForLevel(monster.level || 1);
     const affinitySummary = getMonsterAffinitySummaryLabel(monster);
@@ -3067,6 +3097,147 @@
     });
   }
 
+  function renderNotebookMonstersTab(state, content) {
+    const registryEntries = buildRegistryEntries(content).map(function (entry) {
+      const isCaught = state.registry.caught.includes(entry.species.id);
+      const stats = entry.species.baseStats || {};
+      const locationText = entry.locations.length ? entry.locations.join(", ") : "No spawn locations assigned yet";
+      const heroVariantEntry = entry.heroVariant || entry.variants[0] || null;
+      const heroVariant = heroVariantEntry?.variant || getSpeciesVariant(entry.species, "default");
+      const heroVariantLabel = formatMonsterVariantLabel(heroVariant, "default");
+      const heroSpriteMarkup = renderMonsterVariantVisualMarkup(
+        entry.species.id,
+        heroVariant?.id || "default",
+        "registry-hero-sprite",
+        "default"
+      );
+      const variantMarkup = entry.variants.map(function (variantEntry) {
+        const variantLabel = formatMonsterVariantLabel(variantEntry.variant, "default");
+        const variantLocationText = variantEntry.locations.length ? variantEntry.locations.join(", ") : "No available spawn locations assigned yet";
+        const spriteMarkup = renderMonsterVariantVisualMarkup(entry.species.id, variantEntry.variant.id || "default", "registry-variant-sprite", "default");
+
+        return [
+          '<li class="registry-variant-row">',
+          '<div class="registry-variant-identity">' + spriteMarkup + '<div><strong>' + escapeHtml(variantLabel) + '</strong><span>' + escapeHtml(variantLocationText) + "</span></div></div>",
+          "</li>",
+        ].join("");
+      }).join("");
+
+      return [
+        '<article class="registry-card">',
+        '<div class="registry-card-header"><div><h3>' + escapeHtml(entry.species.name) + '</h3><p>' + escapeHtml(entry.species.id) + '</p></div><span class="registry-status ' + (isCaught ? "registry-status-caught" : "registry-status-missing") + '">' + (isCaught ? "Caught" : "Not Caught") + "</span></div>",
+        '<div class="registry-card-hero"><div class="registry-card-hero-visual">' + heroSpriteMarkup + '</div><div class="registry-card-hero-copy"><p class="registry-card-hero-label"><strong>Featured Variant:</strong> ' + escapeHtml(heroVariantLabel) + '</p><p class="registry-spawn-line"><strong>Available Spawn Locations:</strong> ' + escapeHtml(locationText) + "</p><p class=\"registry-stats\">HP " + Number(stats.hp || 0) + " · ATK " + Number(stats.attack || 0) + " · DEF " + Number(stats.defense || 0) + " · SPD " + Number(stats.speed || 0) + "</p></div></div>",
+        '<details class="registry-variants"><summary>Variants (' + entry.variants.length + ')</summary><ul class="compact-list registry-variant-list">' + variantMarkup + "</ul></details>",
+        "</article>",
+      ].join("");
+    }).join("");
+
+    return [
+      '<section class="notebook-summary-row">',
+      '<article class="notebook-summary-card"><span>Total Monsters</span><strong>' + Number(content.monsters?.species?.length || 0) + '</strong></article>',
+      '<article class="notebook-summary-card"><span>Caught</span><strong>' + Number(state.registry.caught.length || 0) + '</strong></article>',
+      "</section>",
+      '<div class="registry-section-scroll"><div class="registry-grid">' + (registryEntries || "<p>No monsters configured yet.</p>") + "</div></div>",
+    ].join("");
+  }
+
+  function renderNotebookCrestsTab(state, content) {
+    const earnedCrestIds = ensureArenaProgress(state).earnedCrests || [];
+    const crestCount = getCollectedCrestCount(state);
+    const currentLevelCap = getCurrentPlayerLevelCap(state);
+    const earnedCrests = earnedCrestIds.map(function (crestId) {
+      const arena = ensureArenaCatalog(content).find(function (entry) {
+        return entry.crestId === crestId;
+      });
+      const label = arena?.crestName || crestId;
+      return '<li class="crest-list-item">' + renderArenaCrestMarkup(content, arena || { crestId, crestName: label }, "arena-crest-image") + "<div><span>" + escapeHtml(label) + '</span><strong>Crest</strong></div></li>';
+    }).join("");
+
+    return [
+      '<section class="notebook-summary-row">',
+      '<article class="notebook-summary-card"><span>Earned Crests</span><strong>' + crestCount + '</strong></article>',
+      '<article class="notebook-summary-card"><span>Current Crest Cap</span><strong>Lv ' + currentLevelCap + '</strong></article>',
+      "</section>",
+      '<section class="panel-block notebook-section-card"><div class="section-heading"><h3>Crest Collection</h3></div><p class="notebook-helper-copy">Your current crest progression unlocks wild and refight level caps up to Lv ' + currentLevelCap + '.</p><ul class="compact-list">' + (earnedCrests || "<li><span>No crests earned yet.</span></li>") + "</ul></section>",
+    ].join("");
+  }
+
+  function renderNotebookPlayerSkillsTab(state, content) {
+    ensurePlayerSkillProgressState(state, content);
+    const skills = ensureSkillCatalog(content);
+    const crestBonusPoints = getMonsterCrestBonusStatPoints(state);
+    const townBonusPoints = getMonsterTownBonusStatPoints(state);
+    const totalPassiveStatBonus = crestBonusPoints + townBonusPoints;
+    const visitedTownCount = getVisitedTownCount(state);
+    const activeSkillCount = skills.filter(function (skill) {
+      return getPlayerSkillLevel(state, content, skill.id) > 0;
+    }).length;
+    const hasMeaningfulSkillProgress = skills.some(function (skill) {
+      return getPlayerSkillLevel(state, content, skill.id) > 0 || getPlayerSkillXp(state, content, skill.id) > 0;
+    });
+    const skillRows = skills.map(function (skill) {
+      const currentLevel = getPlayerSkillLevel(state, content, skill.id);
+      const maxLevel = getSkillMaxLevel(skill);
+      const xpProgress = getPlayerSkillXpProgress(state, content, skill.id);
+      const unlockStatus = getSkillUnlockStatus(state, content, skill);
+      const effectiveSkill = getEffectiveSkillAtLevel(skill, Math.max(1, currentLevel || 1));
+      const statusLabel = currentLevel > 0
+        ? "Lv " + currentLevel + "/" + maxLevel
+        : (unlockStatus.unlocked ? "Ready" : "Locked");
+      const progressCopy = currentLevel <= 0
+        ? (unlockStatus.unlocked ? "Ready to start leveling." : unlockStatus.reasons.join(" • "))
+        : (xpProgress.maxed ? "Max level reached." : (Number(xpProgress.current || 0) + "/" + Number(xpProgress.threshold || 0) + " XP to next level."));
+
+      return [
+        '<article class="notebook-skill-card' + (currentLevel > 0 ? " notebook-skill-card-active" : "") + '">',
+        '<div class="notebook-skill-card-header"><div><h4>' + escapeHtml(skill.name || skill.id) + '</h4><p>' + escapeHtml(normalizeSkillElement(effectiveSkill.element)) + " · " + escapeHtml(effectiveSkill.kind || "skill") + '</p></div><span class="notebook-skill-level">' + escapeHtml(statusLabel) + "</span></div>",
+        '<p class="notebook-skill-copy">' + escapeHtml(effectiveSkill.description || skill.description || "No description yet.") + "</p>",
+        '<div class="notebook-skill-progress"><div class="monster-move-xp-bar"><span style="width:' + Number(xpProgress.percent || 0) + '%"></span></div><strong>' + escapeHtml(progressCopy) + "</strong></div>",
+        "</article>",
+      ].join("");
+    }).join("");
+
+    return [
+      '<section class="notebook-summary-row">',
+      '<article class="notebook-summary-card"><span>Monster Stat Bonus</span><strong>+' + totalPassiveStatBonus + '</strong></article>',
+      '<article class="notebook-summary-card"><span>Skills In Progress</span><strong>' + activeSkillCount + '</strong></article>',
+      "</section>",
+      '<section class="panel-block notebook-section-card"><div class="section-heading"><h3>Passive Bonuses</h3></div><ul class="compact-list">'
+        + '<li><span>Each earned crest gives +1 extra stat point to every player monster.</span><strong>+' + crestBonusPoints + ' from ' + getCollectedCrestCount(state) + ' crest' + (getCollectedCrestCount(state) === 1 ? '' : 's') + '</strong></li>'
+        + '<li><span>Each town visited gives +1 extra stat point to every player monster.</span><strong>+' + townBonusPoints + ' from ' + visitedTownCount + ' town' + (visitedTownCount === 1 ? '' : 's') + '</strong></li>'
+        + "</ul></section>",
+      '<section class="panel-block notebook-section-card"><div class="section-heading"><h3>Move Skill Progression</h3></div>' + (!hasMeaningfulSkillProgress
+        ? '<p class="notebook-helper-copy">No player skill progress yet. Skills will appear here as they unlock and level through battle use and victories.</p>'
+        : "") + '<div class="notebook-skill-grid">' + (skillRows || "<p>No skills configured yet.</p>") + "</div></section>",
+    ].join("");
+  }
+
+  function renderNotebookPanel(state, content) {
+    const ui = ensureWorldUiState(state);
+    const selectedTab = ui.selectedNotebookTab || "monsters";
+    const tabs = [
+      { id: "monsters", label: "Monsters" },
+      { id: "crests", label: "Crests" },
+      { id: "player-skills", label: "Player Skills" },
+    ];
+    const tabMarkup = tabs.map(function (tab) {
+      return '<button class="secondary-button notebook-tab-button' + (tab.id === selectedTab ? " notebook-tab-button-active" : "") + '" type="button" data-action="select-notebook-tab" data-notebook-tab="' + escapeHtml(tab.id) + '">' + escapeHtml(tab.label) + "</button>";
+    }).join("");
+
+    const tabContent = selectedTab === "crests"
+      ? renderNotebookCrestsTab(state, content)
+      : (selectedTab === "player-skills"
+          ? renderNotebookPlayerSkillsTab(state, content)
+          : renderNotebookMonstersTab(state, content));
+
+    return [
+      '<section class="notebook-panel">',
+      '<div class="notebook-tab-bar">' + tabMarkup + "</div>",
+      '<div class="notebook-tab-content">' + tabContent + "</div>",
+      "</section>",
+    ].join("");
+  }
+
   function buildSpawnIndexRows(content) {
     const rowMap = new Map();
 
@@ -3391,8 +3562,16 @@
   }
 
   function rollSpawnLevel(spawn, options) {
-    const minLevel = Math.max(1, Number(spawn.levelMin || spawn.level || 1));
-    const maxLevel = Math.max(minLevel, Number(spawn.levelMax || minLevel));
+    const authoredMinLevel = Math.max(1, Number(spawn.levelMin || spawn.level || 1));
+    const authoredMaxLevel = Math.max(authoredMinLevel, Number(spawn.levelMax || authoredMinLevel));
+    const overrideMinLevel = Number(options?.minLevelOverride);
+    const overrideMaxLevel = Number(options?.maxLevelOverride);
+    const minLevel = Number.isFinite(overrideMinLevel)
+      ? Math.max(1, overrideMinLevel)
+      : authoredMinLevel;
+    const maxLevel = Number.isFinite(overrideMaxLevel)
+      ? Math.max(minLevel, overrideMaxLevel)
+      : authoredMaxLevel;
     const cap = Math.max(1, Number(options?.maxLevelCap || maxLevel));
     const resolvedMax = Math.max(1, Math.min(maxLevel, cap));
     const resolvedMin = Math.min(minLevel, resolvedMax);
@@ -3868,6 +4047,15 @@
     return Math.min(crestCap, requested);
   }
 
+  function getConfiguredWildMonsterLevelRange(state) {
+    const max = getConfiguredWildMonsterMaxLevel(state);
+    const requestedMin = Math.max(1, Number(state?.settings?.wildMonsterMinLevel || 1));
+    return {
+      min: Math.min(requestedMin, max),
+      max,
+    };
+  }
+
   function normalizeCrestScaledWorldSettings(state) {
     if (!state?.settings) {
       return;
@@ -3879,7 +4067,9 @@
     state.settings.trainerRefightMinLevel = trainerRefightRange.min;
     state.settings.trainerRefightMaxLevel = trainerRefightRange.max;
     state.settings.trainerRefightPartySize = Math.max(1, Number(state.settings.trainerRefightPartySize || 1));
-    state.settings.wildMonsterMaxLevel = getConfiguredWildMonsterMaxLevel(state);
+    const wildRange = getConfiguredWildMonsterLevelRange(state);
+    state.settings.wildMonsterMinLevel = wildRange.min;
+    state.settings.wildMonsterMaxLevel = wildRange.max;
   }
 
   function ensureArenaCatalog(content) {
@@ -4266,6 +4456,39 @@
     return state.arenaProgress;
   }
 
+  function ensureTownProgress(state) {
+    if (!state.townProgress) {
+      state.townProgress = {
+        visitedTownIds: [],
+      };
+    }
+
+    if (!Array.isArray(state.townProgress.visitedTownIds)) {
+      state.townProgress.visitedTownIds = [];
+    }
+
+    state.townProgress.visitedTownIds = Array.from(new Set(state.townProgress.visitedTownIds.map(function (entry) {
+      return String(entry || "").trim();
+    }).filter(Boolean)));
+
+    return state.townProgress;
+  }
+
+  function registerTownVisit(state, townId) {
+    const normalizedTownId = String(townId || "").trim();
+    if (!normalizedTownId) {
+      return false;
+    }
+
+    const townProgress = ensureTownProgress(state);
+    if (townProgress.visitedTownIds.includes(normalizedTownId)) {
+      return false;
+    }
+
+    townProgress.visitedTownIds.push(normalizedTownId);
+    return true;
+  }
+
   function buildArenaViewModel(state, content, interaction) {
     const arenaId = interaction.data?.arenaId || "";
     const arena = arenaId ? getArena(content, arenaId) : null;
@@ -4315,6 +4538,7 @@
     if (currentTown) {
       state.player.lastTownId = currentTown.id;
       state.world.lastTownId = currentTown.id;
+      registerTownVisit(state, currentTown.id);
     }
 
     const label = interaction.label || interaction.id || "Healing Center";
@@ -4480,8 +4704,11 @@
       },
     };
 
+    const initialWildRange = getConfiguredWildMonsterLevelRange({ settings: content.settings?.defaults || {}, arenaProgress: { earnedCrests: [] } });
     world.wildMonsters = createWildMonstersForMap(content, world.currentMapId, world.position, {
-      maxLevelCap: getConfiguredWildMonsterMaxLevel({ settings: content.settings?.defaults || {}, arenaProgress: { earnedCrests: [] } }),
+      minLevelOverride: initialWildRange.min,
+      maxLevelOverride: initialWildRange.max,
+      maxLevelCap: initialWildRange.max,
     });
     ensureWorldNpcRuntimeState({ world }, content, world.currentMapId);
     const initialCameraTarget = {
@@ -4517,10 +4744,14 @@
         monsterMovesTarget: null,
         monsterStatsTarget: null,
         monsterAffinityTarget: null,
+        selectedNotebookTab: "monsters",
       },
       arenaProgress: {
         clearedArenaIds: [],
         earnedCrests: [],
+      },
+      townProgress: {
+        visitedTownIds: [starterTown.id],
       },
       trainerProgress: {
         defeatedTrainerIds: [],
@@ -4556,10 +4787,14 @@
         monsterMovesTarget: null,
         monsterStatsTarget: null,
         monsterAffinityTarget: null,
+        selectedNotebookTab: "monsters",
       },
       arenaProgress: save.arenaProgress || {
         clearedArenaIds: [],
         earnedCrests: [],
+      },
+      townProgress: save.townProgress || {
+        visitedTownIds: [],
       },
       trainerProgress: save.trainerProgress || {
         defeatedTrainerIds: [],
@@ -4590,8 +4825,11 @@
     });
 
     if (!Array.isArray(state.world.wildMonsters) || !state.world.wildMonsters.length) {
+      const wildRange = getConfiguredWildMonsterLevelRange(state);
       state.world.wildMonsters = createWildMonstersForMap(content, state.world.currentMapId, state.world.position, {
-        maxLevelCap: getConfiguredWildMonsterMaxLevel(state),
+        minLevelOverride: wildRange.min,
+        maxLevelOverride: wildRange.max,
+        maxLevelCap: wildRange.max,
       });
     }
     ensureWorldNpcRuntimeState(state, content, state.world.currentMapId);
@@ -4604,6 +4842,8 @@
     ensurePlayerVisualState(state);
     ensureWorldCameraState(state, content);
     ensureArenaProgress(state);
+    ensureTownProgress(state);
+    registerTownVisit(state, state.player?.lastTownId || state.world?.lastTownId || "");
     ensureTrainerProgress(state);
     ensurePlayerSkillProgressState(state, content);
 
@@ -4634,6 +4874,7 @@
       world,
       settings: state.settings,
       arenaProgress: ensureArenaProgress(state),
+      townProgress: ensureTownProgress(state),
       trainerProgress: ensureTrainerProgress(state),
       party: (state.party || []).map(sanitizeMonster),
       bank: (state.bank || []).map(sanitizeMonster),
@@ -4644,7 +4885,7 @@
 
   function ensureWorldUiState(state) {
     if (!state.ui) {
-      state.ui = { activePanel: "", encounterPreviewExpanded: true, monsterMovesTarget: null, monsterStatsTarget: null, monsterAffinityTarget: null, selectedCharacterCrestId: "" };
+      state.ui = { activePanel: "", encounterPreviewExpanded: true, monsterMovesTarget: null, monsterStatsTarget: null, monsterAffinityTarget: null, selectedCharacterCrestId: "", selectedNotebookTab: "monsters" };
     }
 
     if (typeof state.ui.activePanel !== "string") {
@@ -4657,6 +4898,10 @@
 
     if (typeof state.ui.selectedCharacterCrestId !== "string") {
       state.ui.selectedCharacterCrestId = "";
+    }
+
+    if (!["monsters", "crests", "player-skills"].includes(state.ui.selectedNotebookTab)) {
+      state.ui.selectedNotebookTab = "monsters";
     }
 
     if (
@@ -5612,8 +5857,12 @@
 
     state.world.currentMapId = town.mapId;
     state.world.position = { x: town.spawn.x, y: town.spawn.y };
+    registerTownVisit(state, town.id);
+    const wildRange = getConfiguredWildMonsterLevelRange(state);
     state.world.wildMonsters = createWildMonstersForMap(content, town.mapId, state.world.position, {
-      maxLevelCap: getConfiguredWildMonsterMaxLevel(state),
+      minLevelOverride: wildRange.min,
+      maxLevelOverride: wildRange.max,
+      maxLevelCap: wildRange.max,
     });
     ensureWorldNpcRuntimeState(state, content, town.mapId);
     syncCameraToPlayer(state, content);
@@ -6055,6 +6304,7 @@
 
     state.world.wildMonsters.forEach(function (monster) {
       if (!monster.active && monster.respawnsAt && monster.respawnsAt <= now) {
+        const wildRange = getConfiguredWildMonsterLevelRange(state);
         const rerolled = createWildMonsterFromSpawn(content, monster.spawnConfig || {
           id: monster.sourceSpawnId,
           speciesId: monster.speciesId,
@@ -6064,7 +6314,9 @@
           levelMax: monster.level,
           respawnSeconds: monster.respawnSeconds || 120,
         }, 0, {
-          maxLevelCap: getConfiguredWildMonsterMaxLevel(state),
+          minLevelOverride: wildRange.min,
+          maxLevelOverride: wildRange.max,
+          maxLevelCap: wildRange.max,
         });
 
         if (rerolled) {
@@ -6416,8 +6668,11 @@
       y: transition.targetSpawn.y,
     };
     state.world.transitionCooldownUntil = Date.now() + TRANSITION_COOLDOWN_MS;
+    const wildRange = getConfiguredWildMonsterLevelRange(state);
     state.world.wildMonsters = createWildMonstersForMap(content, targetMapId, state.world.position, {
-      maxLevelCap: getConfiguredWildMonsterMaxLevel(state),
+      minLevelOverride: wildRange.min,
+      maxLevelOverride: wildRange.max,
+      maxLevelCap: wildRange.max,
     });
     ensureWorldNpcRuntimeState(state, content, targetMapId);
     syncCameraToPlayer(state, content);
@@ -6429,6 +6684,7 @@
       if (town) {
         state.player.lastTownId = town.id;
         state.world.lastTownId = town.id;
+        registerTownVisit(state, town.id);
       }
     }
 
@@ -7983,7 +8239,7 @@
       character: "Character",
       inventory: "Inventory",
       monsters: "Monsters",
-      registry: "Registry",
+      registry: "Notebook",
       quests: "Quests",
       settings: "Settings",
     }[panel] || "Panel";
@@ -8097,53 +8353,7 @@
         '<section class="monster-roster-section"><div class="section-heading"><h3>Monster Bank ' + state.bank.length + '</h3></div><div class="monster-roster-stack">' + bankCards + "</div></section>",
       ].join("");
     } else if (panel === "registry") {
-      const earnedCrests = ensureArenaProgress(state).earnedCrests.map(function (crestId) {
-        const arena = ensureArenaCatalog(content).find(function (entry) {
-          return entry.crestId === crestId;
-        });
-        const label = arena?.crestName || crestId;
-        return '<li class="crest-list-item">' + renderArenaCrestMarkup(content, arena || { crestId, crestName: label }, "arena-crest-image") + "<div><span>" + escapeHtml(label) + "</span><strong>Crest</strong></div></li>";
-      }).join("");
-      const registryEntries = buildRegistryEntries(content).map(function (entry) {
-        const isCaught = state.registry.caught.includes(entry.species.id);
-        const stats = entry.species.baseStats || {};
-        const locationText = entry.locations.length ? entry.locations.join(", ") : "No spawn locations assigned yet";
-        const heroVariantEntry = entry.heroVariant || entry.variants[0] || null;
-        const heroVariant = heroVariantEntry?.variant || getSpeciesVariant(entry.species, "default");
-        const heroVariantLabel = formatMonsterVariantLabel(heroVariant, "default");
-        const heroSpriteMarkup = renderMonsterVariantVisualMarkup(
-          entry.species.id,
-          heroVariant?.id || "default",
-          "registry-hero-sprite",
-          "default"
-        );
-        const variantMarkup = entry.variants.map(function (variantEntry) {
-          const variantLabel = formatMonsterVariantLabel(variantEntry.variant, "default");
-          const variantLocationText = variantEntry.locations.length ? variantEntry.locations.join(", ") : "No available spawn locations assigned yet";
-          const spriteMarkup = renderMonsterVariantVisualMarkup(entry.species.id, variantEntry.variant.id || "default", "registry-variant-sprite", "default");
-
-          return [
-            '<li class="registry-variant-row">',
-            '<div class="registry-variant-identity">' + spriteMarkup + '<div><strong>' + escapeHtml(variantLabel) + '</strong><span>' + escapeHtml(variantLocationText) + "</span></div></div>",
-            "</li>",
-          ].join("");
-        }).join("");
-
-        return [
-          '<article class="registry-card">',
-          '<div class="registry-card-header"><div><h3>' + escapeHtml(entry.species.name) + '</h3><p>' + escapeHtml(entry.species.id) + '</p></div><span class="registry-status ' + (isCaught ? "registry-status-caught" : "registry-status-missing") + '">' + (isCaught ? "Caught" : "Not Caught") + "</span></div>",
-          '<div class="registry-card-hero"><div class="registry-card-hero-visual">' + heroSpriteMarkup + '</div><div class="registry-card-hero-copy"><p class="registry-card-hero-label"><strong>Featured Variant:</strong> ' + escapeHtml(heroVariantLabel) + '</p><p class="registry-spawn-line"><strong>Available Spawn Locations:</strong> ' + escapeHtml(locationText) + "</p><p class=\"registry-stats\">HP " + Number(stats.hp || 0) + " · ATK " + Number(stats.attack || 0) + " · DEF " + Number(stats.defense || 0) + " · SPD " + Number(stats.speed || 0) + "</p></div></div>",
-          '<details class="registry-variants"><summary>Variants (' + entry.variants.length + ')</summary><ul class="compact-list registry-variant-list">' + variantMarkup + "</ul></details>",
-          "</article>",
-        ].join("");
-      }).join("");
-      panelBody = [
-        "<p>Total monsters: " + (content.monsters?.species?.length || 0) + "</p>",
-        "<p>Caught: " + state.registry.caught.length + "</p>",
-        '<div class="registry-section-scroll"><div class="registry-grid">' + (registryEntries || "<p>No monsters configured yet.</p>") + "</div></div>",
-        "<h3>Crests</h3>",
-        '<ul class="compact-list">' + (earnedCrests || "<li><span>No crests earned yet.</span></li>") + "</ul>",
-      ].join("");
+      panelBody = renderNotebookPanel(state, content);
     } else if (panel === "quests") {
       panelBody = "<p>Quest tracking is still planned work. This panel is ready for that system when you want it.</p>";
     } else if (panel === "settings") {
@@ -8167,6 +8377,7 @@
         { value: 310, label: "Normal (310)" },
         { value: 360, label: "Faster x1 (360)" },
         { value: 420, label: "Faster x2 (420)" },
+        { value: 520, label: "Faster x3 (520)" },
       ].map(function (option) {
         const selected = Number(state.settings.walkSpeed || 260) === Number(option.value) ? " selected" : "";
         return '<option value="' + option.value + '"' + selected + ">" + option.label + "</option>";
@@ -8186,7 +8397,8 @@
         '<label class="input-group"><span>Encounter Preview Mode</span><select data-world-setting="encounterPreviewMode"><option value="available"' + (state.settings.encounterPreviewMode === "available" || !state.settings.encounterPreviewMode ? " selected" : "") + '>Show Available</option><option value="current"' + (state.settings.encounterPreviewMode === "current" ? " selected" : "") + '>Show Current Encounters</option><option value="available-current"' + (state.settings.encounterPreviewMode === "available-current" ? " selected" : "") + '>Show Available And Current</option></select></label>' +
         '<label class="input-group"><span>Map Zoom</span><select data-world-setting="zoom">' + zoomOptions + "</select></label>" +
         '<label class="input-group"><span>Walk Speed</span><select data-world-setting="walkSpeed">' + walkSpeedOptions + "</select></label>" +
-        '<label class="input-group"><span>Wild Monster Max Level</span><input type="number" min="1" max="' + crestLevelCap + '" data-world-setting="wildMonsterMaxLevel" value="' + Number(getConfiguredWildMonsterMaxLevel(state)) + '" /></label>' +
+        '<label class="input-group"><span>Wild Monster Min Level</span><input type="number" min="1" max="' + crestLevelCap + '" data-world-setting="wildMonsterMinLevel" value="' + Number(getConfiguredWildMonsterLevelRange(state).min) + '" /></label>' +
+        '<label class="input-group"><span>Wild Monster Max Level</span><input type="number" min="1" max="' + crestLevelCap + '" data-world-setting="wildMonsterMaxLevel" value="' + Number(getConfiguredWildMonsterLevelRange(state).max) + '" /></label>' +
         '<p class="dev-helper-text">With ' + crestCount + ' crest' + (crestCount === 1 ? '' : 's') + ', your current wild/arena refight level cap is <strong>' + crestLevelCap + '</strong>.</p>' +
         '</div></section>',
         '<section class="panel-block"><div class="section-heading"><h3>Party Settings</h3></div><div class="form-grid">' +
@@ -11043,7 +11255,7 @@
       '<section class="play-area">',
       '<div class="map-panel"><div class="world-stage"><canvas class="world-canvas" width="' + VIEWPORT.width + '" height="' + VIEWPORT.height + '"></canvas><section class="mobile-controls" aria-label="Gameplay controls"><section class="touch-controls touch-controls-mobile"><button data-touch="ArrowUp" aria-label="Move up">\u25b2</button><div><button data-touch="ArrowLeft" aria-label="Move left">\u25c0</button><button data-touch="ArrowDown" aria-label="Move down">\u25bc</button><button data-touch="ArrowRight" aria-label="Move right">\u25b6</button></div></section></section>' + promptMarkup + '</div>' + renderWorldInfoBar(state) + '</div>',
       "</section>",
-      '<nav class="world-menu-bar"><button class="secondary-button" type="button" data-open-panel="map">Map</button><button class="secondary-button" type="button" data-open-panel="character">Character</button><button class="secondary-button" type="button" data-open-panel="inventory">Inventory</button><button class="secondary-button" type="button" data-open-panel="monsters">Monsters</button><button class="secondary-button" type="button" data-open-panel="registry">Registry</button><button class="secondary-button" type="button" data-open-panel="quests">Quests</button></nav>',
+      '<nav class="world-menu-bar"><button class="secondary-button" type="button" data-open-panel="map">Map</button><button class="secondary-button" type="button" data-open-panel="character">Character</button><button class="secondary-button" type="button" data-open-panel="inventory">Inventory</button><button class="secondary-button" type="button" data-open-panel="monsters">Monsters</button><button class="secondary-button" type="button" data-open-panel="registry">Notebook</button><button class="secondary-button" type="button" data-open-panel="quests">Quests</button></nav>',
       renderWorldPanelModal(state, content),
       renderInteractionModal(state, content),
       renderBattleModal(state, content),
@@ -11141,6 +11353,11 @@
     root.querySelectorAll('[data-action="select-character-crest"]').forEach(function (button) {
       button.addEventListener("click", function () {
         app.selectCharacterCrest(button.getAttribute("data-crest-id") || "");
+      });
+    });
+    root.querySelectorAll('[data-action="select-notebook-tab"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.selectNotebookTab(button.getAttribute("data-notebook-tab") || "monsters");
       });
     });
 
@@ -12573,6 +12790,9 @@
 
         const ui = ensureWorldUiState(this.state);
         ui.activePanel = panel;
+        if (panel === "registry") {
+          ui.selectedNotebookTab = "monsters";
+        }
         this.render();
       },
       closeWorldPanel: function () {
@@ -12590,6 +12810,17 @@
 
         const ui = ensureWorldUiState(this.state);
         ui.selectedCharacterCrestId = String(crestId || "");
+        this.render();
+      },
+      selectNotebookTab: function (tabId) {
+        if (this.state.screen !== "world") {
+          return;
+        }
+
+        const ui = ensureWorldUiState(this.state);
+        ui.selectedNotebookTab = ["monsters", "crests", "player-skills"].includes(tabId)
+          ? tabId
+          : "monsters";
         this.render();
       },
       toggleEncounterPreviewExpanded: function () {
@@ -12610,10 +12841,13 @@
           this.state.settings[key] = Math.max(0, Number(rawValue || 0));
         } else if (key === "zoom" || key === "walkSpeed" || key === "partySize" || key === "arenaLeaderPartySize" || key === "trainerRefightPartySize") {
           this.state.settings[key] = Number(rawValue || 0);
-        } else if (key === "wildMonsterMaxLevel") {
+        } else if (key === "wildMonsterMinLevel" || key === "wildMonsterMaxLevel") {
           this.state.settings[key] = Math.max(1, Math.min(getCurrentPlayerLevelCap(this.state), Number(rawValue || 1)));
+          const wildRange = getConfiguredWildMonsterLevelRange(this.state);
           this.state.world.wildMonsters = createWildMonstersForMap(this.content, this.state.world.currentMapId, this.state.world.position, {
-            maxLevelCap: getConfiguredWildMonsterMaxLevel(this.state),
+            minLevelOverride: wildRange.min,
+            maxLevelOverride: wildRange.max,
+            maxLevelCap: wildRange.max,
           });
         } else if (key === "arenaLeaderMinLevel" || key === "arenaLeaderMaxLevel") {
           const crestCap = getCurrentPlayerLevelCap(this.state);
@@ -12688,7 +12922,7 @@
 
         ensureMonsterStatPointState(monster, species);
         const currentPoints = Math.max(0, Number(monster.statPoints?.[statKey] || 0));
-        if (Number(delta) > 0 && getAvailableMonsterStatPoints(monster) <= 0) {
+        if (Number(delta) > 0 && getAvailableMonsterStatPoints(monster, this.state) <= 0) {
           return;
         }
         if (Number(delta) < 0 && currentPoints <= 0) {

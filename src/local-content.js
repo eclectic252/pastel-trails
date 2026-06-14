@@ -22,32 +22,37 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       "crestLevelCaps": [
         {
           "crestMin": 0,
-          "crestMax": 2,
+          "crestMax": 1,
           "levelCap": 5
         },
         {
-          "crestMin": 3,
-          "crestMax": 4,
+          "crestMin": 2,
+          "crestMax": 3,
           "levelCap": 10
         },
         {
-          "crestMin": 5,
-          "crestMax": 6,
+          "crestMin": 4,
+          "crestMax": 5,
           "levelCap": 15
         },
         {
-          "crestMin": 7,
-          "crestMax": 100,
+          "crestMin": 6,
+          "crestMax": 7,
           "levelCap": 20
+        },
+        {
+          "crestMin": 8,
+          "crestMax": 9,
+          "levelCap": 25
         }
       ],
       "battleModel": {
         "skillAttackScale": 0.6,
         "skillDefenseScale": 0.35,
         "basicDefenseDivisor": 2,
-        "randomVarianceMax": 3,
+        "randomVarianceMax": 4,
         "affinityDamageBonusPerPointPercent": 1,
-        "elementalAdvantageMultiplier": 2,
+        "elementalAdvantageMultiplier": 1.5,
         "elementalResistanceMultiplier": 0.5,
         "elementalAdvantagePointPercent": 0,
         "elementalResistancePointPercent": 0,
@@ -2967,6 +2972,102 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               "frameDurationMs": 180
             },
             "label": "Fire"
+          },
+          {
+            "id": "default-pink",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Torvyn/torvyn_pink.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180
+            },
+            "label": "Pink"
+          },
+          {
+            "id": "default-dark",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Torvyn/torvyn_dark.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180
+            },
+            "label": "Dark"
+          },
+          {
+            "id": "default-galaxy",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Torvyn/torvyn_galaxy.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180
+            },
+            "label": "Galaxy"
+          },
+          {
+            "id": "default-lavender",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Torvyn/torvyn_lavender.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180
+            },
+            "label": "Lavender"
           }
         ]
       }

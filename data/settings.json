@@ -21,32 +21,37 @@
     "crestLevelCaps": [
       {
         "crestMin": 0,
-        "crestMax": 2,
+        "crestMax": 1,
         "levelCap": 5
       },
       {
-        "crestMin": 3,
-        "crestMax": 4,
+        "crestMin": 2,
+        "crestMax": 3,
         "levelCap": 10
       },
       {
-        "crestMin": 5,
-        "crestMax": 6,
+        "crestMin": 4,
+        "crestMax": 5,
         "levelCap": 15
       },
       {
-        "crestMin": 7,
-        "crestMax": 100,
+        "crestMin": 6,
+        "crestMax": 7,
         "levelCap": 20
+      },
+      {
+        "crestMin": 8,
+        "crestMax": 9,
+        "levelCap": 25
       }
     ],
     "battleModel": {
       "skillAttackScale": 0.6,
       "skillDefenseScale": 0.35,
       "basicDefenseDivisor": 2,
-      "randomVarianceMax": 3,
+      "randomVarianceMax": 4,
       "affinityDamageBonusPerPointPercent": 1,
-      "elementalAdvantageMultiplier": 2,
+      "elementalAdvantageMultiplier": 1.5,
       "elementalResistanceMultiplier": 0.5,
       "elementalAdvantagePointPercent": 0,
       "elementalResistancePointPercent": 0,

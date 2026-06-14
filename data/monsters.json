@@ -2145,6 +2145,102 @@
             "frameDurationMs": 180
           },
           "label": "Fire"
+        },
+        {
+          "id": "default-pink",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Torvyn/torvyn_pink.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "Pink"
+        },
+        {
+          "id": "default-dark",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Torvyn/torvyn_dark.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "Dark"
+        },
+        {
+          "id": "default-galaxy",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Torvyn/torvyn_galaxy.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "Galaxy"
+        },
+        {
+          "id": "default-lavender",
+          "sprite": "assets/monsters/new-monster.png",
+          "portrait": {
+            "imagePath": "assets/Monsters/Torvyn/torvyn_lavender.png",
+            "sheetId": "",
+            "row": 0,
+            "frame": 0
+          },
+          "overworld": {
+            "displayMode": "",
+            "sheetId": "",
+            "row": 0,
+            "idleFrame": 0,
+            "walkFrames": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "frameDurationMs": 180
+          },
+          "label": "Lavender"
         }
       ]
     }

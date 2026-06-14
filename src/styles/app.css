@@ -2630,6 +2630,129 @@ button {
   margin-top: 0;
 }
 
+.notebook-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.notebook-tab-bar {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.notebook-tab-button {
+  min-width: 0;
+}
+
+.notebook-tab-button-active {
+  background: rgba(240, 205, 214, 0.85);
+  border-color: rgba(201, 147, 163, 0.55);
+  color: #6b4a56;
+}
+
+.notebook-tab-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  min-height: 0;
+}
+
+.notebook-summary-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.65rem;
+}
+
+.notebook-summary-card {
+  border: 1px solid rgba(32, 56, 82, 0.12);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 0.75rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.notebook-summary-card span {
+  color: #66758c;
+  font-size: 0.88rem;
+}
+
+.notebook-summary-card strong {
+  font-size: 1.15rem;
+  color: var(--text);
+}
+
+.notebook-section-card {
+  margin: 0;
+}
+
+.notebook-helper-copy {
+  margin: 0 0 0.8rem;
+  color: #66758c;
+}
+
+.notebook-skill-grid {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.notebook-skill-card {
+  border: 1px solid rgba(32, 56, 82, 0.12);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.68);
+  padding: 0.8rem 0.9rem;
+}
+
+.notebook-skill-card-active {
+  border-color: rgba(199, 152, 115, 0.38);
+  box-shadow: 0 8px 18px rgba(161, 132, 93, 0.08);
+}
+
+.notebook-skill-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.notebook-skill-card-header h4,
+.notebook-skill-card-header p,
+.notebook-skill-copy,
+.notebook-skill-progress {
+  margin: 0;
+}
+
+.notebook-skill-card-header p,
+.notebook-skill-copy {
+  color: #66758c;
+}
+
+.notebook-skill-level {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(233, 224, 245, 0.8);
+  color: #62577e;
+  font-size: 0.84rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.notebook-skill-copy {
+  margin-top: 0.45rem;
+  line-height: 1.45;
+}
+
+.notebook-skill-progress {
+  margin-top: 0.55rem;
+  display: grid;
+  gap: 0.3rem;
+}
+
 .registry-grid {
   display: grid;
   gap: 0.65rem;
@@ -2782,6 +2905,11 @@ button {
 }
 
 @media (max-width: 780px) {
+  .notebook-tab-bar {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
   .registry-card-hero {
     grid-template-columns: 1fr;
     gap: 0.6rem;
