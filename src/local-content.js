@@ -148,9 +148,10 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
   "items": {
     "items": [
       {
-        "id": "basic-orb",
-        "name": "Basic Orb",
+        "id": "bait",
+        "name": "Bait",
         "type": "catch",
+        "price": 25,
         "effect": {
           "catchModifier": 1
         }
@@ -159,6 +160,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "id": "small-tonic",
         "name": "Small Tonic",
         "type": "heal",
+        "price": 40,
         "effect": {
           "healAmount": 20
         }
@@ -73419,6 +73421,18 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "x": 2752,
             "y": 64
           }
+        },
+        {
+          "id": "lily-to-route5",
+          "x": 3712,
+          "y": 128,
+          "width": 128,
+          "height": 512,
+          "targetMapId": "route-5",
+          "targetSpawn": {
+            "x": 320,
+            "y": 5184
+          }
         }
       ],
       "interactions": [
@@ -73449,6 +73463,21 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "data": {
             "shopId": "",
             "arenaId": "Lily-Harbor-Arena",
+            "crestId": ""
+          }
+        },
+        {
+          "id": "interaction-3",
+          "type": "shop",
+          "x": 896,
+          "y": 896,
+          "width": 256,
+          "height": 128,
+          "label": "New Interaction",
+          "text": "Add interaction text here.",
+          "data": {
+            "shopId": "",
+            "arenaId": "",
             "crestId": ""
           }
         }
@@ -73622,8 +73651,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "height": 256,
           "targetMapId": "route-3",
           "targetSpawn": {
-            "x": 192,
-            "y": 4416
+            "x": 704,
+            "y": 4288
           }
         }
       ],

@@ -1,9 +1,10 @@
 {
   "items": [
     {
-      "id": "basic-orb",
-      "name": "Basic Orb",
+      "id": "bait",
+      "name": "Bait",
       "type": "catch",
+      "price": 25,
       "effect": {
         "catchModifier": 1
       }
@@ -12,6 +13,7 @@
       "id": "small-tonic",
       "name": "Small Tonic",
       "type": "heal",
+      "price": 40,
       "effect": {
         "healAmount": 20
       }

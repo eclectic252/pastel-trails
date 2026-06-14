@@ -170,7 +170,10 @@
       maxSaveSlots: 5,
     },
     themes: { themes: [{ id: "classic", label: "Classic" }] },
-    items: { items: [{ id: "basic-orb", name: "Basic Orb", type: "catch", effect: { catchModifier: 1 } }] },
+    items: { items: [
+      { id: "bait", name: "Bait", type: "catch", price: 25, effect: { catchModifier: 1 } },
+      { id: "small-tonic", name: "Small Tonic", type: "heal", price: 40, effect: { healAmount: 20 } },
+    ] },
     skills: {
       skills: [
         {
@@ -1118,6 +1121,23 @@
     }) || "Neutral";
   }
 
+  function ensureItemCatalog(content) {
+    if (!content.items || !Array.isArray(content.items.items)) {
+      content.items = JSON.parse(JSON.stringify(fallbackContent.items));
+    }
+    return content.items.items;
+  }
+
+  function getItemDefinition(content, itemId) {
+    return ensureItemCatalog(content).find(function (item) {
+      return item.id === itemId;
+    }) || null;
+  }
+
+  function getItemDisplayName(content, itemId) {
+    return getItemDefinition(content, itemId)?.name || itemId;
+  }
+
   function getSkillElementClassName(value) {
     return "skill-element-" + normalizeSkillElement(value).toLowerCase();
   }
@@ -1343,11 +1363,23 @@
     return Math.max(0, getVisitedTownCount(state));
   }
 
+  function getCaughtSpeciesCount(state) {
+    return Array.from(new Set(state?.registry?.caught || [])).length;
+  }
+
+  function getMonsterSpeciesCollectionBonusStatPoints(state) {
+    if (!state) {
+      return 0;
+    }
+    return Math.max(0, getCaughtSpeciesCount(state));
+  }
+
   function getMonsterStatPointBudget(monster, state) {
     return getTotalMonsterStatPointsForLevel(monster?.level || 1)
       + Math.max(0, Number(monster?.bonusStatPoints || 0))
       + getMonsterCrestBonusStatPoints(state)
-      + getMonsterTownBonusStatPoints(state);
+      + getMonsterTownBonusStatPoints(state)
+      + getMonsterSpeciesCollectionBonusStatPoints(state);
   }
 
   function getSpentMonsterStatPoints(monster) {
@@ -2720,7 +2752,8 @@
     const totalPoints = getMonsterStatPointBudget(monster, ACTIVE_APP?.state);
     const crestBonusPoints = getMonsterCrestBonusStatPoints(ACTIVE_APP?.state);
     const townBonusPoints = getMonsterTownBonusStatPoints(ACTIVE_APP?.state);
-    const passiveBonusPoints = crestBonusPoints + townBonusPoints;
+    const speciesBonusPoints = getMonsterSpeciesCollectionBonusStatPoints(ACTIVE_APP?.state);
+    const passiveBonusPoints = crestBonusPoints + townBonusPoints + speciesBonusPoints;
     const location = options?.collection === "bank" ? "Bank" : "Party";
     const controls = MONSTER_STAT_KEYS.map(function (stat) {
       const currentPoints = Math.max(0, Number(monster.statPoints?.[stat] || 0));
@@ -2742,7 +2775,7 @@
       '<section class="monster-moves-panel monster-affinity-panel">',
       '<div class="monster-affinity-panel-topline"><strong>Stats</strong><span>' + spentPoints + "/" + totalPoints + ' spent · ' + availablePoints + ' available</span></div>',
       '<div class="monster-affinity-grid">' + controls + "</div>",
-      '<p class="monster-moves-note">Base stats are this species at level 1. Each level grants 1 stat point to spend on Health, Attack, Defense, or Speed' + (passiveBonusPoints > 0 ? ", and passive bonuses add +" + passiveBonusPoints + " total point" + (passiveBonusPoints === 1 ? "" : "s") + " to every player monster (" + crestBonusPoints + " from crests, " + townBonusPoints + " from towns)." : ".") + "</p>",
+      '<p class="monster-moves-note">Base stats are this species at level 1. Each level grants 1 stat point to spend on Health, Attack, Defense, or Speed' + (passiveBonusPoints > 0 ? ", and passive bonuses add +" + passiveBonusPoints + " total point" + (passiveBonusPoints === 1 ? "" : "s") + " to every player monster (" + crestBonusPoints + " from crests, " + townBonusPoints + " from towns, " + speciesBonusPoints + " from species collected)." : ".") + "</p>",
       "</section>",
     ].join("");
   }
@@ -3167,8 +3200,10 @@
     const skills = ensureSkillCatalog(content);
     const crestBonusPoints = getMonsterCrestBonusStatPoints(state);
     const townBonusPoints = getMonsterTownBonusStatPoints(state);
-    const totalPassiveStatBonus = crestBonusPoints + townBonusPoints;
+    const speciesBonusPoints = getMonsterSpeciesCollectionBonusStatPoints(state);
+    const totalPassiveStatBonus = crestBonusPoints + townBonusPoints + speciesBonusPoints;
     const visitedTownCount = getVisitedTownCount(state);
+    const caughtSpeciesCount = getCaughtSpeciesCount(state);
     const activeSkillCount = skills.filter(function (skill) {
       return getPlayerSkillLevel(state, content, skill.id) > 0;
     }).length;
@@ -3205,6 +3240,7 @@
       '<section class="panel-block notebook-section-card"><div class="section-heading"><h3>Passive Bonuses</h3></div><ul class="compact-list">'
         + '<li><span>Each earned crest gives +1 extra stat point to every player monster.</span><strong>+' + crestBonusPoints + ' from ' + getCollectedCrestCount(state) + ' crest' + (getCollectedCrestCount(state) === 1 ? '' : 's') + '</strong></li>'
         + '<li><span>Each town visited gives +1 extra stat point to every player monster.</span><strong>+' + townBonusPoints + ' from ' + visitedTownCount + ' town' + (visitedTownCount === 1 ? '' : 's') + '</strong></li>'
+        + '<li><span>Each monster species collected gives +1 extra stat point to every player monster.</span><strong>+' + speciesBonusPoints + ' from ' + caughtSpeciesCount + ' species</strong></li>'
         + "</ul></section>",
       '<section class="panel-block notebook-section-card"><div class="section-heading"><h3>Move Skill Progression</h3></div>' + (!hasMeaningfulSkillProgress
         ? '<p class="notebook-helper-copy">No player skill progress yet. Skills will appear here as they unlock and level through battle use and victories.</p>'
@@ -4288,6 +4324,12 @@
     return range.min + Math.floor(Math.random() * (range.max - range.min + 1));
   }
 
+  function clampArenaAuthoredLevelToProgression(state, level, fallbackLevel) {
+    const crestCap = getCurrentPlayerLevelCap(state);
+    const resolvedLevel = Math.max(1, Number(level || fallbackLevel || 1));
+    return Math.min(resolvedLevel, crestCap);
+  }
+
   function buildArenaBattleRoster(state, content, arena) {
     ensureArenaPools(content);
     const progress = ensureArenaProgress(state);
@@ -4312,7 +4354,7 @@
         variantId: picked.variantId || "default",
         level: isRefight
           ? rollArenaLeaderLevel(refightRange, arena?.recommendedLevel || 5)
-          : Math.max(1, Number(arena?.recommendedLevel || picked.level || 5)),
+          : clampArenaAuthoredLevelToProgression(state, picked.level, arena?.recommendedLevel || 5),
       });
     }
 
@@ -4320,7 +4362,7 @@
       const nextMember = Object.assign({}, member);
       nextMember.level = isRefight
         ? rollArenaLeaderLevel(refightRange, member.level || arena?.recommendedLevel || 5)
-        : Math.max(1, Number(member.level || arena?.recommendedLevel || 5));
+        : clampArenaAuthoredLevelToProgression(state, member.level, arena?.recommendedLevel || 5);
       return nextMember;
     });
   }
@@ -4573,8 +4615,16 @@
       buildArenaInteractionState(state, content, interaction);
       return;
     } else if (interaction.type === "shop") {
-      text = text || "The shop interface is not built yet, but this is where it will open.";
+      text = text || "Welcome in. Pick up a few supplies before heading back out.";
       state.message = "Visited " + label + ".";
+      state.interaction = {
+        id: interaction.id,
+        type: interaction.type,
+        title: label,
+        text,
+        shopId: interaction.data?.shopId || "",
+      };
+      return;
     } else if (interaction.type === "door") {
       text = text || "This door does not lead anywhere yet.";
       state.message = "Examined " + label + ".";
@@ -4736,7 +4786,7 @@
       bank: [],
       registry: { seen: [starterSpecies.id], caught: [starterSpecies.id] },
       inventory: [
-        { itemId: "basic-orb", quantity: 5 },
+        { itemId: "bait", quantity: 5 },
         { itemId: "small-tonic", quantity: 2 },
       ],
       ui: {
@@ -5891,12 +5941,6 @@
 
       const enemy = state.battle.enemy;
       const enemySpecies = getSpecies(content, enemy.speciesId);
-      const enemyInstance = {
-        stats: enemy.stats,
-        currentHp: enemy.currentHp,
-        _battleTemp: enemy._battleTemp,
-      };
-
       if (step === "player") {
         const activePlayerMonster = state.party[state.battle.playerIndex];
         if (!activePlayerMonster || Number(activePlayerMonster.currentHp || 0) <= 0 || state.battle.mustSelectReplacement) {
@@ -5931,7 +5975,7 @@
 
         const skillDealsDamage = isDamagingBattleSkill(selectedSkill);
         const enemyHpBefore = Number(enemy.currentHp || 0);
-        const damage = calculateDamage(activePlayerMonster, enemyInstance, { skill: selectedSkill, battleModel });
+        const damage = calculateDamage(activePlayerMonster, enemy, { skill: selectedSkill, battleModel });
         let primaryMessage = "";
         if (skillDealsDamage) {
           enemy.currentHp = Math.max(0, enemy.currentHp - damage);
@@ -6075,11 +6119,11 @@
     const enemy = state.battle.enemy;
     const species = getSpecies(content, enemy.speciesId);
     const item = state.inventory.find(function (entry) {
-      return entry.itemId === "basic-orb" && entry.quantity > 0;
+      return entry.itemId === "bait" && entry.quantity > 0;
     });
 
     if (!item) {
-      addBattleLogEntry(state, "You have no Basic Orbs left.");
+      addBattleLogEntry(state, "You have no Bait left.");
       return;
     }
 
@@ -6124,11 +6168,11 @@
     const enemy = state.battle.enemy;
     const species = getSpecies(content, enemy.speciesId);
     const item = state.inventory.find(function (entry) {
-      return entry.itemId === "basic-orb" && entry.quantity > 0;
+      return entry.itemId === "bait" && entry.quantity > 0;
     });
 
     if (!item) {
-      addBattleLogEntry(state, "You have no Basic Orbs left to support a befriending attempt.");
+      addBattleLogEntry(state, "You have no Bait left to support a befriending attempt.");
       return;
     }
 
@@ -6163,6 +6207,27 @@
 
     addBattleLogEntry(state, species.name + " was not ready to befriend you yet.");
     resolveEnemyCounter(state, content);
+  }
+
+  function buyShopItem(state, content, itemId) {
+    if (state.screen !== "world" || !state.interaction || state.interaction.type !== "shop") {
+      return;
+    }
+
+    const item = getItemDefinition(content, itemId);
+    const price = Math.max(0, Number(item?.price || 0));
+    if (!item || price <= 0) {
+      state.message = "That shop item is not available right now.";
+      return;
+    }
+    if (Number(state.player?.money || 0) < price) {
+      state.message = "You do not have enough money for " + (item.name || item.id) + ".";
+      return;
+    }
+
+    state.player.money = Math.max(0, Number(state.player.money || 0) - price);
+    grantInventoryItem(state, item.id, 1);
+    state.message = "Bought 1 " + (item.name || item.id) + " for $" + price + ".";
   }
 
   function resolveEnemyCounter(state, content) {
@@ -7559,6 +7624,25 @@
     })?.quantity || 0);
   }
 
+  function grantInventoryItem(state, itemId, amount) {
+    if (!itemId || Number(amount || 0) <= 0) {
+      return;
+    }
+
+    const existing = state.inventory.find(function (entry) {
+      return entry.itemId === itemId;
+    });
+    if (existing) {
+      existing.quantity = Math.max(0, Number(existing.quantity || 0) + Number(amount || 0));
+      return;
+    }
+
+    state.inventory.push({
+      itemId,
+      quantity: Math.max(0, Number(amount || 0)),
+    });
+  }
+
   function renderBattleMonsterHud(content, monster, options) {
     const species = getSpecies(content, monster.speciesId);
     const variant = getSpeciesVariant(species, monster.variantId || "default");
@@ -7944,7 +8028,7 @@
     const fightType = isTrainerBattle ? (state.battle.opponentTitle || "Arena Leader") : "Wild";
     const locationLabel = content.mapMetadata[state.world.currentMapId]?.displayName || state.world.currentMapId;
     const tonicCount = getInventoryQuantity(state, "small-tonic");
-    const orbCount = getInventoryQuantity(state, "basic-orb");
+    const baitCount = getInventoryQuantity(state, "bait");
     const hasBench = state.party.some(function (monster, index) {
       return index !== state.battle.playerIndex && Number(monster?.currentHp || 0) > 0;
     });
@@ -8041,7 +8125,7 @@
         '<button type="button" class="battle-action-card battle-action-card-root' + (menu === "fight" ? " battle-action-card-selected" : "") + '" data-battle-action="open-fight-menu"' + (activeSkills.length ? "" : " disabled") + '><strong>Fight</strong><span>Skills</span></button>' +
         '<button type="button" class="battle-action-card battle-action-card-root' + (menu === "switch" ? " battle-action-card-selected" : "") + '" data-battle-action="open-switch-menu"' + (!hasBench ? " disabled" : "") + '><strong>Switch</strong><span>Party</span></button>' +
         '<button type="button" class="battle-action-card battle-action-card-root' + (menu === "item" ? " battle-action-card-selected" : "") + '" data-battle-action="open-item-menu"><strong>Item</strong><span>Support</span></button>' +
-        '<button type="button" class="battle-action-card battle-action-card-root' + (menu === "befriend" ? " battle-action-card-selected" : "") + '" data-battle-action="befriend"' + (isTrainerBattle || orbCount <= 0 ? " disabled" : "") + '><strong>Befriend</strong><span>Attempt</span></button>' +
+        '<button type="button" class="battle-action-card battle-action-card-root' + (menu === "befriend" ? " battle-action-card-selected" : "") + '" data-battle-action="befriend"' + (isTrainerBattle || baitCount <= 0 ? " disabled" : "") + '><strong>Befriend</strong><span>Attempt</span></button>' +
         '<button type="button" class="battle-action-card battle-action-card-root' + (menu === "run" ? " battle-action-card-selected" : "") + '" data-battle-action="run"' + (isTrainerBattle ? " disabled" : "") + '><strong>Run</strong><span>Leave</span></button>' +
       "</div>";
     }
@@ -8149,6 +8233,33 @@
         confirmActions,
         "</section>",
         "</div>",
+      ].join("");
+    }
+
+    if (state.interaction.type === "shop") {
+      const shopItems = ensureItemCatalog(content).filter(function (item) {
+        return ["bait", "small-tonic"].includes(item.id);
+      });
+      const shopRows = shopItems.map(function (item) {
+        const price = Math.max(0, Number(item.price || 0));
+        const owned = getInventoryQuantity(state, item.id);
+        return '<li><span><strong>' + escapeHtml(item.name || item.id) + '</strong><br><small>' + escapeHtml(item.id === "bait" ? "Used for catch and befriend attempts in wild battles." : "Recover 20 HP in battle.") + '</small></span><div class="title-actions"><strong>$' + price + '</strong><button class="secondary-button" type="button" data-action="buy-shop-item" data-shop-item-id="' + escapeHtml(item.id) + '"' + (Number(state.player?.money || 0) < price ? " disabled" : "") + '>Buy</button></div></li>';
+      }).join("");
+
+      return [
+        '<div class="battle-overlay">',
+        '<section class="battle-modal world-panel-modal">',
+        '<div class="battle-headings">',
+        '<div><span class="eyebrow">Shop</span><h2>' + escapeHtml(state.interaction.title) + '</h2><p>$' + Number(state.player?.money || 0) + ' on hand</p></div>',
+        "</div>",
+        '<div class="world-panel-body">' +
+          '<div class="battle-log"><p>' + escapeHtml(state.interaction.text || "Welcome in.") + '</p><p>Bait lets you catch or befriend wild monsters.</p></div>' +
+          '<div class="panel-block"><ul class="compact-list">' + (shopRows || "<li><span>No shop items configured yet.</span></li>") + '</ul></div>' +
+          '<div class="panel-block"><p><strong>Bag:</strong> ' + getInventoryQuantity(state, "bait") + ' Bait · ' + getInventoryQuantity(state, "small-tonic") + ' Small Tonics</p></div>' +
+        '</div>' +
+        '<div class="battle-actions"><button class="primary-button" type="button" data-action="close-interaction">Close</button></div>' +
+        '</section>',
+        '</div>',
       ].join("");
     }
 
@@ -8315,7 +8426,7 @@
       ].join("");
     } else if (panel === "inventory") {
       panelBody = '<ul class="compact-list">' + state.inventory.map(function (item) {
-        return "<li><span>" + escapeHtml(item.itemId) + "</span><strong>x" + Number(item.quantity) + "</strong></li>";
+        return "<li><span>" + escapeHtml(getItemDisplayName(content, item.itemId)) + "</span><strong>x" + Number(item.quantity) + "</strong></li>";
       }).join("") + "</ul>";
     } else if (panel === "monsters") {
       const movesTarget = ui.monsterMovesTarget;
@@ -11338,6 +11449,11 @@
     root.querySelector('[data-action="confirm-healing-center"]')?.addEventListener("click", function () {
       app.confirmHealingCenter();
     });
+    root.querySelectorAll('[data-action="buy-shop-item"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.buyShopItem(button.getAttribute("data-shop-item-id") || "");
+      });
+    });
     root.querySelector('[data-action="start-arena-battle"]')?.addEventListener("click", function () {
       app.startArenaBattleFromInteraction();
     });
@@ -13250,6 +13366,14 @@
         }
 
         performHealingCenterService(this.state, this.content, interaction);
+        this.render();
+      },
+      buyShopItem: function (itemId) {
+        if (this.state.screen !== "world" || !this.state.interaction || this.state.interaction.type !== "shop") {
+          return;
+        }
+
+        buyShopItem(this.state, this.content, itemId);
         this.render();
       },
       updateNewGameSetup: function (action, value) {
