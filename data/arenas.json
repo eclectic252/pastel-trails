@@ -31,7 +31,8 @@
           "variantId": "Lilac"
         }
       ],
-      "crestImagePath": "assets/Crests/crest1.png"
+      "crestImagePath": "assets/Crests/crest1.png",
+      "leaderSheetId": "heather-walk"
     },
     {
       "id": "Camelia-Ranch-Arena",
@@ -174,13 +175,14 @@
           "speciesId": "pawlit",
           "variantId": "default-grass"
         }
-      ]
+      ],
+      "leaderSheetId": "assets-characters-boardwalk-girl-sprite-gray-pants-walksheet"
     },
     {
       "id": "arena-6",
       "name": "Bougainvillea Arena",
-      "leaderName": "Leader Name",
-      "leaderTitle": "Elizabeth",
+      "leaderName": "Elizabeth",
+      "leaderTitle": "Leader",
       "crestId": "crest-6",
       "crestName": "Bougainvillea Crest",
       "crestImagePath": "",
@@ -249,7 +251,8 @@
           "speciesId": "Owlet",
           "variantId": "owlet-snow"
         }
-      ]
+      ],
+      "leaderSheetId": "frostbite"
     },
     {
       "id": "arena-8",
@@ -286,7 +289,8 @@
           "speciesId": "pawlit",
           "variantId": "default-lavvender"
         }
-      ]
+      ],
+      "leaderSheetId": "blonde-braided-adventurer-walksheet-v3-fullsize-transparent"
     },
     {
       "id": "arena-9",
@@ -304,8 +308,8 @@
       "mapId": "",
       "team": [
         {
-          "speciesId": "monster-8",
-          "variantId": "default-electric",
+          "speciesId": "monster-10",
+          "variantId": "varkaw-electric",
           "level": 5
         },
         {
@@ -322,13 +326,10 @@
       "pool": [
         {
           "speciesId": "monster-8",
-          "variantId": "default-dark"
-        },
-        {
-          "speciesId": "Kelpar",
-          "variantId": "kelpar-dark"
+          "variantId": "default-electric"
         }
-      ]
+      ],
+      "leaderSheetId": "assets-characters-boardwalk-girl-sprite-tony"
     }
   ]
 }

@@ -43,7 +43,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "levelCap": 15,
           "arenaMinLevel": 11,
           "arenaMaxLevel": 15,
-          "leaderBonusStatPoints": 3
+          "leaderBonusStatPoints": 4
         },
         {
           "crestMin": 6,
@@ -51,7 +51,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "levelCap": 20,
           "arenaMinLevel": 16,
           "arenaMaxLevel": 20,
-          "leaderBonusStatPoints": 4
+          "leaderBonusStatPoints": 5
         },
         {
           "crestMin": 8,
@@ -59,7 +59,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "levelCap": 25,
           "arenaMinLevel": 21,
           "arenaMaxLevel": 25,
-          "leaderBonusStatPoints": 5
+          "leaderBonusStatPoints": 7
         }
       ],
       "battleModel": {
@@ -3365,6 +3365,139 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "label": "Lavender"
           }
         ]
+      },
+      {
+        "id": "monster-10",
+        "name": "Varkaw",
+        "baseStats": {
+          "hp": 10,
+          "attack": 5,
+          "defense": 5,
+          "speed": 5
+        },
+        "growth": "medium",
+        "overworldDisplayMode": "portrait",
+        "skills": [
+          "basic-attack",
+          "skill-2",
+          "skill-3",
+          "skill-4",
+          "skill-5",
+          "skill-6",
+          "skill-7",
+          "skill-8",
+          "skill-9",
+          "skill-10",
+          "skill-11",
+          "skill-12",
+          "skill-13",
+          "skill-14",
+          "skill-15",
+          "skill-16",
+          "skill-17",
+          "skill-18",
+          "skill-19",
+          "skill-20",
+          "skill-21",
+          "skill-22"
+        ],
+        "variants": [
+          {
+            "id": "varkaw-default",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Varkaw/varkaw_default.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180
+            }
+          },
+          {
+            "id": "varkaw-snow",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Varkaw/varkaw_snow.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180
+            },
+            "label": "Snow"
+          },
+          {
+            "id": "varkaw-grass",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Varkaw/varkaw_grass.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180
+            },
+            "label": "Grass"
+          },
+          {
+            "id": "varkaw-electric",
+            "sprite": "assets/monsters/new-monster.png",
+            "portrait": {
+              "imagePath": "assets/Monsters/Varkaw/varkaw_electric.png",
+              "sheetId": "",
+              "row": 0,
+              "frame": 0
+            },
+            "overworld": {
+              "displayMode": "",
+              "sheetId": "",
+              "row": 0,
+              "idleFrame": 0,
+              "walkFrames": [
+                0,
+                1,
+                2,
+                3
+              ],
+              "frameDurationMs": 180
+            },
+            "label": "Electric"
+          }
+        ]
       }
     ]
   },
@@ -3680,7 +3813,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "variantId": "Lilac"
           }
         ],
-        "crestImagePath": "assets/Crests/crest1.png"
+        "crestImagePath": "assets/Crests/crest1.png",
+        "leaderSheetId": "heather-walk"
       },
       {
         "id": "Camelia-Ranch-Arena",
@@ -3823,13 +3957,14 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "speciesId": "pawlit",
             "variantId": "default-grass"
           }
-        ]
+        ],
+        "leaderSheetId": "assets-characters-boardwalk-girl-sprite-gray-pants-walksheet"
       },
       {
         "id": "arena-6",
         "name": "Bougainvillea Arena",
-        "leaderName": "Leader Name",
-        "leaderTitle": "Elizabeth",
+        "leaderName": "Elizabeth",
+        "leaderTitle": "Leader",
         "crestId": "crest-6",
         "crestName": "Bougainvillea Crest",
         "crestImagePath": "",
@@ -3898,7 +4033,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "speciesId": "Owlet",
             "variantId": "owlet-snow"
           }
-        ]
+        ],
+        "leaderSheetId": "frostbite"
       },
       {
         "id": "arena-8",
@@ -3935,7 +4071,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "speciesId": "pawlit",
             "variantId": "default-lavvender"
           }
-        ]
+        ],
+        "leaderSheetId": "blonde-braided-adventurer-walksheet-v3-fullsize-transparent"
       },
       {
         "id": "arena-9",
@@ -3953,8 +4090,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "mapId": "",
         "team": [
           {
-            "speciesId": "monster-8",
-            "variantId": "default-electric",
+            "speciesId": "monster-10",
+            "variantId": "varkaw-electric",
             "level": 5
           },
           {
@@ -3971,13 +4108,10 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "pool": [
           {
             "speciesId": "monster-8",
-            "variantId": "default-dark"
-          },
-          {
-            "speciesId": "Kelpar",
-            "variantId": "kelpar-dark"
+            "variantId": "default-electric"
           }
-        ]
+        ],
+        "leaderSheetId": "assets-characters-boardwalk-girl-sprite-tony"
       }
     ]
   },
@@ -77628,7 +77762,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         },
         {
           "id": "npc-2",
-          "type": "dialogue",
+          "type": "trainer",
           "x": 1728,
           "y": 448,
           "label": "Equestrian Sasha",
@@ -78362,9 +78496,9 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         {
           "id": "Sunflower-arena",
           "type": "arena",
-          "x": 0,
-          "y": 0,
-          "width": 128,
+          "x": 1024,
+          "y": 640,
+          "width": 256,
           "height": 128,
           "label": "Sunflower Coast Arena",
           "text": "Add interaction text here.",

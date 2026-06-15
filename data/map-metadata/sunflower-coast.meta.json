@@ -52,9 +52,9 @@
     {
       "id": "Sunflower-arena",
       "type": "arena",
-      "x": 0,
-      "y": 0,
-      "width": 128,
+      "x": 1024,
+      "y": 640,
+      "width": 256,
       "height": 128,
       "label": "Sunflower Coast Arena",
       "text": "Add interaction text here.",

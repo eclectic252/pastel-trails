@@ -42,7 +42,7 @@
         "levelCap": 15,
         "arenaMinLevel": 11,
         "arenaMaxLevel": 15,
-        "leaderBonusStatPoints": 3
+        "leaderBonusStatPoints": 4
       },
       {
         "crestMin": 6,
@@ -50,7 +50,7 @@
         "levelCap": 20,
         "arenaMinLevel": 16,
         "arenaMaxLevel": 20,
-        "leaderBonusStatPoints": 4
+        "leaderBonusStatPoints": 5
       },
       {
         "crestMin": 8,
@@ -58,7 +58,7 @@
         "levelCap": 25,
         "arenaMinLevel": 21,
         "arenaMaxLevel": 25,
-        "leaderBonusStatPoints": 5
+        "leaderBonusStatPoints": 7
       }
     ],
     "battleModel": {

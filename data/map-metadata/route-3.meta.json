@@ -300,7 +300,7 @@
     },
     {
       "id": "npc-2",
-      "type": "dialogue",
+      "type": "trainer",
       "x": 1728,
       "y": 448,
       "label": "Equestrian Sasha",

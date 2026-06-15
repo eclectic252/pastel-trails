@@ -7,6 +7,7 @@
   const TOUCH_KEYS = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"];
   const VIEWPORT = { width: 960, height: 640 };
   const ELEMENTAL_AFFINITIES = ["Air", "Fire", "Earth", "Water", "Light", "Dark"];
+  const MAX_MONSTER_ELEMENTAL_AFFINITIES = 2;
   const SKILL_ELEMENTS = ["Neutral"].concat(ELEMENTAL_AFFINITIES);
   const BATTLE_MODIFIER_STATS = ["attack", "defense", "speed", "accuracy"];
   const MONSTER_STAT_KEYS = ["hp", "attack", "defense", "speed"];
@@ -1023,6 +1024,39 @@
     return 1 + Math.floor(resolvedLevel / 4);
   }
 
+  function getElementalAffinityPointValue(monster, element) {
+    return Math.max(0, Number(monster?.elementalAffinityPoints?.[element] || 0));
+  }
+
+  function getAllowedElementalAffinities(monster) {
+    const primaryElement = ELEMENTAL_AFFINITIES.includes(monster?.primaryElementalAffinity)
+      ? monster.primaryElementalAffinity
+      : "";
+    const positiveElements = ELEMENTAL_AFFINITIES.filter(function (element) {
+      return getElementalAffinityPointValue(monster, element) > 0;
+    }).sort(function (left, right) {
+      const pointDelta = getElementalAffinityPointValue(monster, right) - getElementalAffinityPointValue(monster, left);
+      if (pointDelta !== 0) {
+        return pointDelta;
+      }
+      return ELEMENTAL_AFFINITIES.indexOf(left) - ELEMENTAL_AFFINITIES.indexOf(right);
+    });
+    const allowed = [];
+
+    if (primaryElement && getElementalAffinityPointValue(monster, primaryElement) > 0) {
+      allowed.push(primaryElement);
+    }
+
+    positiveElements.forEach(function (element) {
+      if (allowed.length >= MAX_MONSTER_ELEMENTAL_AFFINITIES || allowed.includes(element)) {
+        return;
+      }
+      allowed.push(element);
+    });
+
+    return allowed.slice(0, MAX_MONSTER_ELEMENTAL_AFFINITIES);
+  }
+
   function ensureElementalAffinityState(monster, options) {
     if (!monster || typeof monster !== "object") {
       return null;
@@ -1038,6 +1072,24 @@
     });
     monster.primaryElementalAffinity = primaryElement;
     monster.elementalAffinityPoints = points;
+    const allowed = getAllowedElementalAffinities(monster);
+    if (allowed.length) {
+      const allowedSet = new Set(allowed);
+      const fallback = allowed[0];
+      let overflow = 0;
+      ELEMENTAL_AFFINITIES.forEach(function (element) {
+        if (!allowedSet.has(element)) {
+          overflow += points[element];
+          points[element] = 0;
+        }
+      });
+      if (overflow > 0 && fallback) {
+        points[fallback] += overflow;
+      }
+      if (getElementalAffinityPointValue(monster, monster.primaryElementalAffinity) <= 0 && fallback) {
+        monster.primaryElementalAffinity = fallback;
+      }
+    }
     return monster;
   }
 
@@ -1057,6 +1109,13 @@
     const totalPoints = getTotalElementalAffinityPointsForLevel(level);
     const resolvedPrimary = ELEMENTAL_AFFINITIES.includes(primaryElement) ? primaryElement : pickRandomElementalAffinity();
     const points = createEmptyElementalPointMap();
+    const secondaryPool = ELEMENTAL_AFFINITIES.filter(function (element) {
+      return element !== resolvedPrimary;
+    });
+    const resolvedSecondary = options?.randomize
+      ? (secondaryPool[Math.floor(Math.random() * secondaryPool.length)] || resolvedPrimary)
+      : resolvedPrimary;
+    const allowedElements = Array.from(new Set([resolvedPrimary, resolvedSecondary])).slice(0, MAX_MONSTER_ELEMENTAL_AFFINITIES);
 
     if (totalPoints > 0) {
       points[resolvedPrimary] += 1;
@@ -1070,7 +1129,7 @@
           resolvedPrimary,
           resolvedPrimary,
           resolvedPrimary,
-        ].concat(ELEMENTAL_AFFINITIES);
+        ].concat(allowedElements);
         pickedElement = weightedPool[Math.floor(Math.random() * weightedPool.length)] || resolvedPrimary;
       }
       points[pickedElement] += 1;
@@ -1101,7 +1160,7 @@
     ensureElementalAffinityState(monster);
     return ELEMENTAL_AFFINITIES.filter(function (element) {
       return Number(monster.elementalAffinityPoints?.[element] || 0) > 0;
-    });
+    }).slice(0, MAX_MONSTER_ELEMENTAL_AFFINITIES);
   }
 
   function getMonsterAffinitySummaryLabel(monster) {
@@ -2167,6 +2226,26 @@
     });
   }
 
+  function queueTrainerBattleConclusionAnimation(state) {
+    if (!state?.battle || state.battle.type !== "trainer" || state.battle.trainerOutroQueued) {
+      return;
+    }
+    if (!getBattleLeaderSheetId(state.battle)) {
+      return;
+    }
+
+    const animation = ensureBattleAnimationState(state);
+    if (!animation) {
+      return;
+    }
+
+    state.battle.trainerOutroQueued = true;
+    animation.trainerIntro.awaitingContinue = false;
+    queueBattleAnimationEvents(state, [
+      { type: "trainer-enter", duration: 1000, holdAtEnd: false },
+    ]);
+  }
+
   function updateBattleAnimation(state, deltaMs) {
     const animation = ensureBattleAnimationState(state);
     if (!animation) {
@@ -2248,8 +2327,13 @@
         animation.displayedHp[animation.current.target] = Number(animation.current.to || 0);
       } else if (animation.current.type === "trainer-enter") {
         animation.trainerIntro.progress = 1;
-        animation.trainerIntro.phase = "awaiting";
-        animation.trainerIntro.awaitingContinue = true;
+        if (animation.current.holdAtEnd === false) {
+          animation.trainerIntro.phase = "shown";
+          animation.trainerIntro.awaitingContinue = false;
+        } else {
+          animation.trainerIntro.phase = "awaiting";
+          animation.trainerIntro.awaitingContinue = true;
+        }
       } else if (animation.current.type === "trainer-exit") {
         animation.trainerIntro.progress = 1;
         animation.trainerIntro.phase = "";
@@ -2685,13 +2769,15 @@
     const species = getSpecies(content, monster.speciesId);
     const availablePoints = getAvailableElementalAffinityPoints(monster);
     const location = options?.collection === "bank" ? "Bank" : "Party";
+    const assignedAffinities = getAssignedElementalAffinities(monster);
     const controls = ELEMENTAL_AFFINITIES.map(function (element) {
       const currentPoints = Number(monster.elementalAffinityPoints?.[element] || 0);
+      const canAddToElement = currentPoints > 0 || assignedAffinities.length < MAX_MONSTER_ELEMENTAL_AFFINITIES;
       return [
         '<div class="monster-affinity-row">',
         '<span class="monster-affinity-element">' + escapeHtml(element) + '</span>',
         '<strong class="monster-affinity-value">' + currentPoints + "</strong>",
-        '<button class="secondary-button monster-affinity-spend-button" type="button" data-spend-affinity="' + escapeHtml(location.toLowerCase()) + '" data-monster-index="' + Number(options?.index || 0) + '" data-affinity-element="' + escapeHtml(element) + '"' + (availablePoints <= 0 ? " disabled" : "") + '>+1</button>',
+        '<button class="secondary-button monster-affinity-spend-button" type="button" data-spend-affinity="' + escapeHtml(location.toLowerCase()) + '" data-monster-index="' + Number(options?.index || 0) + '" data-affinity-element="' + escapeHtml(element) + '"' + (availablePoints <= 0 || !canAddToElement ? " disabled" : "") + '>+1</button>',
         "</div>",
       ].join("");
     }).join("");
@@ -2716,15 +2802,17 @@
     const totalPoints = getTotalElementalAffinityPointsForLevel(monster.level || 1);
     const affinitySummary = getMonsterAffinitySummaryLabel(monster);
     const location = options?.collection === "bank" ? "Bank" : "Party";
+    const assignedAffinities = getAssignedElementalAffinities(monster);
     const controls = ELEMENTAL_AFFINITIES.map(function (element) {
       const currentPoints = Number(monster.elementalAffinityPoints?.[element] || 0);
+      const canAddToElement = currentPoints > 0 || assignedAffinities.length < MAX_MONSTER_ELEMENTAL_AFFINITIES;
       return [
         '<div class="monster-affinity-row">',
         '<span class="monster-affinity-element">' + escapeHtml(element) + '</span>',
         '<strong class="monster-affinity-value">' + currentPoints + "</strong>",
         '<div class="monster-affinity-controls">' +
           '<button class="secondary-button monster-affinity-spend-button" type="button" data-adjust-affinity="' + escapeHtml(location.toLowerCase()) + '" data-monster-index="' + Number(options?.index || 0) + '" data-affinity-element="' + escapeHtml(element) + '" data-affinity-delta="-1"' + (currentPoints <= 0 ? " disabled" : "") + '>-</button>' +
-          '<button class="secondary-button monster-affinity-spend-button" type="button" data-adjust-affinity="' + escapeHtml(location.toLowerCase()) + '" data-monster-index="' + Number(options?.index || 0) + '" data-affinity-element="' + escapeHtml(element) + '" data-affinity-delta="1"' + (availablePoints <= 0 ? " disabled" : "") + '>+</button>' +
+          '<button class="secondary-button monster-affinity-spend-button" type="button" data-adjust-affinity="' + escapeHtml(location.toLowerCase()) + '" data-monster-index="' + Number(options?.index || 0) + '" data-affinity-element="' + escapeHtml(element) + '" data-affinity-delta="1"' + (availablePoints <= 0 || !canAddToElement ? " disabled" : "") + '>+</button>' +
         "</div>",
         "</div>",
       ].join("");
@@ -2734,7 +2822,7 @@
       '<section class="monster-moves-panel monster-affinity-panel">',
       '<div class="monster-affinity-panel-topline"><strong>Elemental Affinity</strong><span>' + spentPoints + "/" + totalPoints + ' spent · ' + availablePoints + ' available</span></div>',
       '<div class="monster-affinity-grid">' + controls + "</div>",
-      '<p class="monster-moves-note">Current affinity: <strong>' + escapeHtml(affinitySummary) + "</strong>. Monsters can specialize in more than one element as you spend points.</p>",
+      '<p class="monster-moves-note">Current affinity: <strong>' + escapeHtml(affinitySummary) + "</strong>. Monsters can invest in up to " + MAX_MONSTER_ELEMENTAL_AFFINITIES + " elemental affinities total.</p>",
       "</section>",
     ].join("");
   }
@@ -5819,6 +5907,7 @@
     playerMonster.currentHp = playerMonster.stats.hp;
     returnToTown(state, content);
     state.message = "You blacked out and returned to " + content.mapMetadata[state.world.currentMapId].displayName + ".";
+    queueTrainerBattleConclusionAnimation(state);
   }
 
   function handleEnemyDefeat(state, content, enemy, options) {
@@ -5831,26 +5920,17 @@
     if (!options?.skipLog) {
       addBattleLogEntry(state, enemySpecies.name + " fainted.");
     }
-        if (state.battle.type === "trainer") {
-          const nextEnemyIndex = Number(state.battle.enemyIndex || 0) + 1;
-          const nextEnemy = state.battle.enemyQueue?.[nextEnemyIndex];
-          if (nextEnemy) {
-            state.battle.enemyIndex = nextEnemyIndex;
-            state.battle.enemy = nextEnemy;
-        if (getBattleLeaderSheetId(state.battle)) {
-          const animation = ensureBattleAnimationState(state);
-          animation.trainerIntro.phase = "enter";
-          animation.trainerIntro.progress = 0;
-          animation.trainerIntro.awaitingContinue = false;
-          animation.playerIntro.phase = "hidden";
-          animation.playerIntro.progress = 0;
-          animation.playerIntro.completed = false;
-          queueBattleAnimationEvents(state, [
-            { type: "trainer-enter", duration: 1400 },
-          ]);
-        } else {
-          addBattleLogEntry(state, (state.battle.opponentTitle || "Leader") + " " + (state.battle.opponentName || "Trainer") + " sent out " + nextEnemy.name + ".");
+    if (state.battle.type === "trainer") {
+      const nextEnemyIndex = Number(state.battle.enemyIndex || 0) + 1;
+      const nextEnemy = state.battle.enemyQueue?.[nextEnemyIndex];
+      if (nextEnemy) {
+        state.battle.enemyIndex = nextEnemyIndex;
+        state.battle.enemy = nextEnemy;
+        const animation = ensureBattleAnimationState(state);
+        if (animation?.displayedHp) {
+          animation.displayedHp.enemy = Number(nextEnemy.currentHp || nextEnemy.maxHp || 0);
         }
+        addBattleLogEntry(state, (state.battle.opponentTitle || "Leader") + " " + (state.battle.opponentName || "Trainer") + " sent out " + nextEnemy.name + ".");
       } else {
         state.battle.outcome = "victory";
         const totalXp = rewardStructuredBattleVictory(state, content, state.battle);
@@ -5875,6 +5955,7 @@
         if (state.battle.battleSource === "npc-trainer" && state.battle.victoryText) {
           addBattleLogEntry(state, state.battle.victoryText);
         }
+        queueTrainerBattleConclusionAnimation(state);
       }
     } else {
       state.battle.outcome = "victory";
@@ -8133,7 +8214,7 @@
     const showTrainerIntro = Boolean(
       isTrainerBattle
       && leaderSheetId
-      && ["enter", "awaiting", "exit"].includes(String(animation?.trainerIntro?.phase || ""))
+      && ["enter", "awaiting", "shown", "exit"].includes(String(animation?.trainerIntro?.phase || ""))
     );
     const partyRoster = state.party.map(function (monster, index) {
       const species = getSpecies(content, monster.speciesId);
@@ -13101,6 +13182,11 @@
         if (Number(delta) > 0 && getAvailableElementalAffinityPoints(monster) <= 0) {
           return;
         }
+        if (Number(delta) > 0 && currentPoints <= 0 && getAssignedElementalAffinities(monster).length >= MAX_MONSTER_ELEMENTAL_AFFINITIES) {
+          this.state.message = (getSpecies(this.content, monster.speciesId)?.name || "Monster") + " can only hold " + MAX_MONSTER_ELEMENTAL_AFFINITIES + " elemental affinities at a time.";
+          this.render();
+          return;
+        }
         if (Number(delta) < 0 && currentPoints <= 0) {
           return;
         }
@@ -15754,6 +15840,7 @@
             drawCharacterDevCanvases(root, this.devTools);
           }
           safeDrawMonsterVariantCanvases(root, this.content);
+          safeDrawAvatarPreviewCanvases(root, this.content);
           attachDevToolsHandlers(root, this);
           restoreFocusableState(root, focusState);
           this.restoreDevPreviewScroll();
