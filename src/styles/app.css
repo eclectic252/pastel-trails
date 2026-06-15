@@ -380,6 +380,38 @@ button {
   font-weight: 700;
 }
 
+.arena-leader-preview-wrap {
+  margin: 0.9rem 0 0.4rem;
+}
+
+.arena-leader-preview-card {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.8rem 0.9rem;
+  border-radius: 18px;
+  border: 1px solid rgba(57, 79, 91, 0.14);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.arena-leader-preview-frame {
+  width: 92px;
+  min-width: 92px;
+  height: 92px;
+  border-radius: 18px;
+  background: rgba(244, 239, 232, 0.92);
+  border: 1px solid rgba(57, 79, 91, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.arena-leader-preview-sprite {
+  width: 80px;
+  height: 80px;
+}
+
 .crest-list {
   margin-bottom: 0.9rem;
 }

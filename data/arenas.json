@@ -284,6 +284,48 @@
           "variantId": "default-lavvender"
         }
       ]
+    },
+    {
+      "id": "arena-9",
+      "name": "Sunflower Coast Arena",
+      "leaderName": "Tony",
+      "leaderTitle": "Leader",
+      "crestId": "crest-9",
+      "crestName": "Sunflower Coast Crest",
+      "crestImagePath": "assets/Crests/crest11 - sunflower.png",
+      "recommendedLevel": 5,
+      "partySize": 3,
+      "rewardMoney": 50,
+      "rewardText": "",
+      "description": "",
+      "mapId": "",
+      "team": [
+        {
+          "speciesId": "monster-8",
+          "variantId": "default-electric",
+          "level": 5
+        },
+        {
+          "speciesId": "Caniri",
+          "variantId": "Caniri-electric",
+          "level": 5
+        },
+        {
+          "speciesId": "Kelpar",
+          "variantId": "kelpar-electric",
+          "level": 5
+        }
+      ],
+      "pool": [
+        {
+          "speciesId": "monster-8",
+          "variantId": "default-dark"
+        },
+        {
+          "speciesId": "Kelpar",
+          "variantId": "kelpar-dark"
+        }
+      ]
     }
   ]
 }

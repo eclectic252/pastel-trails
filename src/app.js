@@ -4153,6 +4153,7 @@
       name: "New Arena",
       leaderName: "Leader Name",
       leaderTitle: "Leader",
+      leaderSheetId: "",
       crestId: "crest-" + index,
       crestName: "New Crest",
       crestImagePath: "",
@@ -5562,8 +5563,10 @@
     state.interaction = null;
     state.battle = {
       type: "trainer",
+      battleSource: "arena-leader",
       opponentName: arena.leaderName || "Arena Leader",
       opponentTitle: arena.leaderTitle || "Leader",
+      leaderSheetId: arena.leaderSheetId || "",
       arenaId: arena.id,
       crestId: arena.crestId || interaction.data?.crestId || "",
       crestName: arena.crestName || "Arena Crest",
@@ -5579,6 +5582,18 @@
       menu: "root",
       outcome: null,
     };
+    if (state.battle.leaderSheetId) {
+      const animation = ensureBattleAnimationState(state);
+      animation.trainerIntro.phase = "enter";
+      animation.trainerIntro.progress = 0;
+      animation.trainerIntro.awaitingContinue = false;
+      animation.playerIntro.phase = "hidden";
+      animation.playerIntro.progress = 0;
+      animation.playerIntro.completed = false;
+      queueBattleAnimationEvents(state, [
+        { type: "trainer-enter", duration: 1400 },
+      ]);
+    }
     state.message = "Arena battle started at " + (arena.name || interaction.label || "the arena") + ".";
   }
 
@@ -5800,13 +5815,13 @@
     if (!options?.skipLog) {
       addBattleLogEntry(state, enemySpecies.name + " fainted.");
     }
-    if (state.battle.type === "trainer") {
-      const nextEnemyIndex = Number(state.battle.enemyIndex || 0) + 1;
-      const nextEnemy = state.battle.enemyQueue?.[nextEnemyIndex];
-      if (nextEnemy) {
-        state.battle.enemyIndex = nextEnemyIndex;
-        state.battle.enemy = nextEnemy;
-        if (state.battle.battleSource === "npc-trainer" && state.battle.trainerSheetId) {
+        if (state.battle.type === "trainer") {
+          const nextEnemyIndex = Number(state.battle.enemyIndex || 0) + 1;
+          const nextEnemy = state.battle.enemyQueue?.[nextEnemyIndex];
+          if (nextEnemy) {
+            state.battle.enemyIndex = nextEnemyIndex;
+            state.battle.enemy = nextEnemy;
+        if (getBattleLeaderSheetId(state.battle)) {
           const animation = ensureBattleAnimationState(state);
           animation.trainerIntro.phase = "enter";
           animation.trainerIntro.progress = 0;
@@ -7773,7 +7788,7 @@
   }
 
   function renderBattleTrainerIntro(content, battle, animation) {
-    const trainerSheet = getCharacterSheetConfig(content, battle?.trainerSheetId || "");
+    const trainerSheet = getCharacterSheetConfig(content, battle?.trainerSheetId || battle?.leaderSheetId || "");
     const species = getSpecies(content, battle?.enemy?.speciesId);
     const variant = getSpeciesVariant(species, battle?.enemy?.variantId || "default");
     const progress = Math.max(0, Math.min(1, Number(animation?.trainerIntro?.progress || 0)));
@@ -7814,6 +7829,10 @@
       "</div>",
       "</div>",
     ].join("");
+  }
+
+  function getBattleLeaderSheetId(battle) {
+    return String(battle?.trainerSheetId || battle?.leaderSheetId || "");
   }
 
   function renderBattlePlayerIntro(content, monster, animation) {
@@ -8088,16 +8107,16 @@
     const playerPartyPips = renderBattlePartyPips(state.party, state.battle.playerIndex, "battle-party-pips-player");
     const trainerIntroAwaitingContinue = Boolean(animation?.trainerIntro?.awaitingContinue);
     const mustSelectReplacement = Boolean(state.battle.mustSelectReplacement);
+    const leaderSheetId = getBattleLeaderSheetId(state.battle);
     const showPlayerIntro = Boolean(animation?.playerIntro?.phase === "enter");
     const suppressDefaultPlayerBattler = Boolean(
       isTrainerBattle
-      && state.battle.battleSource === "npc-trainer"
+      && leaderSheetId
       && animation?.playerIntro?.completed === false
     );
     const showTrainerIntro = Boolean(
       isTrainerBattle
-      && state.battle.battleSource === "npc-trainer"
-      && state.battle.trainerSheetId
+      && leaderSheetId
       && ["enter", "awaiting", "exit"].includes(String(animation?.trainerIntro?.phase || ""))
     );
     const partyRoster = state.party.map(function (monster, index) {
@@ -10385,6 +10404,12 @@
         return '<option value="' + escapeHtml(imagePath) + '"' + selected + ">" + escapeHtml(imagePath.replace(/^assets\//, "")) + "</option>";
       })
     ).join("");
+    const arenaLeaderSheetOptions = ['<option value="">None</option>'].concat(
+      getAvailableCharacterSheets(content).map(function (sheet) {
+        const selected = (selectedArena?.leaderSheetId || "") === sheet.id ? " selected" : "";
+        return '<option value="' + escapeHtml(sheet.id) + '"' + selected + ">" + escapeHtml(sheet.label || sheet.id) + "</option>";
+      })
+    ).join("");
     const poolEditor = selectedArena
       ? (selectedArena.pool || []).map(function (member, poolIndex) {
           const memberSpecies = getSpecies(content, member.speciesId);
@@ -10439,6 +10464,10 @@
           return "<li><span>" + escapeHtml(species?.name || member.speciesId || "Unassigned") + " - " + escapeHtml(formatMonsterVariantLabel(variant, member.variantId || "default")) + "</span><strong>Lv " + Number(member.level || 1) + "</strong></li>";
         }).join("")
       : "";
+    const arenaLeaderSheet = getCharacterSheetConfig(content, selectedArena?.leaderSheetId || "");
+    const arenaLeaderPreview = arenaLeaderSheet
+      ? '<div class="arena-leader-preview-card"><div class="arena-leader-preview-frame">' + renderAvatarPreviewMarkup(arenaLeaderSheet, "arena-leader-preview-sprite") + '</div><div><p><strong>Leader Sprite</strong></p><p>' + escapeHtml(arenaLeaderSheet.label || arenaLeaderSheet.id) + '</p></div></div>'
+      : '<p class="dev-helper-text">No leader sprite selected yet. Pick a character sheet above to preview the arena leader intro sprite.</p>';
 
     const arenaEditor = selectedArena
       ? [
@@ -10449,6 +10478,7 @@
           '<label class="input-group"><span>Arena Name</span><input data-dev-arena-field="name" value="' + escapeHtml(selectedArena.name || "") + '" /></label>',
           '<label class="input-group"><span>Leader Name</span><input data-dev-arena-field="leaderName" value="' + escapeHtml(selectedArena.leaderName || "") + '" /></label>',
           '<label class="input-group"><span>Leader Title</span><input data-dev-arena-field="leaderTitle" value="' + escapeHtml(selectedArena.leaderTitle || "") + '" /></label>',
+          '<label class="input-group"><span>Leader Sprite</span><select data-dev-arena-field="leaderSheetId">' + arenaLeaderSheetOptions + '</select></label>',
           '<label class="input-group"><span>Crest ID</span><input data-dev-arena-field="crestId" value="' + escapeHtml(selectedArena.crestId || "") + '" /></label>',
           '<label class="input-group"><span>Crest Name</span><input data-dev-arena-field="crestName" value="' + escapeHtml(selectedArena.crestName || "") + '" /></label>',
           '<label class="input-group"><span>Crest Image</span><select data-dev-arena-field="crestImagePath">' + crestImageOptions + '</select></label>',
@@ -10470,7 +10500,7 @@
               ? '<ul class="compact-list">' + poolEditor + "</ul>"
               : '<p>No fallback pool monsters configured yet.</p>') +
           "</section>",
-          '<section class="panel-block"><div class="section-heading"><h2>Preview</h2></div><div class="arena-crest-preview">' + renderArenaCrestMarkup(content, selectedArena, "arena-crest-image arena-crest-image-large") + '<div><p><strong>' + escapeHtml(selectedArena.name || selectedArena.id) + '</strong></p><p>' + escapeHtml((selectedArena.leaderTitle || "Leader") + " " + (selectedArena.leaderName || "TBD")) + '</p><p>Crest: ' + escapeHtml(selectedArena.crestName || selectedArena.crestId || "Unassigned") + '</p></div></div><p>Recommended Level: ' + escapeHtml(String(selectedArena.recommendedLevel || "TBD")) + ' · Party Size: ' + escapeHtml(String(selectedArena.partySize || "TBD")) + '</p><p>Reward Money: $' + escapeHtml(String(Number(selectedArena.rewardMoney || 0))) + '</p><p>' + escapeHtml(selectedArena.description || "No arena description yet.") + '</p><p class="dev-helper-text">Uncollected arenas use the authored team levels here. Refights use the player arena settings, capped by the crest progression tiers in <code>settings.json</code>: ' + escapeHtml(formatCrestLevelCapSummary(content)) + '.</p><h3>Configured Team</h3><ul class="compact-list">' + (teamPreview || "<li><span>No team members configured yet.</span></li>") + "</ul><h3>Fallback Pool</h3><ul class=\"compact-list\">" + ((selectedArena.pool || []).map(function (member) { const species = getSpecies(content, member.speciesId); const variant = getSpeciesVariant(species, member.variantId || "default"); return "<li><span>" + escapeHtml(species?.name || member.speciesId || "Unassigned") + " - " + escapeHtml(variant?.id || member.variantId || "default") + "</span><strong>Pool</strong></li>"; }).join("") || "<li><span>No pool monsters configured yet.</span></li>") + "</ul></section>",
+          '<section class="panel-block"><div class="section-heading"><h2>Preview</h2></div><div class="arena-crest-preview">' + renderArenaCrestMarkup(content, selectedArena, "arena-crest-image arena-crest-image-large") + '<div><p><strong>' + escapeHtml(selectedArena.name || selectedArena.id) + '</strong></p><p>' + escapeHtml((selectedArena.leaderTitle || "Leader") + " " + (selectedArena.leaderName || "TBD")) + '</p><p>Crest: ' + escapeHtml(selectedArena.crestName || selectedArena.crestId || "Unassigned") + '</p></div></div><div class="arena-leader-preview-wrap">' + arenaLeaderPreview + '</div><p>Recommended Level: ' + escapeHtml(String(selectedArena.recommendedLevel || "TBD")) + ' · Party Size: ' + escapeHtml(String(selectedArena.partySize || "TBD")) + '</p><p>Reward Money: $' + escapeHtml(String(Number(selectedArena.rewardMoney || 0))) + '</p><p>' + escapeHtml(selectedArena.description || "No arena description yet.") + '</p><p class="dev-helper-text">Uncollected arenas use the authored team levels here. Refights use the player arena settings, capped by the crest progression tiers in <code>settings.json</code>: ' + escapeHtml(formatCrestLevelCapSummary(content)) + '.</p><h3>Configured Team</h3><ul class="compact-list">' + (teamPreview || "<li><span>No team members configured yet.</span></li>") + "</ul><h3>Fallback Pool</h3><ul class=\"compact-list\">" + ((selectedArena.pool || []).map(function (member) { const species = getSpecies(content, member.speciesId); const variant = getSpeciesVariant(species, member.variantId || "default"); return "<li><span>" + escapeHtml(species?.name || member.speciesId || "Unassigned") + " - " + escapeHtml(variant?.id || member.variantId || "default") + "</span><strong>Pool</strong></li>"; }).join("") || "<li><span>No pool monsters configured yet.</span></li>") + "</ul></section>",
         ].join("")
       : '<section class="panel-block dev-editor-panel"><h2>No Arena Selected</h2><p>Add a new arena to begin editing.</p></section>';
 
@@ -13917,7 +13947,7 @@
           this.devTools.characterSheetFrameOffsets[this.devTools.characterSheetSelectedRow][this.devTools.characterSheetSelectedFrame].height = Number(rawValue || 0);
         } else if (field === "previewScale") {
           this.devTools.characterSheetPreviewScale = Math.max(0.5, Number(rawValue || 0.5));
-        } else if (field.indexOf("crestLevelCap") === 0) {
+        } else if (field.indexOf("crestLevelCap") === 0 || field.indexOf("crestArena") === 0 || field.indexOf("crestLeaderBonusStatPoints") === 0) {
           const fieldParts = field.split(":");
           const crestField = fieldParts[0];
           const crestIndex = Math.max(0, Number(fieldParts[1] || 0));

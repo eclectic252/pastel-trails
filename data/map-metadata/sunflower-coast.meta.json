@@ -1,0 +1,85 @@
+{
+  "mapId": "sunflower-coast",
+  "displayName": "Sunflower Coast",
+  "isTown": true,
+  "safezone": false,
+  "collisionGrid": 64,
+  "transitions": [
+    {
+      "id": "sunflower-to-route5",
+      "x": 0,
+      "y": 896,
+      "width": 128,
+      "height": 384,
+      "targetMapId": "route-5",
+      "targetSpawn": {
+        "x": 1472,
+        "y": 1856
+      }
+    }
+  ],
+  "interactions": [
+    {
+      "id": "interaction-1",
+      "type": "healing-center",
+      "x": 640,
+      "y": 1408,
+      "width": 256,
+      "height": 128,
+      "label": "New Interaction",
+      "text": "Add interaction text here.",
+      "data": {
+        "shopId": "",
+        "arenaId": "",
+        "crestId": ""
+      }
+    },
+    {
+      "id": "interaction-2",
+      "type": "shop",
+      "x": 1664,
+      "y": 1536,
+      "width": 256,
+      "height": 128,
+      "label": "Sunflower Coast Shop",
+      "text": "Add interaction text here.",
+      "data": {
+        "shopId": "",
+        "arenaId": "",
+        "crestId": ""
+      }
+    },
+    {
+      "id": "Sunflower-arena",
+      "type": "arena",
+      "x": 0,
+      "y": 0,
+      "width": 128,
+      "height": 128,
+      "label": "Sunflower Coast Arena",
+      "text": "Add interaction text here.",
+      "data": {
+        "shopId": "",
+        "arenaId": "arena-9",
+        "crestId": ""
+      }
+    }
+  ],
+  "spawnZones": [
+    {
+      "id": "default-zone",
+      "label": "Default Zone",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "visibleSpawns": [],
+      "spawnTable": []
+    }
+  ],
+  "trainers": [],
+  "npcs": [],
+  "mapMonstersPanel": []
+}

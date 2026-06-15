@@ -244,6 +244,36 @@
           "overlayOpacity": 0.18
         }
       }
+    },
+    {
+      "id": "sunflower-coast",
+      "name": "Sunflower Coast",
+      "cardSubtitle": "",
+      "mapId": "sunflower-coast",
+      "spawn": {
+        "x": 128,
+        "y": 128
+      },
+      "includeInStarterSelection": true,
+      "cardBackgrounds": {
+        "desktop": {
+          "imagePath": "assets/posters/sunflowerposter.png",
+          "fit": "cover",
+          "zoom": 100,
+          "positionX": 50,
+          "positionY": 50,
+          "repeat": "no-repeat"
+        },
+        "mobile": {
+          "imagePath": "assets/posters/sunflowerposter.png",
+          "fit": "cover",
+          "zoom": 100,
+          "positionX": 80,
+          "positionY": 50,
+          "repeat": "no-repeat",
+          "overlayOpacity": 0.18
+        }
+      }
     }
   ]
 }

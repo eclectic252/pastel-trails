@@ -126,7 +126,7 @@
           "id": "spawn-3",
           "speciesId": "Fluffram",
           "spawnChance": 100,
-          "x": 1472,
+          "x": 1216,
           "y": 448,
           "levelMin": 2,
           "levelMax": 4,
@@ -170,6 +170,39 @@
               "speciesId": "Caniri",
               "weight": 50,
               "variantId": "Caniri-snow"
+            }
+          ]
+        },
+        {
+          "id": "spawn-5",
+          "speciesId": "monster-8",
+          "spawnChance": 100,
+          "x": 2112,
+          "y": 448,
+          "levelMin": 2,
+          "levelMax": 4,
+          "walkRange": 300,
+          "respawnSeconds": 120,
+          "monsterOptions": [
+            {
+              "speciesId": "monster-8",
+              "weight": 25,
+              "variantId": "default-lavender"
+            },
+            {
+              "speciesId": "monster-9",
+              "weight": 25,
+              "variantId": "kitari-lavender"
+            },
+            {
+              "speciesId": "monster-9",
+              "weight": 25,
+              "variantId": "kitari-galaxy"
+            },
+            {
+              "speciesId": "monster-8",
+              "weight": 25,
+              "variantId": "default-galaxy"
             }
           ]
         }
