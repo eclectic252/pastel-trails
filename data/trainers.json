@@ -57,6 +57,78 @@
           "variantId": "default-grass"
         }
       ]
+    },
+    {
+      "id": "trainer-3",
+      "name": "Sasha",
+      "title": "Equestrian",
+      "introText": "Let's battle.",
+      "rewardMoney": 25,
+      "rewardText": "",
+      "victoryText": "",
+      "recommendedLevel": 5,
+      "partySize": 2,
+      "refightPartyMode": "flexible",
+      "team": [
+        {
+          "speciesId": "equira",
+          "variantId": "Equira-Pink",
+          "level": 5
+        },
+        {
+          "speciesId": "monster-8",
+          "variantId": "default-pink",
+          "level": 5
+        }
+      ],
+      "pool": [
+        {
+          "speciesId": "equira",
+          "variantId": "Equira-default"
+        },
+        {
+          "speciesId": "equira",
+          "variantId": "Equira-Galaxy"
+        },
+        {
+          "speciesId": "Fluffram",
+          "variantId": "fluffram-snow"
+        }
+      ]
+    },
+    {
+      "id": "trainer-4",
+      "name": "Anne",
+      "title": "Equestrian",
+      "introText": "Let's battle.",
+      "rewardMoney": 25,
+      "rewardText": "",
+      "victoryText": "",
+      "recommendedLevel": 5,
+      "partySize": 2,
+      "refightPartyMode": "flexible",
+      "team": [
+        {
+          "speciesId": "equira",
+          "variantId": "Equira-dark",
+          "level": 5
+        },
+        {
+          "speciesId": "equira",
+          "variantId": "Equira-water",
+          "level": 5
+        }
+      ],
+      "pool": [
+        {
+          "speciesId": "equira",
+          "variantId": "Equira-Electric"
+        },
+        {
+          "speciesId": "equira",
+          "variantId": "Equira-Fire"
+        }
+      ]
     }
   ]
 }

@@ -3713,7 +3713,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "variantId": "Equira-Pink"
           }
         ],
-        "crestImagePath": "assets/Crests/crest2.png"
+        "crestImagePath": "assets/Crests/crest2.png",
+        "leaderSheetId": "pastel-pink-cowgirl"
       },
       {
         "id": "Plumeria-Arena",
@@ -3741,7 +3742,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "speciesId": "Caniri",
             "variantId": "Caniri-grass"
           }
-        ]
+        ],
+        "leaderSheetId": "whitesundress"
       },
       {
         "id": "arena-4",
@@ -3783,7 +3785,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "speciesId": "pawlit",
             "variantId": "default-galaxy"
           }
-        ]
+        ],
+        "leaderSheetId": "assets-characters-boardwalk-girl-sprite-navy-pants-white-top-walksheet-v1"
       },
       {
         "id": "arena-5",
@@ -4035,6 +4038,78 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           {
             "speciesId": "monster-8",
             "variantId": "default-grass"
+          }
+        ]
+      },
+      {
+        "id": "trainer-3",
+        "name": "Sasha",
+        "title": "Equestrian",
+        "introText": "Let's battle.",
+        "rewardMoney": 25,
+        "rewardText": "",
+        "victoryText": "",
+        "recommendedLevel": 5,
+        "partySize": 2,
+        "refightPartyMode": "flexible",
+        "team": [
+          {
+            "speciesId": "equira",
+            "variantId": "Equira-Pink",
+            "level": 5
+          },
+          {
+            "speciesId": "monster-8",
+            "variantId": "default-pink",
+            "level": 5
+          }
+        ],
+        "pool": [
+          {
+            "speciesId": "equira",
+            "variantId": "Equira-default"
+          },
+          {
+            "speciesId": "equira",
+            "variantId": "Equira-Galaxy"
+          },
+          {
+            "speciesId": "Fluffram",
+            "variantId": "fluffram-snow"
+          }
+        ]
+      },
+      {
+        "id": "trainer-4",
+        "name": "Anne",
+        "title": "Equestrian",
+        "introText": "Let's battle.",
+        "rewardMoney": 25,
+        "rewardText": "",
+        "victoryText": "",
+        "recommendedLevel": 5,
+        "partySize": 2,
+        "refightPartyMode": "flexible",
+        "team": [
+          {
+            "speciesId": "equira",
+            "variantId": "Equira-dark",
+            "level": 5
+          },
+          {
+            "speciesId": "equira",
+            "variantId": "Equira-water",
+            "level": 5
+          }
+        ],
+        "pool": [
+          {
+            "speciesId": "equira",
+            "variantId": "Equira-Electric"
+          },
+          {
+            "speciesId": "equira",
+            "variantId": "Equira-Fire"
           }
         ]
       }
@@ -76430,8 +76505,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "height": 128,
           "targetMapId": "route-3",
           "targetSpawn": {
-            "x": 1088,
-            "y": 8384
+            "x": 448,
+            "y": 8128
           }
         }
       ],
@@ -77371,8 +77446,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               "id": "spawn-1",
               "speciesId": "equira",
               "spawnChance": 100,
-              "x": 1600,
-              "y": 1856,
+              "x": 1856,
+              "y": 1472,
               "levelMin": 2,
               "levelMax": 4,
               "respawnSeconds": 120,
@@ -77404,8 +77479,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               "id": "spawn-2",
               "speciesId": "equira",
               "spawnChance": 100,
-              "x": 2112,
-              "y": 3136,
+              "x": 1856,
+              "y": 3264,
               "levelMin": 2,
               "levelMax": 4,
               "respawnSeconds": 120,
@@ -77432,8 +77507,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               "id": "spawn-3",
               "speciesId": "equira",
               "spawnChance": 100,
-              "x": 1856,
-              "y": 6976,
+              "x": 1600,
+              "y": 6848,
               "levelMin": 2,
               "levelMax": 4,
               "walkRange": 300,
@@ -77465,11 +77540,11 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               "id": "spawn-4",
               "speciesId": "Fluffram",
               "spawnChance": 100,
-              "x": 1088,
+              "x": 704,
               "y": 5056,
               "levelMin": 2,
               "levelMax": 4,
-              "walkRange": 0,
+              "walkRange": 400,
               "respawnSeconds": 120,
               "monsterOptions": [
                 {
@@ -77502,7 +77577,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               "y": 3520,
               "levelMin": 2,
               "levelMax": 4,
-              "walkRange": 0,
+              "walkRange": 300,
               "respawnSeconds": 120,
               "monsterOptions": [
                 {
@@ -77536,8 +77611,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         {
           "id": "npc-1",
           "type": "trainer",
-          "x": 1344,
-          "y": 2752,
+          "x": 960,
+          "y": 2368,
           "label": "Cowboy Roy",
           "text": "Hello there!",
           "sheetId": "assets-characters-boardwalk-girl-sprite-western-red-shirt-walksheet-v1-transparent",
@@ -77547,8 +77622,27 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "trainerId": "trainer-2"
           },
           "moveRadius": 150,
-          "moveSpeed": 80,
-          "movementMode": "wander"
+          "moveSpeed": 73,
+          "movementMode": "wander",
+          "lookSpeed": 1
+        },
+        {
+          "id": "npc-2",
+          "type": "dialogue",
+          "x": 1728,
+          "y": 448,
+          "label": "Equestrian Sasha",
+          "text": "Hello there!",
+          "sheetId": "assets-characters-boardwalk-girl-sprite-equestrian-girl-pink-walksheet",
+          "facing": "down",
+          "interactionRadius": 88,
+          "movementMode": "wander",
+          "moveRadius": 400,
+          "lookSpeed": 1,
+          "moveSpeed": 70,
+          "data": {
+            "trainerId": "trainer-3"
+          }
         }
       ],
       "mapMonstersPanel": []
@@ -77592,8 +77686,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "height": 128,
           "targetMapId": "route-5",
           "targetSpawn": {
-            "x": 704,
-            "y": 192
+            "x": 832,
+            "y": 320
           }
         },
         {
@@ -77766,7 +77860,26 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         }
       ],
       "trainers": [],
-      "npcs": [],
+      "npcs": [
+        {
+          "id": "npc-1",
+          "type": "trainer",
+          "x": 2112,
+          "y": 1088,
+          "label": "Equestrian Anne",
+          "text": "Hello there!",
+          "sheetId": "assets-characters-boardwalk-girl-sprite-equestrian-girl-walksheet-v1-fullsize-transparent",
+          "facing": "down",
+          "interactionRadius": 88,
+          "movementMode": "wander",
+          "moveRadius": 200,
+          "lookSpeed": 1,
+          "moveSpeed": 70,
+          "data": {
+            "trainerId": "trainer-4"
+          }
+        }
+      ],
       "mapMonstersPanel": []
     },
     "route-5": {
@@ -77779,7 +77892,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         {
           "id": "route5-to-route4",
           "x": 128,
-          "y": 128,
+          "y": 0,
           "width": 1536,
           "height": 128,
           "targetMapId": "route-4",

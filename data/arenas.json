@@ -64,7 +64,8 @@
           "variantId": "Equira-Pink"
         }
       ],
-      "crestImagePath": "assets/Crests/crest2.png"
+      "crestImagePath": "assets/Crests/crest2.png",
+      "leaderSheetId": "pastel-pink-cowgirl"
     },
     {
       "id": "Plumeria-Arena",
@@ -92,7 +93,8 @@
           "speciesId": "Caniri",
           "variantId": "Caniri-grass"
         }
-      ]
+      ],
+      "leaderSheetId": "whitesundress"
     },
     {
       "id": "arena-4",
@@ -134,7 +136,8 @@
           "speciesId": "pawlit",
           "variantId": "default-galaxy"
         }
-      ]
+      ],
+      "leaderSheetId": "assets-characters-boardwalk-girl-sprite-navy-pants-white-top-walksheet-v1"
     },
     {
       "id": "arena-5",

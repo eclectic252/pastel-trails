@@ -118,8 +118,8 @@
           "id": "spawn-1",
           "speciesId": "equira",
           "spawnChance": 100,
-          "x": 1600,
-          "y": 1856,
+          "x": 1856,
+          "y": 1472,
           "levelMin": 2,
           "levelMax": 4,
           "respawnSeconds": 120,
@@ -151,8 +151,8 @@
           "id": "spawn-2",
           "speciesId": "equira",
           "spawnChance": 100,
-          "x": 2112,
-          "y": 3136,
+          "x": 1856,
+          "y": 3264,
           "levelMin": 2,
           "levelMax": 4,
           "respawnSeconds": 120,
@@ -179,8 +179,8 @@
           "id": "spawn-3",
           "speciesId": "equira",
           "spawnChance": 100,
-          "x": 1856,
-          "y": 6976,
+          "x": 1600,
+          "y": 6848,
           "levelMin": 2,
           "levelMax": 4,
           "walkRange": 300,
@@ -212,11 +212,11 @@
           "id": "spawn-4",
           "speciesId": "Fluffram",
           "spawnChance": 100,
-          "x": 1088,
+          "x": 704,
           "y": 5056,
           "levelMin": 2,
           "levelMax": 4,
-          "walkRange": 0,
+          "walkRange": 400,
           "respawnSeconds": 120,
           "monsterOptions": [
             {
@@ -249,7 +249,7 @@
           "y": 3520,
           "levelMin": 2,
           "levelMax": 4,
-          "walkRange": 0,
+          "walkRange": 300,
           "respawnSeconds": 120,
           "monsterOptions": [
             {
@@ -283,8 +283,8 @@
     {
       "id": "npc-1",
       "type": "trainer",
-      "x": 1344,
-      "y": 2752,
+      "x": 960,
+      "y": 2368,
       "label": "Cowboy Roy",
       "text": "Hello there!",
       "sheetId": "assets-characters-boardwalk-girl-sprite-western-red-shirt-walksheet-v1-transparent",
@@ -294,8 +294,27 @@
         "trainerId": "trainer-2"
       },
       "moveRadius": 150,
-      "moveSpeed": 80,
-      "movementMode": "wander"
+      "moveSpeed": 73,
+      "movementMode": "wander",
+      "lookSpeed": 1
+    },
+    {
+      "id": "npc-2",
+      "type": "dialogue",
+      "x": 1728,
+      "y": 448,
+      "label": "Equestrian Sasha",
+      "text": "Hello there!",
+      "sheetId": "assets-characters-boardwalk-girl-sprite-equestrian-girl-pink-walksheet",
+      "facing": "down",
+      "interactionRadius": 88,
+      "movementMode": "wander",
+      "moveRadius": 400,
+      "lookSpeed": 1,
+      "moveSpeed": 70,
+      "data": {
+        "trainerId": "trainer-3"
+      }
     }
   ],
   "mapMonstersPanel": []

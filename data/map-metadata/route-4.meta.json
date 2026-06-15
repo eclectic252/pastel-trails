@@ -37,8 +37,8 @@
       "height": 128,
       "targetMapId": "route-5",
       "targetSpawn": {
-        "x": 704,
-        "y": 192
+        "x": 832,
+        "y": 320
       }
     },
     {
@@ -211,6 +211,25 @@
     }
   ],
   "trainers": [],
-  "npcs": [],
+  "npcs": [
+    {
+      "id": "npc-1",
+      "type": "trainer",
+      "x": 2112,
+      "y": 1088,
+      "label": "Equestrian Anne",
+      "text": "Hello there!",
+      "sheetId": "assets-characters-boardwalk-girl-sprite-equestrian-girl-walksheet-v1-fullsize-transparent",
+      "facing": "down",
+      "interactionRadius": 88,
+      "movementMode": "wander",
+      "moveRadius": 200,
+      "lookSpeed": 1,
+      "moveSpeed": 70,
+      "data": {
+        "trainerId": "trainer-4"
+      }
+    }
+  ],
   "mapMonstersPanel": []
 }

@@ -3730,14 +3730,30 @@
   }
 
   function syncNpcRuntimeWithDefinition(runtime, npc) {
+    const previousHomeX = Number(runtime.homeX);
+    const previousHomeY = Number(runtime.homeY);
     runtime.id = npc.id;
     runtime.homeX = Number(npc.x || 0);
     runtime.homeY = Number(npc.y || 0);
-    if (!Number.isFinite(runtime.x)) {
+    const homeChanged = !Number.isFinite(previousHomeX)
+      || !Number.isFinite(previousHomeY)
+      || Math.abs(previousHomeX - runtime.homeX) > 0.01
+      || Math.abs(previousHomeY - runtime.homeY) > 0.01;
+    const moveRadius = getNpcMoveRadius(npc);
+    const maxAllowedDistanceFromHome = Math.max(moveRadius + MONSTER_WALK_STEP_PX * 2, MONSTER_WALK_STEP_PX * 2);
+    const hasValidRuntimePosition = Number.isFinite(runtime.x) && Number.isFinite(runtime.y);
+    const runtimeTooFarFromHome = hasValidRuntimePosition
+      && Math.hypot(runtime.x - runtime.homeX, runtime.y - runtime.homeY) > maxAllowedDistanceFromHome;
+
+    if (!hasValidRuntimePosition || homeChanged || runtimeTooFarFromHome) {
       runtime.x = runtime.homeX;
-    }
-    if (!Number.isFinite(runtime.y)) {
       runtime.y = runtime.homeY;
+      runtime.walkTargetX = runtime.homeX;
+      runtime.walkTargetY = runtime.homeY;
+      runtime.isWalking = false;
+      runtime.frameIndex = 0;
+      runtime.frameTime = 0;
+      runtime.nextBehaviorAt = Date.now() + getRandomNpcLookDelay(npc);
     }
     if (!["down", "left", "right", "up"].includes(runtime.facing)) {
       runtime.facing = ["down", "left", "right", "up"].includes(npc?.facing) ? npc.facing : "down";
