@@ -9,7 +9,7 @@
   const ELEMENTAL_AFFINITIES = ["Air", "Fire", "Earth", "Water", "Light", "Dark"];
   const MAX_MONSTER_ELEMENTAL_AFFINITIES = 2;
   const SKILL_ELEMENTS = ["Neutral"].concat(ELEMENTAL_AFFINITIES);
-  const BATTLE_MODIFIER_STATS = ["attack", "defense", "speed", "accuracy"];
+  const BATTLE_MODIFIER_STATS = ["attack", "defense", "speed", "accuracy", "hp"];
   const MONSTER_STAT_KEYS = ["hp", "attack", "defense", "speed"];
   const MONSTER_STAT_LABELS = {
     hp: "Health",
@@ -45,9 +45,9 @@
   const NPC_WALK_PAUSE_MS = 700;
   const NPC_DEFAULT_MOVE_SPEED = 72;
   const DEFAULT_CREST_LEVEL_CAPS = [
-    { crestMin: 0, crestMax: 2, levelCap: 5, arenaMinLevel: 1, arenaMaxLevel: 5, leaderBonusStatPoints: 0 },
-    { crestMin: 3, crestMax: 4, levelCap: 10, arenaMinLevel: 6, arenaMaxLevel: 10, leaderBonusStatPoints: 0 },
-    { crestMin: 5, crestMax: 99, levelCap: 15, arenaMinLevel: 11, arenaMaxLevel: 15, leaderBonusStatPoints: 0 },
+    { crestMin: 0, crestMax: 2, levelCap: 5, arenaMinLevel: 1, arenaMaxLevel: 5, leaderPartySize: 1, leaderBonusStatPoints: 0 },
+    { crestMin: 3, crestMax: 4, levelCap: 10, arenaMinLevel: 6, arenaMaxLevel: 10, leaderPartySize: 2, leaderBonusStatPoints: 0 },
+    { crestMin: 5, crestMax: 99, levelCap: 15, arenaMinLevel: 11, arenaMaxLevel: 15, leaderPartySize: 3, leaderBonusStatPoints: 0 },
   ];
   const OVERWORLD_LABEL_STYLE = {
     background: "rgba(252, 246, 232, 0.96)",
@@ -280,6 +280,7 @@
       images: [],
     },
     arenas: { arenas: [] },
+    events: { events: [] },
     trainers: { trainers: [] },
     maps: {
       "lily-harbor": {
@@ -579,6 +580,7 @@
       townAssets,
       crestAssets,
       arenas: rawContent.arenas || JSON.parse(JSON.stringify(fallbackContent.arenas)),
+      events: rawContent.events || JSON.parse(JSON.stringify(fallbackContent.events)),
       trainers: rawContent.trainers,
       maps,
       mapMetadata: metadata,
@@ -806,6 +808,7 @@
     const monsters = await readJsonFromHandle(rootHandle, ["data", "monsters.json"]);
     const towns = await readJsonFromHandle(rootHandle, ["data", "towns.json"]);
     const arenas = await tryReadJsonFromHandle(rootHandle, ["data", "arenas.json"]) || JSON.parse(JSON.stringify(fallbackContent.arenas));
+    const events = await tryReadJsonFromHandle(rootHandle, ["data", "events.json"]) || JSON.parse(JSON.stringify(fallbackContent.events));
     const trainers = await readJsonFromHandle(rootHandle, ["data", "trainers.json"]);
     const discoveredCharacterSheets = await loadCharacterSheetsFromDirectory(rootHandle);
     const characterSheetsData = await tryReadJsonFromHandle(rootHandle, ["data", "character-sheets.json"]);
@@ -844,7 +847,7 @@
       mapMetadata[mapId] = await tryReadJsonFromHandle(rootHandle, ["data", "map-metadata", mapId + ".meta.json"]) || {};
     }
 
-    return normalizeContent({ settings, themes, items, skills, monsters, towns, arenas, trainers, characterSheets, monsterAssets, townAssets, crestAssets, maps, mapMetadata }, "directory");
+    return normalizeContent({ settings, themes, items, skills, monsters, towns, arenas, events, trainers, characterSheets, monsterAssets, townAssets, crestAssets, maps, mapMetadata }, "directory");
   }
 
   function loadEmbeddedContent() {
@@ -1700,6 +1703,19 @@
     }).filter(function (entry) {
       return !!entry.skillId;
     });
+    if (!Array.isArray(skill.unlockRequirements.requiredAffinities)) {
+      skill.unlockRequirements.requiredAffinities = [];
+    }
+    skill.unlockRequirements.requiredAffinities = skill.unlockRequirements.requiredAffinities.map(function (entry) {
+      return {
+        element: ELEMENTAL_AFFINITIES.includes(entry?.element) ? entry.element : ELEMENTAL_AFFINITIES[0],
+        points: Math.max(1, Number(entry?.points || 1) || 1),
+      };
+    }).filter(function (entry, index, entries) {
+      return entries.findIndex(function (candidate) {
+        return candidate.element === entry.element;
+      }) === index;
+    });
     if (!skill.statModifiers || typeof skill.statModifiers !== "object") {
       skill.statModifiers = { self: [], foe: [] };
     }
@@ -2002,7 +2018,10 @@
     const prerequisiteScore = (skill.unlockRequirements?.requiredSkillLevels || []).reduce(function (sum, requirement) {
       return sum + Math.max(0, Number(requirement.level || 0));
     }, 0);
-    return arenaGatePenalty + prerequisiteScore;
+    const affinityScore = (skill.unlockRequirements?.requiredAffinities || []).reduce(function (sum, requirement) {
+      return sum + Math.max(0, Number(requirement.points || 0));
+    }, 0);
+    return arenaGatePenalty + prerequisiteScore + affinityScore;
   }
 
   function canWildMonsterLearnSkillAtLevel(skill, level) {
@@ -2011,9 +2030,72 @@
     if ((skill.unlockRequirements?.arenaClears || []).length) {
       return false;
     }
+    if ((skill.unlockRequirements?.requiredAffinities || []).length) {
+      return false;
+    }
     return (skill.unlockRequirements?.requiredSkillLevels || []).every(function (requirement) {
       return numericLevel >= Math.max(1, Number(requirement.level || 1));
     });
+  }
+
+  function createEmptySkillAffinityRequirement() {
+    return {
+      element: ELEMENTAL_AFFINITIES[0],
+      points: 1,
+    };
+  }
+
+  function getSkillAffinityRequirementSummary(skill) {
+    ensureSkillEffectCollections(skill);
+    const requirements = skill?.unlockRequirements?.requiredAffinities || [];
+    if (!requirements.length) {
+      return "";
+    }
+    return requirements.map(function (requirement) {
+      return requirement.element + " " + Number(requirement.points || 1);
+    }).join(", ");
+  }
+
+  function getMonsterSkillAffinityRequirementStatus(monster, skill) {
+    ensureElementalAffinityState(monster);
+    ensureSkillEffectCollections(skill);
+    const unmet = (skill.unlockRequirements?.requiredAffinities || []).map(function (requirement) {
+      const currentPoints = getElementalAffinityPointValue(monster, requirement.element);
+      return currentPoints >= Number(requirement.points || 1)
+        ? null
+        : {
+            element: requirement.element,
+            requiredPoints: Math.max(1, Number(requirement.points || 1)),
+            currentPoints,
+          };
+    }).filter(Boolean);
+    return {
+      met: unmet.length === 0,
+      unmet,
+    };
+  }
+
+  function getMonsterSkillAffinityRequirementText(monster, skill) {
+    const status = getMonsterSkillAffinityRequirementStatus(monster, skill);
+    if (status.met) {
+      const summary = getSkillAffinityRequirementSummary(skill);
+      return summary ? ("Affinity requirement met: " + summary + ".") : "";
+    }
+    return "Needs " + status.unmet.map(function (entry) {
+      return entry.element + " " + entry.requiredPoints + " (" + entry.currentPoints + "/" + entry.requiredPoints + ")";
+    }).join(" • ") + ".";
+  }
+
+  function getLearnedSkillAffinityViolations(monster, content) {
+    ensureMonsterSkillState(monster, content);
+    return (monster.skills || []).map(function (skillId) {
+      const skill = getSkill(content, skillId);
+      if (!skill) {
+        return null;
+      }
+      const status = getMonsterSkillAffinityRequirementStatus(monster, skill);
+      return status.met ? null : { skill, status };
+    }).filter(Boolean);
   }
 
   function buildWildMonsterSkills(content, species, level) {
@@ -2093,6 +2175,7 @@
 
   function getBattleStatLabel(stat) {
     return {
+      hp: "Health",
       attack: "Attack",
       defense: "Defense",
       speed: "Speed",
@@ -2607,10 +2690,17 @@
     if (stat === "accuracy") {
       return stageValue * Number(battleModel.accuracyModifierPerStage || 0);
     }
+    if (stat === "hp") {
+      return Math.max(1, Number(monster?.stats?.hp || 0) + stageValue);
+    }
 
     const baseValue = Math.max(0, Number(monster?.stats?.[stat] || 0));
     const stageMultiplier = Math.max(0, 1 + (stageValue * Number(battleModel.statModifierPercentPerStage || 0)) / 100);
     return Math.max(0, Math.round(baseValue * stageMultiplier));
+  }
+
+  function getBattleMaxHp(monster) {
+    return Math.max(1, getEffectiveBattleStat(monster, "hp"));
   }
 
   function getDirectDamageStatusMultiplier(attacker, battleModel) {
@@ -2954,7 +3044,7 @@
       return getSkill(content, skillId);
     }).filter(Boolean);
     const species = getSpecies(content, monster.speciesId);
-    const availableSkills = getSpeciesSkillPool(species).map(function (skillId) {
+    const remainingSkills = getSpeciesSkillPool(species).map(function (skillId) {
       return getSkill(content, skillId);
     }).filter(Boolean).filter(function (skill) {
       return !(monster.skills || []).includes(skill.id);
@@ -2962,6 +3052,7 @@
 
     const buildSkillRow = function (skill, bucketLabel) {
       const unlockStatus = profileState ? getSkillUnlockStatus(profileState, content, skill) : { unlocked: true, reasons: [] };
+      const affinityStatus = getMonsterSkillAffinityRequirementStatus(monster, skill);
       const currentLevel = profileState ? getPlayerSkillLevel(profileState, content, skill.id) : 1;
       const effectiveSkill = getEffectiveSkillAtLevel(skill, currentLevel || 1);
       const maxLevel = getSkillMaxLevel(skill);
@@ -2974,7 +3065,8 @@
       const canLearn = bucketLabel === "available"
         && unlockStatus.unlocked
         && currentLevel > 0
-        && learnedSkills.length < MAX_LEARNED_MONSTER_SKILLS;
+        && learnedSkills.length < MAX_LEARNED_MONSTER_SKILLS
+        && affinityStatus.met;
       const actionLabel = bucketLabel === "learned" ? "Remove" : "Learn";
       const actionName = bucketLabel === "learned" ? "remove-monster-skill" : "learn-monster-skill";
       const requirementCopy = unlockStatus.unlocked
@@ -2984,17 +3076,35 @@
                 ? "This monster already knows 4 moves."
                 : "Unlocked for this save."))
         : unlockStatus.reasons.join(" • ");
+      const affinityCopy = getMonsterSkillAffinityRequirementText(monster, skill);
       const skillElementClass = getSkillElementClassName(effectiveSkill.element);
       const effectivenessState = isActiveBattleMonster && currentOpponent
         ? getSkillEffectivenessState(monster, currentOpponent, effectiveSkill, battleModel)
         : "neutral";
       return [
-        '<li class="monster-move-row ' + skillElementClass + (unlockStatus.unlocked ? "" : " monster-move-row-locked") + '">',
-        '<div class="monster-move-row-main"><span><strong>' + escapeHtml(skill.name) + '</strong><em><span class="skill-element-badge ' + skillElementClass + '">' + escapeHtml(normalizeSkillElement(effectiveSkill.element)) + '</span> ' + escapeHtml(effectiveSkill.kind || "skill") + " · Power " + Number(effectiveSkill.power || 0) + " · Acc " + Number(effectiveSkill.accuracy ?? 100) + '%' + (isActiveBattleMonster && currentOpponent ? ' · ' + renderSkillEffectivenessLabel(effectivenessState) : "") + '</em></span><div class="monster-move-xp"><div class="monster-move-xp-bar"><span style="width:' + Number(xpProgress.percent || 0) + '%"></span></div><strong>' + (xpProgress.maxed ? "Max" : (Number(xpProgress.current || 0) + "/" + Number(xpProgress.threshold || 0) + " XP")) + '</strong></div><small>' + escapeHtml(requirementCopy) + (effectiveSkill.description ? "<br>" + escapeHtml(effectiveSkill.description) : "") + "</small></div>",
+        '<li class="monster-move-row ' + skillElementClass + (unlockStatus.unlocked ? "" : " monster-move-row-locked") + (affinityStatus.met ? "" : " monster-move-row-locked") + '">',
+        '<div class="monster-move-row-main"><span><strong>' + escapeHtml(skill.name) + '</strong><em><span class="skill-element-badge ' + skillElementClass + '">' + escapeHtml(normalizeSkillElement(effectiveSkill.element)) + '</span> ' + escapeHtml(effectiveSkill.kind || "skill") + " · Power " + Number(effectiveSkill.power || 0) + " · Acc " + Number(effectiveSkill.accuracy ?? 100) + '%' + (isActiveBattleMonster && currentOpponent ? ' · ' + renderSkillEffectivenessLabel(effectivenessState) : "") + '</em></span><div class="monster-move-xp"><div class="monster-move-xp-bar"><span style="width:' + Number(xpProgress.percent || 0) + '%"></span></div><strong>' + (xpProgress.maxed ? "Max" : (Number(xpProgress.current || 0) + "/" + Number(xpProgress.threshold || 0) + " XP")) + '</strong></div><small>' + escapeHtml(requirementCopy) + (affinityCopy ? "<br>" + escapeHtml(affinityCopy) : "") + (effectiveSkill.description ? "<br>" + escapeHtml(effectiveSkill.description) : "") + "</small></div>",
         '<div class="monster-move-row-controls"><button class="secondary-button monster-move-action" type="button" data-action="' + actionName + '" data-monster-collection="' + escapeHtml(options?.collection || "party") + '" data-monster-index="' + Number(options?.index || 0) + '" data-skill-id="' + escapeHtml(skill.id) + '"' + (bucketLabel === "available" && !canLearn ? " disabled" : "") + '>' + actionLabel + '</button><span class="monster-move-level-badge">Lv ' + currentLevel + "/" + maxLevel + '</span></div>',
         '</li>',
       ].join("");
     };
+
+    const availableSkills = [];
+    const unavailableSkills = [];
+    remainingSkills.forEach(function (skill) {
+      const unlockStatus = profileState ? getSkillUnlockStatus(profileState, content, skill) : { unlocked: true, reasons: [] };
+      const affinityStatus = getMonsterSkillAffinityRequirementStatus(monster, skill);
+      const currentLevel = profileState ? getPlayerSkillLevel(profileState, content, skill.id) : 1;
+      const canLearn = unlockStatus.unlocked
+        && currentLevel > 0
+        && learnedSkills.length < MAX_LEARNED_MONSTER_SKILLS
+        && affinityStatus.met;
+      if (canLearn) {
+        availableSkills.push(skill);
+      } else {
+        unavailableSkills.push(skill);
+      }
+    });
 
     const learnedMarkup = learnedSkills.length
       ? learnedSkills.map(function (skill) {
@@ -3006,6 +3116,11 @@
           return buildSkillRow(skill, "available");
         }).join("")
       : "<li><span>No additional moves available yet.</span></li>";
+    const unavailableMarkup = unavailableSkills.length
+      ? unavailableSkills.map(function (skill) {
+          return buildSkillRow(skill, "unavailable");
+        }).join("")
+      : "";
 
     return [
       '<section class="monster-moves-panel">',
@@ -3013,6 +3128,9 @@
       '<div><h4>Learned Moves (' + learnedSkills.length + '/' + MAX_LEARNED_MONSTER_SKILLS + ')</h4><ul class="compact-list">' + learnedMarkup + "</ul></div>",
       '<div><h4>Available Moves</h4><ul class="compact-list">' + availableMarkup + "</ul></div>",
       "</div>",
+      (unavailableMarkup
+        ? '<div><h4>Unavailable Skills</h4><ul class="compact-list">' + unavailableMarkup + "</ul></div>"
+        : ""),
       '<p class="monster-moves-note">' + escapeHtml((species?.name || "This monster") + " can learn moves from the Available Moves column. Each monster can know up to " + MAX_LEARNED_MONSTER_SKILLS + " moves at once, and skill levels increase automatically from battle usage and victories.") + "</p>",
       "</section>",
     ].join("");
@@ -3942,6 +4060,7 @@
         shopId: "",
         arenaId: "",
         crestId: "",
+        eventId: "",
       },
     };
   }
@@ -3976,6 +4095,8 @@
         return "Press E to enter the shop";
       case "arena":
         return "Press E to approach the arena";
+      case "event":
+        return "Press E to enter the event";
       case "door":
         return "Press E to use the door";
       default:
@@ -4105,8 +4226,9 @@
     const levelCap = Math.max(1, Number(entry?.levelCap ?? fallback.levelCap) || 1);
     const arenaMinLevel = Math.max(1, Number(entry?.arenaMinLevel ?? fallback.arenaMinLevel ?? 1) || 1);
     const arenaMaxLevel = Math.max(arenaMinLevel, Math.min(levelCap, Number(entry?.arenaMaxLevel ?? fallback.arenaMaxLevel ?? levelCap) || levelCap));
+    const leaderPartySize = Math.max(1, Number(entry?.leaderPartySize ?? fallback.leaderPartySize ?? 1) || 1);
     const leaderBonusStatPoints = Math.max(0, Number(entry?.leaderBonusStatPoints ?? fallback.leaderBonusStatPoints ?? 0) || 0);
-    return { crestMin, crestMax, levelCap, arenaMinLevel: Math.min(arenaMinLevel, arenaMaxLevel), arenaMaxLevel, leaderBonusStatPoints };
+    return { crestMin, crestMax, levelCap, arenaMinLevel: Math.min(arenaMinLevel, arenaMaxLevel), arenaMaxLevel, leaderPartySize, leaderBonusStatPoints };
   }
 
   function ensureGlobalCrestLevelCapSettings(content) {
@@ -4199,12 +4321,17 @@
     return Math.max(0, Number(entry?.leaderBonusStatPoints || 0));
   }
 
+  function getArenaLeaderProgressionPartySize(state, content) {
+    const entry = getCrestLevelCapEntryForCount(getCollectedCrestCount(state), content || ACTIVE_APP?.content || fallbackContent);
+    return Math.max(1, Number(entry?.leaderPartySize || 1));
+  }
+
   function formatCrestLevelCapSummary(content) {
     return ensureGlobalCrestLevelCapSettings(content).map(function (entry) {
       const crestRange = entry.crestMin === entry.crestMax
         ? String(entry.crestMin)
         : (entry.crestMax >= 99 ? (entry.crestMin + "+") : (entry.crestMin + "-" + entry.crestMax));
-      return crestRange + " crest" + (entry.crestMin === 1 && entry.crestMax === 1 ? "" : "s") + ": wild/refight cap Lv " + entry.levelCap + ", arena Lv " + entry.arenaMinLevel + "-" + entry.arenaMaxLevel + ", leader bonus +" + entry.leaderBonusStatPoints + " stat";
+      return crestRange + " crest" + (entry.crestMin === 1 && entry.crestMax === 1 ? "" : "s") + ": wild/refight cap Lv " + entry.levelCap + ", arena Lv " + entry.arenaMinLevel + "-" + entry.arenaMaxLevel + ", arena party " + entry.leaderPartySize + ", leader bonus +" + entry.leaderBonusStatPoints + " stat";
     }).join(", ");
   }
 
@@ -4366,6 +4493,522 @@
     return state.trainerProgress;
   }
 
+  function normalizeEventType(value) {
+    return String(value || "").trim().toLowerCase() === "tournament"
+      ? "tournament"
+      : "championship";
+  }
+
+  function createEmptyEvent(index) {
+    return {
+      id: "event-" + index,
+      name: "New Event",
+      type: "championship",
+      description: "A special battle event.",
+      entryInteractionLabel: "Challenge Event",
+      introText: "A special event is ready for challengers.",
+      completionText: "You completed the event.",
+      leaderSheetId: "",
+      unlock: {
+        requiredCrestCount: 0,
+      },
+      reward: {
+        money: 0,
+        text: "",
+      },
+      trainerIds: [],
+      bracketSize: 4,
+      seedingMode: "authored",
+      rules: {
+        allowedSpeciesIds: [],
+        bannedSpeciesIds: [],
+        allowedVariantIds: [],
+        bannedVariantIds: [],
+        allowedSkillIds: [],
+        bannedSkillIds: [],
+      },
+    };
+  }
+
+  function normalizeEventRuleArray(values) {
+    return Array.from(new Set((Array.isArray(values) ? values : [])
+      .map(function (entry) {
+        return String(entry || "").trim();
+      })
+      .filter(Boolean)));
+  }
+
+  function parseEventRuleList(value) {
+    return normalizeEventRuleArray(String(value || "").split(","));
+  }
+
+  function allVariantBelongsToAllowedSpecies(content, allowedSpeciesSet, variantId) {
+    if (!variantId || !(allowedSpeciesSet instanceof Set) || !allowedSpeciesSet.size) {
+      return true;
+    }
+    return (content.monsters?.species || []).some(function (species) {
+      return allowedSpeciesSet.has(species.id)
+        && Array.isArray(species.variants)
+        && species.variants.some(function (variant) {
+          return variant.id === variantId;
+        });
+    });
+  }
+
+  function normalizeEventRecord(entry, index) {
+    const fallback = createEmptyEvent(index + 1);
+    const type = normalizeEventType(entry?.type);
+    return {
+      id: String(entry?.id || fallback.id),
+      name: String(entry?.name || fallback.name),
+      type,
+      description: String(entry?.description || ""),
+      entryInteractionLabel: String(entry?.entryInteractionLabel || fallback.entryInteractionLabel),
+      introText: String(entry?.introText || entry?.description || fallback.introText),
+      completionText: String(entry?.completionText || ""),
+      leaderSheetId: String(entry?.leaderSheetId || ""),
+      unlock: {
+        requiredCrestCount: Math.max(0, Number(entry?.unlock?.requiredCrestCount || 0)),
+      },
+      reward: {
+        money: Math.max(0, Number(entry?.reward?.money || 0)),
+        text: String(entry?.reward?.text || ""),
+      },
+      trainerIds: normalizeEventRuleArray(entry?.trainerIds),
+      bracketSize: Math.max(2, Number(entry?.bracketSize || fallback.bracketSize)),
+      seedingMode: String(entry?.seedingMode || fallback.seedingMode || "authored"),
+      rules: {
+        allowedSpeciesIds: normalizeEventRuleArray(entry?.rules?.allowedSpeciesIds),
+        bannedSpeciesIds: normalizeEventRuleArray(entry?.rules?.bannedSpeciesIds),
+        allowedVariantIds: normalizeEventRuleArray(entry?.rules?.allowedVariantIds),
+        bannedVariantIds: normalizeEventRuleArray(entry?.rules?.bannedVariantIds),
+        allowedSkillIds: normalizeEventRuleArray(entry?.rules?.allowedSkillIds),
+        bannedSkillIds: normalizeEventRuleArray(entry?.rules?.bannedSkillIds),
+      },
+    };
+  }
+
+  function ensureEventCatalog(content) {
+    if (!content.events || !Array.isArray(content.events.events)) {
+      content.events = JSON.parse(JSON.stringify(fallbackContent.events));
+    }
+
+    content.events.events = content.events.events.map(function (entry, index) {
+      return normalizeEventRecord(entry, index);
+    });
+    return content.events.events;
+  }
+
+  function getEvent(content, eventId) {
+    return ensureEventCatalog(content).find(function (event) {
+      return event.id === eventId;
+    }) || null;
+  }
+
+  function syncEventDevSelection(content, devToolsState) {
+    const events = ensureEventCatalog(content);
+    if (!events.find(function (entry) { return entry.id === devToolsState.selectedEventId; })) {
+      devToolsState.selectedEventId = events[0]?.id || "";
+    }
+  }
+
+  function replaceEventReferences(content, previousEventId, nextEventId) {
+    if (!previousEventId || previousEventId === nextEventId) {
+      return;
+    }
+
+    Object.keys(content.mapMetadata || {}).forEach(function (mapId) {
+      getEditableInteractions(content.mapMetadata[mapId] || {}).forEach(function (interaction) {
+        if (String(interaction?.data?.eventId || "") === String(previousEventId)) {
+          if (!interaction.data || typeof interaction.data !== "object") {
+            interaction.data = {};
+          }
+          interaction.data.eventId = nextEventId;
+        }
+      });
+    });
+  }
+
+  function ensureEventProgress(state) {
+    if (!state.eventProgress) {
+      state.eventProgress = {
+        completedEventIds: [],
+        bestResults: {},
+        inProgress: null,
+      };
+    }
+    if (!Array.isArray(state.eventProgress.completedEventIds)) {
+      state.eventProgress.completedEventIds = [];
+    }
+    state.eventProgress.completedEventIds = Array.from(new Set(state.eventProgress.completedEventIds.map(function (entry) {
+      return String(entry || "").trim();
+    }).filter(Boolean)));
+    if (!state.eventProgress.bestResults || typeof state.eventProgress.bestResults !== "object") {
+      state.eventProgress.bestResults = {};
+    }
+    if (state.eventProgress.inProgress && typeof state.eventProgress.inProgress !== "object") {
+      state.eventProgress.inProgress = null;
+    }
+    return state.eventProgress;
+  }
+
+  function cloneMonsterCollection(collection) {
+    return JSON.parse(JSON.stringify(Array.isArray(collection) ? collection : []));
+  }
+
+  function getActiveEventRun(state) {
+    return ensureEventProgress(state).inProgress || null;
+  }
+
+  function getEventRequiredCrestCount(event) {
+    return Math.max(0, Number(event?.unlock?.requiredCrestCount || 0));
+  }
+
+  function isEventUnlocked(state, event) {
+    return getCollectedCrestCount(state) >= getEventRequiredCrestCount(event);
+  }
+
+  function getEventBestResult(state, eventId) {
+    return ensureEventProgress(state).bestResults[String(eventId || "")] || null;
+  }
+
+  function syncTournamentPartySnapshot(state) {
+    const eventProgress = ensureEventProgress(state);
+    if (eventProgress.inProgress?.type !== "tournament") {
+      return;
+    }
+    eventProgress.inProgress.lockedPartySnapshot = cloneMonsterCollection(state.party);
+  }
+
+  function isTournamentPartyLocked(state) {
+    return ensureEventProgress(state).inProgress?.type === "tournament";
+  }
+
+  function getTournamentPartyLockMessage() {
+    return "Your party is locked while a tournament run is in progress.";
+  }
+
+  function restoreTournamentPartySnapshot(state, content) {
+    const run = getActiveEventRun(state);
+    if (run?.type !== "tournament" || !Array.isArray(run.lockedPartySnapshot)) {
+      return false;
+    }
+
+    state.party = cloneMonsterCollection(run.lockedPartySnapshot);
+    state.party.forEach(function (monster) {
+      const species = getSpecies(content, monster.speciesId);
+      ensureMonsterStatPointState(monster, species);
+      recalculateMonsterStats(monster, species);
+      ensureElementalAffinityState(monster);
+    });
+    return true;
+  }
+
+  function clearInvalidEventRun(state) {
+    const eventProgress = ensureEventProgress(state);
+    eventProgress.inProgress = null;
+  }
+
+  function validateEventRunAgainstContent(state, content) {
+    const run = getActiveEventRun(state);
+    if (!run) {
+      return { valid: true, message: "" };
+    }
+
+    const event = getEvent(content, run.eventId);
+    if (!event) {
+      clearInvalidEventRun(state);
+      return {
+        valid: false,
+        message: "An in-progress event referenced missing content and was cleared.",
+      };
+    }
+
+    const missingTrainerId = normalizeEventRuleArray(run.trainerIds || event.trainerIds).find(function (trainerId) {
+      return !getTrainer(content, trainerId);
+    });
+    if (missingTrainerId) {
+      clearInvalidEventRun(state);
+      return {
+        valid: false,
+        message: "An in-progress event referenced missing trainer '" + missingTrainerId + "' and was cleared.",
+      };
+    }
+
+    return { valid: true, message: "" };
+  }
+
+  function getEventTrainerIdsForRun(run, event) {
+    return normalizeEventRuleArray(run?.trainerIds || event?.trainerIds);
+  }
+
+  function getEventEntrantIdForTrainer(trainerId) {
+    return "trainer:" + String(trainerId || "");
+  }
+
+  function getEventPlayerEntrantId() {
+    return "player";
+  }
+
+  function getNextPowerOfTwo(value) {
+    let size = 1;
+    while (size < Math.max(1, Number(value || 1))) {
+      size *= 2;
+    }
+    return size;
+  }
+
+  function getTrainerRosterStrength(content, trainerId) {
+    const trainer = getTrainer(content, trainerId);
+    if (!trainer) {
+      return 0;
+    }
+    return (trainer.team || []).reduce(function (sum, member) {
+      return sum + Math.max(1, Number(member?.level || trainer.recommendedLevel || 1));
+    }, 0) + Math.max(1, Number(trainer.partySize || trainer.team?.length || 1));
+  }
+
+  function pickTournamentTrainerWinner(content, leftTrainerId, rightTrainerId) {
+    const leftScore = getTrainerRosterStrength(content, leftTrainerId);
+    const rightScore = getTrainerRosterStrength(content, rightTrainerId);
+    if (leftScore === rightScore) {
+      return String(leftTrainerId || "") <= String(rightTrainerId || "")
+        ? leftTrainerId
+        : rightTrainerId;
+    }
+    return leftScore > rightScore ? leftTrainerId : rightTrainerId;
+  }
+
+  function createTournamentRounds(event, state, content) {
+    const trainerIds = normalizeEventRuleArray(event?.trainerIds);
+    const totalEntrants = Math.max(2, Number(event?.bracketSize || trainerIds.length + 1 || 2));
+    const seededEntrants = [getEventPlayerEntrantId()].concat(
+      trainerIds.slice(0, Math.max(0, totalEntrants - 1)).map(function (trainerId) {
+        return getEventEntrantIdForTrainer(trainerId);
+      })
+    );
+    const paddedSize = getNextPowerOfTwo(Math.max(totalEntrants, seededEntrants.length));
+    while (seededEntrants.length < paddedSize) {
+      seededEntrants.push("");
+    }
+
+    const rounds = [];
+    let currentEntrants = seededEntrants.slice();
+    while (currentEntrants.length > 1) {
+      const matches = [];
+      for (let index = 0; index < currentEntrants.length; index += 2) {
+        matches.push({
+          leftEntrantId: currentEntrants[index] || "",
+          rightEntrantId: currentEntrants[index + 1] || "",
+          winnerEntrantId: "",
+        });
+      }
+      rounds.push({ matches });
+      currentEntrants = Array.from({ length: matches.length }, function () {
+        return "";
+      });
+    }
+
+    return rounds;
+  }
+
+  function getTournamentEntrantTrainerId(entrantId) {
+    return String(entrantId || "").startsWith("trainer:")
+      ? String(entrantId || "").slice("trainer:".length)
+      : "";
+  }
+
+  function getTournamentEntrantLabel(state, content, entrantId) {
+    if (entrantId === getEventPlayerEntrantId()) {
+      return state.player?.name || "Player";
+    }
+    const trainerId = getTournamentEntrantTrainerId(entrantId);
+    const trainer = trainerId ? getTrainer(content, trainerId) : null;
+    return trainer
+      ? ((trainer.title || "Trainer") + " " + (trainer.name || trainer.id))
+      : "Open Slot";
+  }
+
+  function propagateTournamentWinners(run) {
+    (run?.rounds || []).forEach(function (round, roundIndex) {
+      const nextRound = run?.rounds?.[roundIndex + 1];
+      if (!nextRound) {
+        return;
+      }
+      nextRound.matches.forEach(function (match) {
+        match.leftEntrantId = "";
+        match.rightEntrantId = "";
+      });
+      round.matches.forEach(function (match, matchIndex) {
+        const nextMatch = nextRound.matches[Math.floor(matchIndex / 2)];
+        if (!nextMatch) {
+          return;
+        }
+        if (matchIndex % 2 === 0) {
+          nextMatch.leftEntrantId = match.winnerEntrantId || "";
+        } else {
+          nextMatch.rightEntrantId = match.winnerEntrantId || "";
+        }
+      });
+    });
+  }
+
+  function advanceTournamentRun(run, state, content) {
+    if (!run || run.type !== "tournament") {
+      return { completed: false, pending: false };
+    }
+
+    propagateTournamentWinners(run);
+    const playerEntrantId = getEventPlayerEntrantId();
+
+    for (let roundIndex = 0; roundIndex < (run.rounds || []).length; roundIndex += 1) {
+      const round = run.rounds[roundIndex];
+      for (let matchIndex = 0; matchIndex < (round.matches || []).length; matchIndex += 1) {
+        const match = round.matches[matchIndex];
+        if (match.winnerEntrantId) {
+          continue;
+        }
+
+        const left = match.leftEntrantId || "";
+        const right = match.rightEntrantId || "";
+        if (!left && !right) {
+          match.winnerEntrantId = "";
+          continue;
+        }
+        if (!left || !right) {
+          match.winnerEntrantId = left || right;
+          propagateTournamentWinners(run);
+          continue;
+        }
+        if (left === playerEntrantId || right === playerEntrantId) {
+          run.currentRoundIndex = roundIndex;
+          run.currentMatchIndex = matchIndex;
+          return {
+            completed: false,
+            pending: true,
+            match,
+            roundIndex,
+            matchIndex,
+          };
+        }
+
+        const winnerTrainerId = pickTournamentTrainerWinner(
+          content,
+          getTournamentEntrantTrainerId(left),
+          getTournamentEntrantTrainerId(right)
+        );
+        match.winnerEntrantId = getEventEntrantIdForTrainer(winnerTrainerId);
+        propagateTournamentWinners(run);
+      }
+    }
+
+    const finalRound = run.rounds?.[run.rounds.length - 1];
+    const finalMatch = finalRound?.matches?.[0] || null;
+    run.currentRoundIndex = Math.max(0, Number(run.currentRoundIndex || 0));
+    run.currentMatchIndex = Math.max(0, Number(run.currentMatchIndex || 0));
+    return {
+      completed: Boolean(finalMatch?.winnerEntrantId),
+      pending: false,
+      winnerEntrantId: finalMatch?.winnerEntrantId || "",
+    };
+  }
+
+  function createChampionshipRun(event) {
+    return {
+      eventId: event.id,
+      type: "championship",
+      trainerIds: normalizeEventRuleArray(event.trainerIds),
+      currentTrainerIndex: 0,
+    };
+  }
+
+  function createTournamentRun(state, content, event) {
+    const run = {
+      eventId: event.id,
+      type: "tournament",
+      trainerIds: normalizeEventRuleArray(event.trainerIds),
+      lockedPartySnapshot: cloneMonsterCollection(state.party),
+      rounds: createTournamentRounds(event, state, content),
+      currentRoundIndex: 0,
+      currentMatchIndex: 0,
+      wins: 0,
+    };
+    advanceTournamentRun(run, state, content);
+    return run;
+  }
+
+  function getCurrentTournamentMatch(run) {
+    return run?.rounds?.[Number(run?.currentRoundIndex || 0)]?.matches?.[Number(run?.currentMatchIndex || 0)] || null;
+  }
+
+  function describeTournamentRules(event) {
+    const rules = event?.rules || {};
+    const parts = [];
+    if (rules.allowedSpeciesIds?.length) {
+      parts.push("species allowlist: " + rules.allowedSpeciesIds.join(", "));
+    } else if (rules.bannedSpeciesIds?.length) {
+      parts.push("species banlist: " + rules.bannedSpeciesIds.join(", "));
+    }
+    if (rules.allowedVariantIds?.length) {
+      parts.push("variant allowlist: " + rules.allowedVariantIds.join(", "));
+    } else if (rules.bannedVariantIds?.length) {
+      parts.push("variant banlist: " + rules.bannedVariantIds.join(", "));
+    }
+    if (rules.allowedSkillIds?.length) {
+      parts.push("move allowlist: " + rules.allowedSkillIds.join(", "));
+    } else if (rules.bannedSkillIds?.length) {
+      parts.push("move banlist: " + rules.bannedSkillIds.join(", "));
+    }
+    return parts.length ? parts.join(" • ") : "No special restrictions.";
+  }
+
+  function isIdAllowedByEventRule(allowedIds, bannedIds, id) {
+    const normalizedId = String(id || "");
+    const allowlist = normalizeEventRuleArray(allowedIds);
+    if (allowlist.length) {
+      return allowlist.includes(normalizedId);
+    }
+    const banlist = normalizeEventRuleArray(bannedIds);
+    if (banlist.length) {
+      return !banlist.includes(normalizedId);
+    }
+    return true;
+  }
+
+  function validateTournamentParty(state, content, event) {
+    const rules = event?.rules || {};
+    const messages = [];
+
+    (state.party || []).forEach(function (monster, monsterIndex) {
+      const species = getSpecies(content, monster.speciesId);
+      const monsterName = species?.name || monster.speciesId || ("Monster " + (monsterIndex + 1));
+      const speciesId = String(monster.speciesId || "");
+      const variantId = String(monster.variantId || "default");
+      const learnedSkills = Array.isArray(monster.skills) ? monster.skills.map(function (skillId) {
+        return String(skillId || "");
+      }).filter(Boolean) : [];
+
+      if (!isIdAllowedByEventRule(rules.allowedSpeciesIds, rules.bannedSpeciesIds, speciesId)) {
+        messages.push(monsterName + " is not legal under the species rule.");
+      }
+      if (!isIdAllowedByEventRule(rules.allowedVariantIds, rules.bannedVariantIds, variantId)) {
+        messages.push(monsterName + " is not legal under the variant rule.");
+      }
+      learnedSkills.forEach(function (skillId) {
+        const skill = getSkill(content, skillId);
+        const skillName = skill?.name || skillId;
+        if (!isIdAllowedByEventRule(rules.allowedSkillIds, rules.bannedSkillIds, skillId)) {
+          messages.push(monsterName + " knows " + skillName + ", which is not legal under the move rule.");
+        }
+      });
+    });
+
+    return {
+      valid: !messages.length,
+      messages,
+    };
+  }
+
   function getTrainerRefightCooldownSeconds(state) {
     return Math.max(0, Number(state?.settings?.trainerRefightCooldownSeconds ?? 180));
   }
@@ -4479,7 +5122,7 @@
     }).filter(Boolean);
     const requestedSize = isRefight
       ? Math.max(1, Number(state.settings?.arenaLeaderPartySize || authoredTeam.length || 1))
-      : Math.max(1, Number(arena?.partySize || authoredTeam.length || 1));
+      : Math.max(1, Number(getArenaLeaderProgressionPartySize(state, content) || arena?.partySize || authoredTeam.length || 1));
     const roster = authoredTeam.slice(0, requestedSize);
     const refightRange = getRefightArenaLeaderLevelRange(state);
     const progressionRange = getArenaProgressionLevelRange(state, content);
@@ -4507,9 +5150,11 @@
     });
   }
 
-  function buildTrainerBattleRoster(state, content, trainer) {
+  function buildTrainerBattleRoster(state, content, trainer, options) {
     const progress = ensureTrainerProgress(state);
-    const isRefight = Boolean(trainer?.id && progress.defeatedTrainerIds.includes(trainer.id));
+    const isRefight = options?.ignoreRefight
+      ? false
+      : Boolean(trainer?.id && progress.defeatedTrainerIds.includes(trainer.id));
     const authoredTeam = (trainer?.team || []).map(function (member) {
       return resolveArenaRosterMember(content, member);
     }).filter(Boolean);
@@ -4518,11 +5163,13 @@
     }).filter(Boolean);
     const authoredPartySize = Math.max(1, Number(trainer?.partySize || authoredTeam.length || 1));
     const refightPartyMode = normalizeTrainerRefightPartyMode(trainer?.refightPartyMode);
-    const requestedSize = isRefight
+    const requestedSize = options?.fixedPartySize
+      ? Math.max(1, Number(options.fixedPartySize || authoredPartySize))
+      : (isRefight
       ? (refightPartyMode === "flexible"
           ? Math.max(1, Number(state.settings?.trainerRefightPartySize || authoredPartySize || 1))
           : authoredPartySize)
-      : authoredPartySize;
+      : authoredPartySize);
     const roster = authoredTeam.slice(0, requestedSize);
     const refightRange = getTrainerRefightLevelRange(state);
 
@@ -4604,6 +5251,14 @@
         }
       });
     });
+
+    ensureEventCatalog(content).forEach(function (event) {
+      event.trainerIds = normalizeEventRuleArray((event.trainerIds || []).map(function (trainerId) {
+        return String(trainerId || "") === String(previousTrainerId)
+          ? nextTrainerId
+          : trainerId;
+      }));
+    });
   }
 
   function syncArenaDevSelection(content, devToolsState) {
@@ -4677,23 +5332,53 @@
     const crestId = arena?.crestId || interaction.data?.crestId || "";
     const progress = ensureArenaProgress(state);
     const isCleared = (arenaId && progress.clearedArenaIds.includes(arenaId)) || (crestId && progress.earnedCrests.includes(crestId));
+    const progressionRange = getArenaProgressionLevelRange(state, content);
+    const refightRange = getRefightArenaLeaderLevelRange(state);
+    const tierPartySize = getArenaLeaderProgressionPartySize(state, content);
+    const currentPartySize = isCleared
+      ? Math.max(1, Number(state.settings?.arenaLeaderPartySize || arena?.partySize || 1))
+      : Math.max(1, Number(tierPartySize || arena?.partySize || 1));
+    const currentLevelRange = isCleared ? refightRange : progressionRange;
+    const leaderSheet = getCharacterSheetConfig(content, arena?.leaderSheetId || "");
+    const rewardParts = [];
+    if (arena?.crestName || crestId) {
+      rewardParts.push(arena?.crestName || crestId);
+    }
+    if (Number(arena?.rewardMoney || 0) > 0) {
+      rewardParts.push("$" + Number(arena.rewardMoney || 0));
+    }
+    const rewardLabel = rewardParts.length ? rewardParts.join(" + ") : "Unassigned Reward";
+    const modeLabel = isCleared ? "Refight" : "First Challenge";
+    const statusLabel = isCleared ? "Crest earned. Refight ready." : "Crest available. Challenge ready.";
+    const levelRangeLabel = "Lv " + currentLevelRange.min + "-" + currentLevelRange.max;
+    const partySizeLabel = currentPartySize + " monster" + (currentPartySize === 1 ? "" : "s");
+    const rulesSummary = isCleared
+      ? ("Refight rules use your current arena settings.")
+      : ("First clear uses your current crest tier rules.");
 
     return {
       arenaId,
       arena,
+      leaderSheet,
       crestId,
       isCleared,
       title: arena?.name || interaction.label || interaction.id || "Arena",
       leaderName: arena?.leaderName || "Arena Leader",
       leaderTitle: arena?.leaderTitle || "Leader",
       crestName: arena?.crestName || crestId || "Unassigned Crest",
-      recommendedLevel: arena?.recommendedLevel ?? "TBD",
-      leaderPartySize: arena?.partySize ?? "TBD",
+      statusLabel,
+      modeLabel,
+      rewardLabel,
+      levelRangeLabel,
+      partySizeLabel,
+      leaderPartySize: currentPartySize,
+      configuredTeamSize: Array.isArray(arena?.team) ? arena.team.length : 0,
+      currentLevelMin: currentLevelRange.min,
+      currentLevelMax: currentLevelRange.max,
+      rulesSummary,
       rewardText: arena?.rewardText || "Defeat the arena leader to earn this crest.",
       introText: interaction.text || arena?.description || "The arena leader is ready when you are.",
-      arenaStatus: isCleared
-        ? "Crest earned. Arena refight available."
-        : "Arena challenge ready.",
+      arenaStatus: statusLabel,
     };
   }
 
@@ -4708,6 +5393,77 @@
       type: interaction.type,
       title: view.title,
       arena: view,
+    };
+  }
+
+  function buildEventViewModel(state, content, interaction) {
+    const eventId = String(interaction?.data?.eventId || "");
+    const event = eventId ? getEvent(content, eventId) : null;
+    const eventProgress = ensureEventProgress(state);
+    const activeRun = getActiveEventRun(state);
+    const runForThisEvent = activeRun?.eventId === eventId ? activeRun : null;
+    const blockedByOtherRun = Boolean(activeRun?.eventId && activeRun.eventId !== eventId);
+    const validation = event?.type === "tournament" && !runForThisEvent
+      ? validateTournamentParty(state, content, event)
+      : { valid: true, messages: [] };
+    const requiredCrests = getEventRequiredCrestCount(event);
+    const unlocked = event ? isEventUnlocked(state, event) : false;
+    const completed = Boolean(eventId && eventProgress.completedEventIds.includes(eventId));
+    const bestResult = getEventBestResult(state, eventId);
+    const currentTournamentMatch = runForThisEvent?.type === "tournament"
+      ? getCurrentTournamentMatch(runForThisEvent)
+      : null;
+    const nextOpponentLabel = currentTournamentMatch
+      ? getTournamentEntrantLabel(
+          state,
+          content,
+          currentTournamentMatch.leftEntrantId === getEventPlayerEntrantId()
+            ? currentTournamentMatch.rightEntrantId
+            : currentTournamentMatch.leftEntrantId
+        )
+      : "";
+
+    return {
+      eventId,
+      event,
+      title: event?.name || interaction?.label || interaction?.id || "Event",
+      eventType: normalizeEventType(event?.type),
+      description: event?.description || interaction?.text || "A special event is available here.",
+      introText: event?.introText || interaction?.text || "Step forward when you are ready.",
+      completionText: event?.completionText || "",
+      entryInteractionLabel: event?.entryInteractionLabel || "Start Event",
+      rewardMoney: Math.max(0, Number(event?.reward?.money || 0)),
+      rewardText: event?.reward?.text || "",
+      requiredCrests,
+      crestCount: getCollectedCrestCount(state),
+      unlocked,
+      completed,
+      blockedByOtherRun,
+      activeRunName: blockedByOtherRun ? (getEvent(content, activeRun?.eventId || "")?.name || activeRun?.eventId || "another event") : "",
+      resumable: Boolean(runForThisEvent),
+      validationMessages: validation.messages,
+      validationPassed: validation.valid,
+      trainerCount: event?.trainerIds?.length || 0,
+      rulesSummary: event?.type === "tournament" ? describeTournamentRules(event) : "",
+      currentProgress: runForThisEvent?.type === "championship"
+        ? ("Battle " + (Math.max(0, Number(runForThisEvent.currentTrainerIndex || 0)) + 1) + " of " + Math.max(1, event?.trainerIds?.length || 1))
+        : (runForThisEvent?.type === "tournament"
+            ? ("Round " + (Number(runForThisEvent.currentRoundIndex || 0) + 1) + " · Match " + (Number(runForThisEvent.currentMatchIndex || 0) + 1) + (nextOpponentLabel ? " vs " + nextOpponentLabel : ""))
+            : ""),
+      bestResultSummary: bestResult?.summary || "",
+    };
+  }
+
+  function buildEventInteractionState(state, content, interaction) {
+    const view = buildEventViewModel(state, content, interaction);
+    state.message = view.resumable
+      ? "You checked your progress in " + view.title + "."
+      : "You reviewed " + view.title + ".";
+    state.interaction = {
+      id: interaction.id,
+      type: interaction.type,
+      title: view.title,
+      event: view,
     };
   }
 
@@ -4753,6 +5509,9 @@
       return;
     } else if (interaction.type === "arena") {
       buildArenaInteractionState(state, content, interaction);
+      return;
+    } else if (interaction.type === "event") {
+      buildEventInteractionState(state, content, interaction);
       return;
     } else if (interaction.type === "shop") {
       text = text || "Welcome in. Pick up a few supplies before heading back out.";
@@ -4947,6 +5706,11 @@
         defeatedTrainerIds: [],
         rematchCooldowns: {},
       },
+      eventProgress: {
+        completedEventIds: [],
+        bestResults: {},
+        inProgress: null,
+      },
       battle: null,
       interaction: null,
       message: content.mapMetadata[starterTown.mapId]?.safezone
@@ -4989,6 +5753,11 @@
       trainerProgress: save.trainerProgress || {
         defeatedTrainerIds: [],
         rematchCooldowns: {},
+      },
+      eventProgress: save.eventProgress || {
+        completedEventIds: [],
+        bestResults: {},
+        inProgress: null,
       },
       battle: null,
       interaction: null,
@@ -5035,6 +5804,14 @@
     ensureTownProgress(state);
     registerTownVisit(state, state.player?.lastTownId || state.world?.lastTownId || "");
     ensureTrainerProgress(state);
+    ensureEventProgress(state);
+    const eventValidation = validateEventRunAgainstContent(state, content);
+    if (!eventValidation.valid && eventValidation.message) {
+      state.message = eventValidation.message;
+    }
+    if (getActiveEventRun(state)?.type === "tournament") {
+      restoreTournamentPartySnapshot(state, content);
+    }
     ensurePlayerSkillProgressState(state, content);
 
     return state;
@@ -5066,6 +5843,7 @@
       arenaProgress: ensureArenaProgress(state),
       townProgress: ensureTownProgress(state),
       trainerProgress: ensureTrainerProgress(state),
+      eventProgress: ensureEventProgress(state),
       party: (state.party || []).map(sanitizeMonster),
       bank: (state.bank || []).map(sanitizeMonster),
       registry: state.registry,
@@ -5652,88 +6430,7 @@
     return enemy;
   }
 
-  function startArenaBattle(state, content, arena, interaction) {
-    clearAllBattleTemporaryState(state);
-    const roster = buildArenaBattleRoster(state, content, arena);
-    const team = roster.map(function (member) {
-      return createBattleEnemyFromArenaTeamMember(content, member);
-    }).filter(Boolean);
-
-    if (!team.length) {
-      state.message = "This arena does not have a leader team configured yet.";
-      return;
-    }
-
-    state.interaction = null;
-    state.battle = {
-      type: "trainer",
-      battleSource: "arena-leader",
-      opponentName: arena.leaderName || "Arena Leader",
-      opponentTitle: arena.leaderTitle || "Leader",
-      leaderSheetId: arena.leaderSheetId || "",
-      arenaId: arena.id,
-      crestId: arena.crestId || interaction.data?.crestId || "",
-      crestName: arena.crestName || "Arena Crest",
-      rewardMoney: Number(arena.rewardMoney || 0),
-      rewardText: arena.rewardText || "",
-      enemyQueue: team,
-      enemyIndex: 0,
-      enemy: team[0],
-      playerIndex: 0,
-      participantMonsterIds: state.party[0]?.instanceId ? [state.party[0].instanceId] : [],
-      pendingMonsterXpReward: 0,
-      log: [(arena.leaderTitle || "Leader") + " " + (arena.leaderName || "Arena Leader") + " challenges you to a battle."],
-      menu: "root",
-      outcome: null,
-    };
-    if (state.battle.leaderSheetId) {
-      const animation = ensureBattleAnimationState(state);
-      animation.trainerIntro.phase = "enter";
-      animation.trainerIntro.progress = 0;
-      animation.trainerIntro.awaitingContinue = false;
-      animation.playerIntro.phase = "hidden";
-      animation.playerIntro.progress = 0;
-      animation.playerIntro.completed = false;
-      queueBattleAnimationEvents(state, [
-        { type: "trainer-enter", duration: 1400 },
-      ]);
-    }
-    state.message = "Arena battle started at " + (arena.name || interaction.label || "the arena") + ".";
-  }
-
-  function startTrainerBattle(state, content, trainer, npc) {
-    clearAllBattleTemporaryState(state);
-    const roster = buildTrainerBattleRoster(state, content, trainer);
-    const team = roster.map(function (member) {
-      return createBattleEnemyFromArenaTeamMember(content, member);
-    }).filter(Boolean);
-
-    if (!team.length) {
-      state.message = "This trainer does not have a team configured yet.";
-      return;
-    }
-
-    state.interaction = null;
-    state.battle = {
-      type: "trainer",
-      battleSource: "npc-trainer",
-      opponentName: trainer.name || npc.label || "Trainer",
-      opponentTitle: trainer.title || "Trainer",
-      trainerId: trainer.id || npc.id || "",
-      trainerSheetId: npc?.sheetId || "",
-      rewardMoney: Math.max(0, Number(trainer.rewardMoney || 0)),
-      rewardText: trainer.rewardText || "",
-      victoryText: trainer.victoryText || "",
-      enemyQueue: team,
-      enemyIndex: 0,
-      enemy: team[0],
-      playerIndex: 0,
-      participantMonsterIds: state.party[0]?.instanceId ? [state.party[0].instanceId] : [],
-      pendingMonsterXpReward: 0,
-      log: [(trainer.title || "Trainer") + " " + (trainer.name || npc.label || "Trainer") + " challenges you to a battle."],
-      menu: "root",
-      outcome: null,
-    };
+  function queueTrainerIntroAnimation(state) {
     const animation = ensureBattleAnimationState(state);
     animation.trainerIntro.phase = "enter";
     animation.trainerIntro.progress = 0;
@@ -5744,7 +6441,205 @@
     queueBattleAnimationEvents(state, [
       { type: "trainer-enter", duration: 1400 },
     ]);
-    state.message = (trainer.name || npc.label || "Trainer") + " challenged you to a battle.";
+  }
+
+  function startStructuredTrainerBattle(state, content, config) {
+    clearAllBattleTemporaryState(state);
+    const team = (config?.roster || []).map(function (member) {
+      return createBattleEnemyFromArenaTeamMember(content, member);
+    }).filter(Boolean);
+
+    if (!team.length) {
+      state.message = config?.missingTeamMessage || "This battle does not have a team configured yet.";
+      return false;
+    }
+
+    state.interaction = null;
+    state.battle = {
+      type: "trainer",
+      battleSource: config?.battleSource || "trainer",
+      opponentName: config?.opponentName || "Trainer",
+      opponentTitle: config?.opponentTitle || "Trainer",
+      trainerId: config?.trainerId || "",
+      leaderSheetId: config?.leaderSheetId || "",
+      trainerSheetId: config?.trainerSheetId || "",
+      rewardMoney: Math.max(0, Number(config?.rewardMoney || 0)),
+      rewardText: config?.rewardText || "",
+      victoryText: config?.victoryText || "",
+      arenaId: config?.arenaId || "",
+      crestId: config?.crestId || "",
+      crestName: config?.crestName || "",
+      eventId: config?.eventId || "",
+      eventType: config?.eventType || "",
+      eventTrainerId: config?.eventTrainerId || "",
+      eventRoundIndex: Number(config?.eventRoundIndex || 0),
+      eventMatchIndex: Number(config?.eventMatchIndex || 0),
+      enemyQueue: team,
+      enemyIndex: 0,
+      enemy: team[0],
+      playerIndex: 0,
+      participantMonsterIds: state.party[0]?.instanceId ? [state.party[0].instanceId] : [],
+      pendingMonsterXpReward: 0,
+      log: [config?.introLog || ((config?.opponentTitle || "Trainer") + " " + (config?.opponentName || "Trainer") + " challenges you to a battle.")],
+      menu: "root",
+      outcome: null,
+      eventResolution: null,
+    };
+    if (state.battle.leaderSheetId || state.battle.trainerSheetId) {
+      queueTrainerIntroAnimation(state);
+    }
+    state.message = config?.startMessage || ((config?.opponentName || "Trainer") + " challenged you to a battle.");
+    return true;
+  }
+
+  function startArenaBattle(state, content, arena, interaction) {
+    const roster = buildArenaBattleRoster(state, content, arena);
+    startStructuredTrainerBattle(state, content, {
+      roster,
+      battleSource: "arena-leader",
+      opponentName: arena.leaderName || "Arena Leader",
+      opponentTitle: arena.leaderTitle || "Leader",
+      leaderSheetId: arena.leaderSheetId || "",
+      arenaId: arena.id,
+      crestId: arena.crestId || interaction.data?.crestId || "",
+      crestName: arena.crestName || "Arena Crest",
+      rewardMoney: Number(arena.rewardMoney || 0),
+      rewardText: arena.rewardText || "",
+      introLog: (arena.leaderTitle || "Leader") + " " + (arena.leaderName || "Arena Leader") + " challenges you to a battle.",
+      startMessage: "Arena battle started at " + (arena.name || interaction.label || "the arena") + ".",
+      missingTeamMessage: "This arena does not have a leader team configured yet.",
+    });
+  }
+
+  function startTrainerBattle(state, content, trainer, npc) {
+    const roster = buildTrainerBattleRoster(state, content, trainer);
+    startStructuredTrainerBattle(state, content, {
+      roster,
+      battleSource: "npc-trainer",
+      opponentName: trainer.name || npc.label || "Trainer",
+      opponentTitle: trainer.title || "Trainer",
+      trainerId: trainer.id || npc.id || "",
+      trainerSheetId: npc?.sheetId || "",
+      rewardMoney: Math.max(0, Number(trainer.rewardMoney || 0)),
+      rewardText: trainer.rewardText || "",
+      victoryText: trainer.victoryText || "",
+      introLog: (trainer.title || "Trainer") + " " + (trainer.name || npc.label || "Trainer") + " challenges you to a battle.",
+      startMessage: (trainer.name || npc.label || "Trainer") + " challenged you to a battle.",
+      missingTeamMessage: "This trainer does not have a team configured yet.",
+    });
+  }
+
+  function startChampionshipBattle(state, content, event, run) {
+    const trainerIds = getEventTrainerIdsForRun(run, event);
+    const trainerId = trainerIds[Math.max(0, Number(run?.currentTrainerIndex || 0))] || "";
+    const trainer = trainerId ? getTrainer(content, trainerId) : null;
+    if (!trainer) {
+      state.message = "This championship references a missing trainer.";
+      return false;
+    }
+
+    const roster = buildTrainerBattleRoster(state, content, trainer, {
+      ignoreRefight: true,
+      fixedPartySize: trainer.partySize,
+    });
+    return startStructuredTrainerBattle(state, content, {
+      roster,
+      battleSource: "event-championship",
+      opponentName: trainer.name || trainer.id || "Champion",
+      opponentTitle: trainer.title || "Trainer",
+      rewardMoney: 0,
+      rewardText: "",
+      victoryText: "",
+      eventId: event.id,
+      eventType: "championship",
+      eventTrainerId: trainer.id,
+      introLog: (trainer.title || "Trainer") + " " + (trainer.name || trainer.id || "Champion") + " challenges you in the " + (event.name || "championship") + ".",
+      startMessage: "Championship battle started against " + (trainer.name || trainer.id || "the next challenger") + ".",
+      missingTeamMessage: "This championship trainer does not have a team configured yet.",
+    });
+  }
+
+  function startTournamentBattle(state, content, event, run) {
+    restoreTournamentPartySnapshot(state, content);
+    const match = getCurrentTournamentMatch(run);
+    if (!match) {
+      state.message = "This tournament does not have a playable match ready.";
+      return false;
+    }
+
+    const opponentEntrantId = match.leftEntrantId === getEventPlayerEntrantId()
+      ? match.rightEntrantId
+      : match.leftEntrantId;
+    const trainerId = getTournamentEntrantTrainerId(opponentEntrantId);
+    const trainer = trainerId ? getTrainer(content, trainerId) : null;
+    if (!trainer) {
+      state.message = "This tournament references a missing trainer.";
+      return false;
+    }
+
+    const roster = buildTrainerBattleRoster(state, content, trainer, {
+      ignoreRefight: true,
+      fixedPartySize: trainer.partySize,
+    });
+    return startStructuredTrainerBattle(state, content, {
+      roster,
+      battleSource: "event-tournament",
+      opponentName: trainer.name || trainer.id || "Trainer",
+      opponentTitle: trainer.title || "Trainer",
+      rewardMoney: 0,
+      rewardText: "",
+      victoryText: "",
+      eventId: event.id,
+      eventType: "tournament",
+      eventTrainerId: trainer.id,
+      eventRoundIndex: Number(run.currentRoundIndex || 0),
+      eventMatchIndex: Number(run.currentMatchIndex || 0),
+      introLog: (trainer.title || "Trainer") + " " + (trainer.name || trainer.id || "Trainer") + " steps into the " + (event.name || "tournament") + ".",
+      startMessage: "Tournament match started against " + (trainer.name || trainer.id || "the next trainer") + ".",
+      missingTeamMessage: "This tournament trainer does not have a team configured yet.",
+    });
+  }
+
+  function startEventRunFromInteraction(state, content, interaction) {
+    const eventId = String(interaction?.data?.eventId || "");
+    const event = eventId ? getEvent(content, eventId) : null;
+    if (!event) {
+      state.message = "This event interaction is not linked to a valid event record yet.";
+      return false;
+    }
+
+    const eventProgress = ensureEventProgress(state);
+    const activeRun = getActiveEventRun(state);
+    if (activeRun?.eventId && activeRun.eventId !== event.id) {
+      state.message = "Finish or resume " + (getEvent(content, activeRun.eventId)?.name || "your current event") + " before starting another event.";
+      return false;
+    }
+    if (!isEventUnlocked(state, event)) {
+      state.message = event.name + " is locked until you earn " + getEventRequiredCrestCount(event) + " crests.";
+      return false;
+    }
+
+    let run = activeRun?.eventId === event.id ? activeRun : null;
+    if (!run) {
+      if (event.type === "tournament") {
+        const validation = validateTournamentParty(state, content, event);
+        if (!validation.valid) {
+          buildEventInteractionState(state, content, interaction);
+          state.message = "Tournament entry blocked until your party meets the event rules.";
+          return false;
+        }
+        run = createTournamentRun(state, content, event);
+      } else {
+        run = createChampionshipRun(event);
+      }
+      eventProgress.inProgress = run;
+    }
+
+    if (run.type === "tournament") {
+      syncTournamentPartySnapshot(state);
+      return startTournamentBattle(state, content, event, run);
+    }
+    return startChampionshipBattle(state, content, event, run);
   }
 
   function getSkillHitChance(monster, skill) {
@@ -5777,6 +6672,16 @@
         });
       } else {
         temp.modifiers[effect.stat] += direction;
+      }
+    }
+
+    target.maxHp = getBattleMaxHp(target);
+    target.currentHp = Math.max(0, Math.min(target.maxHp, Number(target.currentHp || 0)));
+    if (effect.type !== "cleanse-negative") {
+      if (effect.stat === "hp") {
+        target.currentHp = Math.max(0, Math.min(target.maxHp, Number(target.currentHp || 0) + Number(effect.amount || 0)));
+      } else if (effect.stat === "all") {
+        target.currentHp = Math.max(0, Math.min(target.maxHp, Number(target.currentHp || 0) + Number(effect.amount || 0)));
       }
     }
 
@@ -5898,6 +6803,102 @@
     temp.statuses = nextStatuses;
   }
 
+  function setEventBestResultSummary(state, eventId, summary, completed) {
+    const eventProgress = ensureEventProgress(state);
+    if (!eventProgress.bestResults[eventId] || typeof eventProgress.bestResults[eventId] !== "object") {
+      eventProgress.bestResults[eventId] = {
+        summary: "",
+        completed: false,
+        completions: 0,
+      };
+    }
+    eventProgress.bestResults[eventId].summary = String(summary || "");
+    eventProgress.bestResults[eventId].completed = Boolean(completed);
+    if (completed) {
+      eventProgress.bestResults[eventId].completions = Math.max(0, Number(eventProgress.bestResults[eventId].completions || 0)) + 1;
+    }
+  }
+
+  function resolveEventBattleVictory(state, content, battle) {
+    const event = getEvent(content, battle?.eventId || "");
+    const eventProgress = ensureEventProgress(state);
+    const run = getActiveEventRun(state);
+    if (!event || !run || run.eventId !== event.id) {
+      clearInvalidEventRun(state);
+      return {
+        completed: false,
+        progressText: "Event progress could not be resumed because the event data changed.",
+      };
+    }
+
+    if (run.type === "championship") {
+      run.currentTrainerIndex = Math.max(0, Number(run.currentTrainerIndex || 0)) + 1;
+      if (run.currentTrainerIndex >= Math.max(1, event.trainerIds.length)) {
+        if (!eventProgress.completedEventIds.includes(event.id)) {
+          eventProgress.completedEventIds.push(event.id);
+        }
+        eventProgress.inProgress = null;
+        state.player.money += Math.max(0, Number(event.reward?.money || 0));
+        setEventBestResultSummary(state, event.id, "Completed", true);
+        return {
+          completed: true,
+          rewardMoney: Math.max(0, Number(event.reward?.money || 0)),
+          rewardText: event.reward?.text || "",
+          completionText: event.completionText || "",
+          progressText: "",
+        };
+      }
+
+      setEventBestResultSummary(
+        state,
+        event.id,
+        "Reached battle " + run.currentTrainerIndex + " of " + Math.max(1, event.trainerIds.length),
+        false
+      );
+      return {
+        completed: false,
+        progressText: "Championship progress saved. Next battle: " + (run.currentTrainerIndex + 1) + " of " + Math.max(1, event.trainerIds.length) + ".",
+      };
+    }
+
+    if (run.type === "tournament") {
+      const match = run.rounds?.[Number(battle.eventRoundIndex || 0)]?.matches?.[Number(battle.eventMatchIndex || 0)] || getCurrentTournamentMatch(run);
+      if (match) {
+        match.winnerEntrantId = getEventPlayerEntrantId();
+      }
+      run.wins = Math.max(0, Number(run.wins || 0)) + 1;
+      syncTournamentPartySnapshot(state);
+      const tournamentState = advanceTournamentRun(run, state, content);
+      if (tournamentState.completed && tournamentState.winnerEntrantId === getEventPlayerEntrantId()) {
+        if (!eventProgress.completedEventIds.includes(event.id)) {
+          eventProgress.completedEventIds.push(event.id);
+        }
+        eventProgress.inProgress = null;
+        state.player.money += Math.max(0, Number(event.reward?.money || 0));
+        setEventBestResultSummary(state, event.id, "Champion", true);
+        return {
+          completed: true,
+          rewardMoney: Math.max(0, Number(event.reward?.money || 0)),
+          rewardText: event.reward?.text || "",
+          completionText: event.completionText || "",
+          progressText: "",
+        };
+      }
+
+      const summary = "Advanced to round " + (Number(run.currentRoundIndex || 0) + 1);
+      setEventBestResultSummary(state, event.id, summary, false);
+      return {
+        completed: false,
+        progressText: "Tournament progress saved. Resume at round " + (Number(run.currentRoundIndex || 0) + 1) + ", match " + (Number(run.currentMatchIndex || 0) + 1) + ".",
+      };
+    }
+
+    return {
+      completed: false,
+      progressText: "Event progress saved.",
+    };
+  }
+
   function handlePlayerDefeat(state, content, playerMonster, options) {
     state.battle.outcome = "defeat";
     state.battle.mustSelectReplacement = false;
@@ -5906,7 +6907,14 @@
     }
     playerMonster.currentHp = playerMonster.stats.hp;
     returnToTown(state, content);
-    state.message = "You blacked out and returned to " + content.mapMetadata[state.world.currentMapId].displayName + ".";
+    if (state.battle?.eventId) {
+      if (state.battle.eventType === "tournament") {
+        syncTournamentPartySnapshot(state);
+      }
+      state.message = "You blacked out and returned to " + content.mapMetadata[state.world.currentMapId].displayName + ". Your event run is still available to resume.";
+    } else {
+      state.message = "You blacked out and returned to " + content.mapMetadata[state.world.currentMapId].displayName + ".";
+    }
     queueTrainerBattleConclusionAnimation(state);
   }
 
@@ -5935,6 +6943,7 @@
         state.battle.outcome = "victory";
         const totalXp = rewardStructuredBattleVictory(state, content, state.battle);
         grantBattleParticipantSkillXp(state, content);
+        const eventResolution = state.battle.eventResolution;
         const rewardParts = [];
         if (state.battle.crestName) {
           rewardParts.push("the " + state.battle.crestName);
@@ -5945,7 +6954,28 @@
         if (totalXp > 0) {
           rewardParts.push(totalXp + " XP");
         }
-        if (rewardParts.length) {
+        if (eventResolution) {
+          if (eventResolution.completed) {
+            const eventRewardParts = [];
+            if (Number(eventResolution.rewardMoney || 0) > 0) {
+              eventRewardParts.push("$" + Number(eventResolution.rewardMoney || 0));
+            }
+            if (totalXp > 0) {
+              eventRewardParts.push(totalXp + " XP");
+            }
+            state.message = eventRewardParts.length
+              ? "Victory. " + (getEvent(content, state.battle.eventId)?.name || "Event") + " complete. You earned " + eventRewardParts.join(" and ") + "."
+              : "Victory. " + (getEvent(content, state.battle.eventId)?.name || "Event") + " complete.";
+            if (eventResolution.rewardText) {
+              addBattleLogEntry(state, eventResolution.rewardText);
+            }
+            if (eventResolution.completionText) {
+              addBattleLogEntry(state, eventResolution.completionText);
+            }
+          } else {
+            state.message = "Victory. " + (eventResolution.progressText || "Event progress saved.");
+          }
+        } else if (rewardParts.length) {
           state.message = "Victory. You earned " + rewardParts.join(" and ") + ".";
         } else if (state.battle.battleSource === "npc-trainer") {
           state.message = "Victory. You defeated " + (state.battle.opponentName || "the trainer") + ".";
@@ -6032,7 +7062,7 @@
       }
     }
 
-    if (battle.trainerId) {
+    if (battle.battleSource === "npc-trainer" && battle.trainerId) {
       const trainerProgress = ensureTrainerProgress(state);
       if (!trainerProgress.defeatedTrainerIds.includes(battle.trainerId)) {
         trainerProgress.defeatedTrainerIds.push(battle.trainerId);
@@ -6042,6 +7072,10 @@
         ? (Date.now() + cooldownSeconds * 1000)
         : 0;
     }
+
+    battle.eventResolution = battle.eventId
+      ? resolveEventBattleVictory(state, content, battle)
+      : null;
 
     normalizeCrestScaledWorldSettings(state);
     return totalXp;
@@ -6506,7 +7540,7 @@
 
     const active = state.party[state.battle.playerIndex];
     tonic.quantity -= 1;
-    active.currentHp = Math.min(active.stats.hp, active.currentHp + 20);
+    active.currentHp = Math.min(getBattleMaxHp(active), active.currentHp + 20);
     addBattleLogEntry(state, "Your active monster recovered 20 HP.");
     resolveEnemyCounter(state, content);
   }
@@ -7795,7 +8829,7 @@
     const variant = getSpeciesVariant(species, monster.variantId || "default");
     const variantLabel = formatMonsterVariantLabel(variant, monster.variantId || "default");
     const affinityLabel = getMonsterAffinitySummaryLabel(monster);
-    const maxHp = Number(options.maxHp || monster.maxHp || monster.stats?.hp || 1);
+    const maxHp = Number(options.maxHp || monster.maxHp || getBattleMaxHp(monster) || monster.stats?.hp || 1);
     const currentHp = Math.round(Number(options.currentHp ?? monster.currentHp ?? 0));
     const hpPercent = Math.max(0, Math.min(100, (currentHp / Math.max(1, maxHp)) * 100));
     const visual = renderMonsterVariantVisualMarkup(monster.speciesId, variant?.id || monster.variantId || "default", "battle-hud-sprite", "default");
@@ -7849,7 +8883,7 @@
 
     const species = getSpecies(content, monster.speciesId);
     const variant = getSpeciesVariant(species, monster.variantId || "default");
-    const maxHp = Number(options.maxHp || monster.maxHp || monster.stats?.hp || 1);
+    const maxHp = Number(options.maxHp || monster.maxHp || getBattleMaxHp(monster) || monster.stats?.hp || 1);
     const currentHp = Number(options.currentHp || monster.currentHp || 0);
     const hpPercent = Math.max(0, Math.min(100, (currentHp / Math.max(1, maxHp)) * 100));
     const activeClass = options.active ? " battle-party-slot-active" : "";
@@ -8287,14 +9321,14 @@
       '<section class="battle-topbar">',
       renderBattleMonsterHud(content, enemy, {
         currentHp: animation?.displayedHp?.enemy ?? enemy.currentHp,
-        maxHp: enemy.maxHp,
+        maxHp: getBattleMaxHp(enemy),
         badgeSide: "left",
         partyPips: enemyPartyPips,
       }) +
       '<div class="battle-fight-pill"><strong>' + escapeHtml(fightType) + '</strong><span>' + escapeHtml(locationLabel) + '</span></div>' +
       renderBattleMonsterHud(content, activeMonster, {
         currentHp: animation?.displayedHp?.player ?? activeMonster.currentHp,
-        maxHp: activeMonster.stats.hp,
+        maxHp: getBattleMaxHp(activeMonster),
         badgeSide: "right",
         partyPips: playerPartyPips,
       }) +
@@ -8419,36 +9453,103 @@
         leaderName: "Arena Leader",
         leaderTitle: "Leader",
         crestName: "Unassigned Crest",
-        recommendedLevel: "TBD",
-        leaderPartySize: "TBD",
+        statusLabel: "Arena challenge ready.",
+        modeLabel: "Challenge",
+        rewardLabel: "Unassigned Crest",
+        levelRangeLabel: "Lv TBD",
+        partySizeLabel: "TBD",
+        rulesSummary: "Arena framework ready.",
+        secondaryDetails: [],
         rewardText: "Trainer battle rewards will be configured here.",
         introText: "Arena framework ready.",
         arenaStatus: "Arena framework ready.",
       };
       const linkedArena = arenaView.arena || null;
       const hasTeam = Array.isArray(linkedArena?.team) && linkedArena.team.length > 0;
+      const leaderSpriteMarkup = arenaView.leaderSheet
+        ? '<div class="arena-leader-preview-card arena-modal-visual-card"><div class="arena-leader-preview-frame arena-modal-visual-frame">' + renderAvatarPreviewMarkup(arenaView.leaderSheet, "arena-leader-preview-sprite") + '</div></div>'
+        : '<div class="arena-modal-visual-card arena-modal-visual-card-fallback"><div class="arena-leader-preview-frame arena-modal-visual-frame"><span class="arena-modal-sprite-fallback">No Sprite</span></div></div>';
       const actionRow = hasTeam
-        ? '<div class="battle-actions"><button class="primary-button" type="button" data-action="start-arena-battle">' + (arenaView.isCleared ? "Start Refight" : "Start Arena Battle") + '</button><button class="secondary-button" type="button" data-action="close-interaction">Not Now</button></div>'
+        ? '<div class="battle-actions arena-modal-actions"><button class="primary-button" type="button" data-action="start-arena-battle">' + (arenaView.isCleared ? "Start Refight" : "Start Arena Battle") + '</button><button class="secondary-button" type="button" data-action="close-interaction">Not Now</button></div>'
+        : '<div class="battle-actions arena-modal-actions"><button class="primary-button" type="button" data-action="close-interaction">Close</button></div>';
+      const statChips = [
+        { label: "Status", value: arenaView.statusLabel || "Arena challenge ready." },
+        { label: "Mode", value: arenaView.modeLabel || "Challenge" },
+        { label: "Party Size", value: arenaView.partySizeLabel || String(arenaView.leaderPartySize || "TBD") },
+        { label: "Level Range", value: arenaView.levelRangeLabel || "Lv TBD" },
+        { label: "Reward", value: arenaView.rewardLabel || arenaView.crestName || "Unassigned Crest" },
+      ].map(function (entry) {
+        return '<li class="arena-modal-chip"><span>' + escapeHtml(entry.label) + '</span><strong>' + escapeHtml(entry.value) + '</strong></li>';
+      }).join("");
+
+      return [
+        '<div class="battle-overlay">',
+        '<section class="battle-modal world-panel-modal arena-modal-shell">',
+        '<header class="arena-modal-hero">' +
+          '<div class="arena-modal-hero-main">' +
+            renderArenaCrestMarkup(content, linkedArena || arenaView, "arena-crest-image arena-crest-image-large arena-modal-crest") +
+            '<div class="arena-modal-hero-copy"><span class="eyebrow">Arena</span><h2>' + escapeHtml(state.interaction.title) + '</h2><p>' + escapeHtml(arenaView.leaderTitle + " " + arenaView.leaderName) + '</p></div>' +
+          '</div>' +
+          '<div class="arena-modal-hero-side"><span class="arena-modal-status-pill">' + escapeHtml(arenaView.statusLabel || "Arena challenge ready.") + '</span>' + actionRow + '</div>' +
+        '</header>' +
+        '<section class="arena-modal-main">' +
+          '<div class="arena-modal-column arena-modal-column-visual">' + leaderSpriteMarkup + '</div>' +
+          '<div class="arena-modal-column arena-modal-column-summary">' +
+            '<section class="arena-modal-summary-card"><p class="arena-modal-rules-copy">' + escapeHtml(arenaView.rulesSummary || "") + '</p><ul class="arena-modal-chip-grid">' + statChips + '</ul></section>' +
+          '</div>' +
+        '</section>' +
+        "</section>",
+        "</div>",
+      ].join("");
+    }
+
+    if (state.interaction.type === "event") {
+      const eventView = state.interaction.event || {};
+      const canStart = Boolean(
+        eventView.event
+        && !eventView.blockedByOtherRun
+        && eventView.unlocked
+        && (eventView.eventType !== "tournament" || eventView.validationPassed || eventView.resumable)
+      );
+      const startLabel = eventView.resumable
+        ? "Resume Event"
+        : (eventView.eventType === "tournament" ? "Start Tournament" : "Start Championship");
+      const rewardCopy = Number(eventView.rewardMoney || 0) > 0
+        ? "$" + Number(eventView.rewardMoney || 0)
+        : "No money";
+      const actionRow = canStart
+        ? '<div class="battle-actions"><button class="primary-button" type="button" data-action="start-event">' + escapeHtml(startLabel) + '</button><button class="secondary-button" type="button" data-action="close-interaction">Not Now</button></div>'
         : '<div class="battle-actions"><button class="primary-button" type="button" data-action="close-interaction">Close</button></div>';
 
       return [
         '<div class="battle-overlay">',
         '<section class="battle-modal world-panel-modal">',
         '<div class="battle-headings">',
-        '<div class="arena-modal-headline">' + renderArenaCrestMarkup(content, linkedArena || arenaView, "arena-crest-image arena-crest-image-large") + '<div><span class="eyebrow">Arena</span><h2>' + escapeHtml(state.interaction.title) + "</h2><p>" + escapeHtml(arenaView.leaderTitle + " " + arenaView.leaderName) + "</p></div></div>",
+        '<div><span class="eyebrow">' + escapeHtml(eventView.eventType === "tournament" ? "Tournament" : "League Championship") + '</span><h2>' + escapeHtml(eventView.title || "Event") + "</h2><p>" + escapeHtml(eventView.entryInteractionLabel || "Special Event") + "</p></div>",
         "</div>",
         '<div class="world-panel-body">' +
-          '<div class="battle-log"><p>' + escapeHtml(arenaView.introText) + '</p><p>' + escapeHtml(arenaView.arenaStatus) + "</p></div>" +
+          '<div class="battle-log"><p>' + escapeHtml(eventView.introText || eventView.description || "") + '</p>' +
+          (eventView.blockedByOtherRun ? '<p>You already have an event in progress: <strong>' + escapeHtml(eventView.activeRunName || "Another Event") + "</strong>.</p>" : "") +
+          (!eventView.unlocked ? '<p>You need <strong>' + Number(eventView.requiredCrests || 0) + "</strong> crests to enter. Current crests: <strong>" + Number(eventView.crestCount || 0) + "</strong>.</p>" : "") +
+          (eventView.validationMessages?.length ? '<p>Tournament entry is currently blocked by party legality.</p>' : "") +
+          '</div>' +
           '<div class="panel-block">' +
-            "<p><strong>Leader:</strong> " + escapeHtml(arenaView.leaderName) + "</p>" +
-            "<p><strong>Title:</strong> " + escapeHtml(arenaView.leaderTitle) + "</p>" +
-            "<p><strong>Crest Reward:</strong> " + escapeHtml(arenaView.crestName) + "</p>" +
-            "<p><strong>Recommended Level:</strong> " + escapeHtml(String(arenaView.recommendedLevel)) + "</p>" +
-            "<p><strong>Leader Party Size:</strong> " + escapeHtml(String(arenaView.leaderPartySize)) + "</p>" +
-            "<p><strong>Configured Team:</strong> " + escapeHtml(String(linkedArena?.team?.length || 0)) + "</p>" +
-            "<p><strong>Reward Notes:</strong> " + escapeHtml(arenaView.rewardText) + "</p>" +
+            "<p><strong>Type:</strong> " + escapeHtml(eventView.eventType === "tournament" ? "Tournament" : "League Championship") + "</p>" +
+            "<p><strong>Unlock:</strong> " + escapeHtml(eventView.unlocked ? "Unlocked" : (String(eventView.requiredCrests || 0) + " crests required")) + "</p>" +
+            "<p><strong>Status:</strong> " + escapeHtml(eventView.resumable ? "Run in progress" : (eventView.completed ? "Completed" : "Ready")) + "</p>" +
+            (eventView.currentProgress ? "<p><strong>Progress:</strong> " + escapeHtml(eventView.currentProgress) + "</p>" : "") +
+            (eventView.bestResultSummary ? "<p><strong>Best Result:</strong> " + escapeHtml(eventView.bestResultSummary) + "</p>" : "") +
+            "<p><strong>Opponent Count:</strong> " + escapeHtml(String(Number(eventView.trainerCount || 0))) + "</p>" +
+            "<p><strong>Reward:</strong> " + escapeHtml(rewardCopy) + "</p>" +
+            (eventView.rewardText ? "<p><strong>Reward Notes:</strong> " + escapeHtml(eventView.rewardText) + "</p>" : "") +
+            (eventView.rulesSummary ? "<p><strong>Rules:</strong> " + escapeHtml(eventView.rulesSummary) + "</p>" : "") +
           "</div>" +
-        "</div>" +
+          (eventView.validationMessages?.length
+            ? '<div class="panel-block"><h3>Legality Issues</h3><ul class="compact-list">' + eventView.validationMessages.map(function (message) {
+                return "<li><span>" + escapeHtml(message) + "</span></li>";
+              }).join("") + "</ul></div>"
+            : "") +
+        '</div>' +
         actionRow,
         "</section>",
         "</div>",
@@ -8608,9 +9709,13 @@
             });
           }).join("")
         : "<p>No monsters in the bank yet.</p>";
+      const tournamentLockNote = isTournamentPartyLocked(state)
+        ? '<p class="dev-helper-text">' + escapeHtml(getTournamentPartyLockMessage()) + " Party order, banking, moves, stats, and affinities are temporarily locked.</p>"
+        : "";
 
       panelBody = [
         "<p>Party size setting: " + Number(state.settings.partySize) + "</p>",
+        tournamentLockNote,
         '<section class="monster-roster-section"><div class="section-heading"><h3>Current Party ' + state.party.length + "/" + Number(state.settings.partySize) + '</h3></div><div class="monster-roster-stack">' + partyCards + "</div></section>",
         '<section class="monster-roster-section"><div class="section-heading"><h3>Monster Bank ' + state.bank.length + '</h3></div><div class="monster-roster-stack">' + bankCards + "</div></section>",
       ].join("");
@@ -8836,7 +9941,13 @@
         ].join("")
       : '<section class="dev-editor"><h3>No Spawn Selected</h3><p>Add a new visible spawn to begin editing.</p></section>';
 
-    const interactionTypeOptions = ["sign", "healing-center", "shop", "arena", "door"].map(function (type) {
+    const eventOptions = ['<option value="">Unlinked</option>'].concat(
+      ensureEventCatalog(content).map(function (event) {
+        const selected = selectedInteraction?.data?.eventId === event.id ? " selected" : "";
+        return '<option value="' + escapeHtml(event.id) + '"' + selected + ">" + escapeHtml(event.name || event.id) + "</option>";
+      })
+    ).join("");
+    const interactionTypeOptions = ["sign", "healing-center", "shop", "arena", "event", "door"].map(function (type) {
       const selected = selectedInteraction?.type === type ? " selected" : "";
       return '<option value="' + type + '"' + selected + ">" + escapeHtml(type) + "</option>";
     }).join("");
@@ -8864,6 +9975,7 @@
           '<label class="input-group dev-input-group-wide"><span>Text</span><textarea rows="4" data-dev-interaction-field="text">' + escapeHtml(selectedInteraction.text || "") + '</textarea></label>',
           '<label class="input-group"><span>Shop ID</span><input data-dev-interaction-field="data.shopId" value="' + escapeHtml(selectedInteraction.data?.shopId || "") + '" /></label>',
           '<label class="input-group"><span>Linked Arena ID</span><select data-dev-interaction-field="data.arenaId">' + arenaOptions + '</select></label>',
+          '<label class="input-group"><span>Linked Event ID</span><select data-dev-interaction-field="data.eventId">' + eventOptions + '</select></label>',
           '<label class="input-group"><span>Crest ID</span><input data-dev-interaction-field="data.crestId" value="' + escapeHtml(selectedInteraction.data?.crestId || "") + '" /></label>',
           "</div>",
           arenaLinkStatus,
@@ -9515,6 +10627,7 @@
       unlockRequirements: {
         arenaClears: [],
         requiredSkillLevels: [],
+        requiredAffinities: [],
       },
       statModifiers: {
         self: [],
@@ -10189,6 +11302,25 @@
       const prerequisiteSkillOptions = ensureSkillCatalog(content).filter(function (entry) {
         return entry.id !== selectedSkill.id;
       });
+      const renderAffinityRequirementRows = function () {
+        const requirements = selectedSkill.unlockRequirements?.requiredAffinities || [];
+        const rows = requirements.map(function (requirement, index) {
+          const elementOptions = ELEMENTAL_AFFINITIES.map(function (element) {
+            const selected = requirement.element === element ? " selected" : "";
+            return '<option value="' + escapeHtml(element) + '"' + selected + '>' + escapeHtml(element) + "</option>";
+          }).join("");
+          return [
+            '<div class="dev-subcard dev-effect-card">',
+            '<div class="section-heading"><h3>Affinity Requirement ' + (index + 1) + '</h3><button class="secondary-button" type="button" data-action="delete-skill-affinity-requirement" data-skill-affinity-index="' + index + '">Delete</button></div>',
+            '<div class="form-grid">',
+            '<label class="input-group"><span>Affinity</span><select data-dev-skill-affinity-field="element" data-skill-affinity-index="' + index + '">' + elementOptions + '</select></label>',
+            '<label class="input-group"><span>Required Points</span><input type="number" min="1" step="1" data-dev-skill-affinity-field="points" data-skill-affinity-index="' + index + '" value="' + Number(requirement.points || 1) + '" /></label>',
+            '</div>',
+            '</div>',
+          ].join("");
+        }).join("");
+        return '<section class="panel-block"><div class="section-heading"><h3>Affinity Requirements</h3><button class="secondary-button" type="button" data-action="add-skill-affinity-requirement">Add Affinity Requirement</button></div><p class="dev-helper-text">A monster must meet every listed affinity requirement before it can learn this skill.</p>' + (rows || '<p class="dev-helper-text">No affinity requirements yet.</p>') + '</section>';
+      };
       const renderModifierRows = function (targetKey, effects, title) {
         const rows = (effects || []).map(function (effect, index) {
           const typeOptions = modifierTypeOptions.map(function (entry) {
@@ -10321,10 +11453,11 @@
         '<label class="input-group"><span>Power</span><input type="number" step="1" data-dev-skill-field="power" value="' + Number(selectedSkill.power || 0) + '" /></label>',
         '<label class="input-group dev-input-group-wide"><span>Description</span><textarea rows="5" data-dev-skill-field="description">' + escapeHtml(selectedSkill.description || "") + '</textarea></label>',
         '</div>',
-        '<p class="dev-helper-text">Matching elemental affinity grants <strong>+1% damage per point spent</strong> for this skill. Neutral skills do not receive an attacker affinity bonus or defender matchup effect. Gates are checked against save-wide player skill progression, not monster level.</p>',
+        '<p class="dev-helper-text">Matching elemental affinity grants <strong>+1% damage per point spent</strong> for this skill. Neutral skills do not receive an attacker affinity bonus or defender matchup effect. Gates are checked against save-wide player skill progression, not monster level. Affinity requirements below are checked against the specific monster trying to learn the skill.</p>',
         renderLevelOverrideRows(),
         renderArenaGateRows(),
         renderPrerequisiteSkillRows(),
+        renderAffinityRequirementRows(),
         renderModifierRows("self", selectedSkill.statModifiers?.self || [], "Friendly Modifiers"),
         renderModifierRows("foe", selectedSkill.statModifiers?.foe || [], "Foe Modifiers"),
         renderStatusRows(selectedSkill.statusEffects || []),
@@ -10615,6 +11748,141 @@
     ].join("");
 
     return null;
+  }
+
+  function renderEventDevToolsScreen(root, content, devToolsState) {
+    const events = ensureEventCatalog(content);
+    const trainers = ensureTrainerCatalog(content);
+    syncEventDevSelection(content, devToolsState);
+
+    const selectedEvent = events.find(function (entry) {
+      return entry.id === devToolsState.selectedEventId;
+    }) || events[0] || null;
+
+    const eventItems = events.map(function (entry) {
+      const selected = entry.id === devToolsState.selectedEventId ? " compact-list-selected" : "";
+      return '<li class="' + selected.trim() + '"><button type="button" class="link-button" data-dev-select-event="' + entry.id + '"><strong>' + escapeHtml(entry.name || entry.id) + '</strong><span>' + escapeHtml(entry.id) + ' · ' + escapeHtml(entry.type) + "</span></button></li>";
+    }).join("");
+
+    const trainerOptionMarkup = ['<option value="">Select Trainer</option>'].concat(
+      trainers.map(function (trainer) {
+        return '<option value="' + escapeHtml(trainer.id) + '">' + escapeHtml((trainer.title || "Trainer") + " " + (trainer.name || trainer.id)) + "</option>";
+      })
+    ).join("");
+
+    const selectedEventTrainerOptions = function (selectedTrainerId) {
+      return ['<option value="">Select Trainer</option>'].concat(
+        trainers.map(function (trainer) {
+          const selected = trainer.id === selectedTrainerId ? " selected" : "";
+          return '<option value="' + escapeHtml(trainer.id) + '"' + selected + ">" + escapeHtml((trainer.title || "Trainer") + " " + (trainer.name || trainer.id)) + "</option>";
+        })
+      ).join("");
+    };
+
+    const trainerListEditor = selectedEvent
+      ? (selectedEvent.trainerIds || []).map(function (trainerId, trainerIndex) {
+          return '<li><div class="form-grid"><label class="input-group"><span>' + escapeHtml(selectedEvent.type === "tournament" ? "Entrant" : "Battle") + " Trainer</span><select data-event-trainer-index=\"" + trainerIndex + "\" data-dev-event-trainer-field=\"trainerId\">" + selectedEventTrainerOptions(trainerId) + '</select></label><div class="title-actions"><button class="secondary-button" type="button" data-action="delete-event-trainer" data-event-trainer-index="' + trainerIndex + '">Delete</button></div></div></li>';
+        }).join("")
+      : "";
+
+    const selectedEventSheetOptions = ['<option value="">None</option>'].concat(
+      getAvailableCharacterSheets(content).map(function (sheet) {
+        const selected = (selectedEvent?.leaderSheetId || "") === sheet.id ? " selected" : "";
+        return '<option value="' + escapeHtml(sheet.id) + '"' + selected + ">" + escapeHtml(sheet.label || sheet.id) + "</option>";
+      })
+    ).join("");
+    const allowedSpeciesSet = new Set(selectedEvent?.rules?.allowedSpeciesIds || []);
+    const allVariantOptions = content.monsters.species.reduce(function (rows, species) {
+      return rows.concat((species.variants || []).map(function (variant) {
+        return {
+          id: variant.id,
+          speciesId: species.id,
+          label: (species.name || species.id) + " - " + formatMonsterVariantLabel(variant, variant.id),
+        };
+      }));
+    }, []);
+    const skillCatalog = ensureSkillCatalog(content);
+    const buildEventRulePicker = function (title, path, options, selectedValues) {
+      const selectedSet = new Set(selectedValues || []);
+      const selectId = "event-rule-" + path.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+      const modeLabel = path.includes("allowed")
+        ? "Allow Mode"
+        : "Ban Mode";
+      const pickerOptions = ['<option value="">Select</option>'].concat(
+        options
+          .filter(function (option) {
+            return option?.id && !selectedSet.has(option.id);
+          })
+          .map(function (option) {
+            return '<option value="' + escapeHtml(option.id) + '">' + escapeHtml(option.label || option.id) + "</option>";
+          })
+      ).join("");
+      const selectedMarkup = (selectedValues || []).length
+        ? '<ul class="compact-list">' + selectedValues.map(function (value) {
+            const option = options.find(function (entry) { return entry.id === value; });
+            return '<li><span>' + escapeHtml(option?.label || value) + '</span><button class="secondary-button" type="button" data-action="remove-event-rule-value" data-event-rule-path="' + escapeHtml(path) + '" data-event-rule-value="' + escapeHtml(value) + '">Remove</button></li>';
+          }).join("") + "</ul>"
+        : '<p class="dev-helper-text">Nothing selected.</p>';
+
+      return '<section class="dev-subcard"><div class="section-heading"><h3>' + escapeHtml(title) + '</h3><span class="dev-helper-text">' + escapeHtml(modeLabel) + '</span></div>' + selectedMarkup + '<div class="form-grid"><label class="input-group"><span>Add</span><select id="' + escapeHtml(selectId) + '" data-dev-event-rule-select="' + escapeHtml(path) + '">' + pickerOptions + '</select></label><div class="title-actions"><button class="secondary-button" type="button" data-action="add-event-rule-value" data-event-rule-path="' + escapeHtml(path) + '" data-event-rule-select-id="' + escapeHtml(selectId) + '">Add</button></div></div></section>';
+    };
+    const speciesOptions = content.monsters.species.map(function (species) {
+      return { id: species.id, label: species.name || species.id };
+    });
+    const variantOptions = allVariantOptions.filter(function (option) {
+      return !allowedSpeciesSet.size || allowedSpeciesSet.has(option.speciesId);
+    });
+    const moveOptions = skillCatalog.map(function (skill) {
+      return { id: skill.id, label: skill.name || skill.id };
+    });
+    const rulesEditor = selectedEvent
+      ? [
+          buildEventRulePicker("Allowed Species", "rules.allowedSpeciesIds", speciesOptions, selectedEvent.rules?.allowedSpeciesIds || []),
+          buildEventRulePicker("Banned Species", "rules.bannedSpeciesIds", speciesOptions, selectedEvent.rules?.bannedSpeciesIds || []),
+          buildEventRulePicker("Allowed Variants", "rules.allowedVariantIds", variantOptions, selectedEvent.rules?.allowedVariantIds || []),
+          buildEventRulePicker("Banned Variants", "rules.bannedVariantIds", variantOptions, selectedEvent.rules?.bannedVariantIds || []),
+          buildEventRulePicker("Allowed Moves", "rules.allowedSkillIds", moveOptions, selectedEvent.rules?.allowedSkillIds || []),
+          buildEventRulePicker("Banned Moves", "rules.bannedSkillIds", moveOptions, selectedEvent.rules?.bannedSkillIds || []),
+        ].join("")
+      : "";
+
+    const eventEditor = selectedEvent
+      ? [
+          '<section class="panel-block dev-editor-panel">',
+          '<div class="section-heading"><h2>Event Settings</h2><div class="topbar-stats"><button class="secondary-button" type="button" data-action="duplicate-event">Duplicate</button><button class="secondary-button" type="button" data-action="delete-event">Delete</button></div></div>',
+          '<div class="form-grid">',
+          '<label class="input-group"><span>Event ID</span><input data-dev-event-field="id" value="' + escapeHtml(selectedEvent.id || "") + '" /></label>',
+          '<label class="input-group"><span>Name</span><input data-dev-event-field="name" value="' + escapeHtml(selectedEvent.name || "") + '" /></label>',
+          '<label class="input-group"><span>Type</span><select data-dev-event-field="type"><option value="championship"' + (normalizeEventType(selectedEvent.type) === "championship" ? " selected" : "") + '>Championship</option><option value="tournament"' + (normalizeEventType(selectedEvent.type) === "tournament" ? " selected" : "") + '>Tournament</option></select></label>',
+          '<label class="input-group"><span>Crest Unlock Count</span><input type="number" min="0" step="1" data-dev-event-field="unlock.requiredCrestCount" value="' + Number(selectedEvent.unlock?.requiredCrestCount || 0) + '" /></label>',
+          '<label class="input-group"><span>Reward Money</span><input type="number" min="0" step="1" data-dev-event-field="reward.money" value="' + Number(selectedEvent.reward?.money || 0) + '" /></label>',
+          '<label class="input-group"><span>Bracket Size</span><input type="number" min="2" step="1" data-dev-event-field="bracketSize" value="' + Number(selectedEvent.bracketSize || 2) + '" /></label>',
+          '<label class="input-group"><span>Seeding</span><select data-dev-event-field="seedingMode"><option value="authored"' + ((selectedEvent.seedingMode || "authored") === "authored" ? " selected" : "") + '>Authored</option></select></label>',
+          '<label class="input-group"><span>Leader Sheet</span><select data-dev-event-field="leaderSheetId">' + selectedEventSheetOptions + '</select></label>',
+          '<label class="input-group dev-input-group-wide"><span>Description</span><textarea rows="3" data-dev-event-field="description">' + escapeHtml(selectedEvent.description || "") + '</textarea></label>',
+          '<label class="input-group dev-input-group-wide"><span>Entry Label</span><textarea rows="2" data-dev-event-field="entryInteractionLabel">' + escapeHtml(selectedEvent.entryInteractionLabel || "") + '</textarea></label>',
+          '<label class="input-group dev-input-group-wide"><span>Intro Text</span><textarea rows="3" data-dev-event-field="introText">' + escapeHtml(selectedEvent.introText || "") + '</textarea></label>',
+          '<label class="input-group dev-input-group-wide"><span>Completion Text</span><textarea rows="3" data-dev-event-field="completionText">' + escapeHtml(selectedEvent.completionText || "") + '</textarea></label>',
+          '<label class="input-group dev-input-group-wide"><span>Reward Notes</span><textarea rows="3" data-dev-event-field="reward.text">' + escapeHtml(selectedEvent.reward?.text || "") + '</textarea></label>',
+          '</div>',
+          '</section>',
+          '<section class="panel-block dev-editor-panel"><div class="section-heading"><h2>' + escapeHtml(selectedEvent.type === "tournament" ? "Tournament Entrants" : "Championship Trainers") + '</h2><div class="topbar-stats"><button class="secondary-button" type="button" data-action="add-event-trainer">Add Trainer</button></div></div><p class="dev-helper-text">' + escapeHtml(selectedEvent.type === "tournament" ? "Choose the curated trainer pool used to fill the elimination bracket in authored order. The player is automatically added as one entrant." : "Choose the ordered trainer gauntlet for the championship run.") + '</p>' + ((selectedEvent.trainerIds || []).length ? '<ul class="compact-list">' + trainerListEditor + '</ul>' : '<p>No trainers added yet.</p>') + '</section>',
+          '<section class="panel-block dev-editor-panel"><div class="section-heading"><h2>Rules</h2></div><p class="dev-helper-text">Each rule group uses either allow mode or ban mode. If an allow list has any entries, it takes over for that group and the opposite ban list is cleared automatically. Allowed variants are filtered to the species you have already allowlisted.</p>' + rulesEditor + '</section>',
+          '<section class="panel-block"><div class="section-heading"><h2>Preview</h2></div><p><strong>' + escapeHtml(selectedEvent.name || selectedEvent.id || "Event") + '</strong></p><p>Type: ' + escapeHtml(selectedEvent.type) + ' · Unlock: ' + Number(selectedEvent.unlock?.requiredCrestCount || 0) + ' crests · Reward: $' + Number(selectedEvent.reward?.money || 0) + '</p><p>' + escapeHtml(selectedEvent.description || "No description yet.") + '</p><p>' + escapeHtml(describeTournamentRules(selectedEvent)) + '</p><h3>Linked Trainers</h3><ul class="compact-list">' + ((selectedEvent.trainerIds || []).map(function (trainerId, index) { const trainer = getTrainer(content, trainerId); return '<li><span>' + escapeHtml((trainer?.title || "Trainer") + " " + (trainer?.name || trainerId || "Unknown")) + '</span><strong>' + escapeHtml(selectedEvent.type === "tournament" ? ("Seed " + (index + 1)) : ("Battle " + (index + 1))) + "</strong></li>"; }).join("") || "<li><span>No trainers configured yet.</span></li>") + '</ul></section>',
+        ].join("")
+      : '<section class="panel-block dev-editor-panel"><h2>No Event Selected</h2><p>Add a new event to begin editing.</p></section>';
+
+    root.innerHTML = [
+      '<main class="dev-screen">',
+      renderDevToolsTopbar(devToolsState.section, "Events Editor"),
+      '<section class="dev-screen-layout">',
+      '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>Events</h2><button class="secondary-button" type="button" data-action="add-event">Add Event</button></div><ul class="compact-list dev-map-list">' + (eventItems || "<li>No events yet.</li>") + '</ul></aside>',
+      '<section class="dev-main"><section class="panel-block dev-preview-controls"><div class="section-heading"><h2>Event Tools</h2></div><p>Author crest-gated championship gauntlets and tournament brackets here. Trainers are referenced by ID from <code>trainers.json</code>, and map entry points should link to these records through map interaction <code>eventId</code>.</p><div class="title-actions"><button class="secondary-button" type="button" data-action="export-events-json">Export events.json</button></div></section>' + eventEditor + '</section>',
+      '</section>',
+      '</main>',
+    ].join("");
+
+    return { trainerOptionMarkup };
   }
 
   function renderTrainerDevToolsScreen(root, content, devToolsState) {
@@ -11433,6 +12701,7 @@
       '<button class="' + (section === "spawn-index" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-spawn-index">Spawn Index</button>',
       '<button class="' + (section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button>',
       '<button class="' + (section === "arenas" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-arenas">Arenas</button>',
+      '<button class="' + (section === "events" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-events">Events</button>',
       '<button class="' + (section === "trainers" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-trainers">Trainers</button>',
       '<button class="' + (section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button>',
       '<button class="' + (section === "characters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-characters">Characters</button>',
@@ -11455,6 +12724,7 @@
         '<label class="input-group"><span>Level Cap</span><input type="number" min="1" step="1" data-dev-progression-field="crestLevelCapLevel:' + index + '" value="' + Number(entry.levelCap) + '" /></label>' +
         '<label class="input-group"><span>Arena Min Level</span><input type="number" min="1" step="1" data-dev-progression-field="crestArenaMinLevel:' + index + '" value="' + Number(entry.arenaMinLevel) + '" /></label>' +
         '<label class="input-group"><span>Arena Max Level</span><input type="number" min="1" step="1" data-dev-progression-field="crestArenaMaxLevel:' + index + '" value="' + Number(entry.arenaMaxLevel) + '" /></label>' +
+        '<label class="input-group"><span>Leader Party Size</span><input type="number" min="1" step="1" data-dev-progression-field="crestLeaderPartySize:' + index + '" value="' + Number(entry.leaderPartySize || 1) + '" /></label>' +
         '<label class="input-group"><span>Leader Bonus Stat Points</span><input type="number" min="0" step="1" data-dev-progression-field="crestLeaderBonusStatPoints:' + index + '" value="' + Number(entry.leaderBonusStatPoints || 0) + '" /></label>' +
         '</div>' +
       '</section>';
@@ -11464,12 +12734,12 @@
       '<main class="dev-screen">',
       renderDevToolsTopbar(devToolsState.section, "Progression Settings"),
       '<section class="dev-screen-layout">',
-      '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>Progression</h2></div><p class="dev-helper-text">Manage crest milestones, wild/refight level caps, first-battle arena leader level ranges, and any extra arena leader stat-point bonus unlocked by each tier.</p></aside>',
+      '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>Progression</h2></div><p class="dev-helper-text">Manage crest milestones, wild/refight level caps, first-battle arena leader level ranges and party sizes, and any extra arena leader stat-point bonus unlocked by each tier.</p></aside>',
       '<section class="dev-main">',
       '<section class="panel-block dev-editor-panel">',
       '<div class="section-heading"><h2>Crest Progression Level Caps</h2><div class="topbar-stats"><button class="secondary-button" type="button" data-action="add-crest-level-cap">Add Tier</button></div></div>',
       crestLevelCapMarkup,
-      '<p class="dev-helper-text">These tiers control the player wild/refight level cap based on earned crests, plus the min/max range and extra stat points used for arena leaders. Collected arena refights still use the player arena settings for levels and size, but they also receive the current tier&apos;s leader bonus stat points. They are saved to <code>settings.json</code>.</p>',
+      '<p class="dev-helper-text">These tiers control the player wild/refight level cap based on earned crests, plus the min/max range, first-clear party size, and extra stat points used for arena leaders. Collected arena refights still use the player arena settings for levels and size, but they also receive the current tier&apos;s leader bonus stat points. They are saved to <code>settings.json</code>.</p>',
       '<div class="title-actions"><button class="secondary-button" type="button" data-action="export-settings-json">Export settings.json</button></div>',
       '</section>',
       '</section>',
@@ -11497,6 +12767,10 @@
 
     if (devToolsState.section === "arenas") {
       return renderArenaDevToolsScreen(root, content, devToolsState);
+    }
+
+    if (devToolsState.section === "events") {
+      return renderEventDevToolsScreen(root, content, devToolsState);
     }
 
     if (devToolsState.section === "trainers") {
@@ -11621,6 +12895,9 @@
     });
     root.querySelector('[data-action="start-arena-battle"]')?.addEventListener("click", function () {
       app.startArenaBattleFromInteraction();
+    });
+    root.querySelector('[data-action="start-event"]')?.addEventListener("click", function () {
+      app.startEventFromInteraction();
     });
     root.querySelector('[data-action="start-trainer-battle"]')?.addEventListener("click", function () {
       app.startTrainerBattleFromInteraction();
@@ -11904,6 +13181,14 @@
         app.deleteSkillPrerequisite(Number(button.getAttribute("data-skill-prerequisite-index") || 0));
       });
     });
+    root.querySelector('[data-action="add-skill-affinity-requirement"]')?.addEventListener("click", function () {
+      app.addSkillAffinityRequirement();
+    });
+    root.querySelectorAll('[data-action="delete-skill-affinity-requirement"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.deleteSkillAffinityRequirement(Number(button.getAttribute("data-skill-affinity-index") || 0));
+      });
+    });
     root.querySelector('[data-action="add-skill-level-override"]')?.addEventListener("click", function () {
       app.addSkillLevelOverride();
     });
@@ -11942,6 +13227,42 @@
     });
     root.querySelector('[data-action="export-arenas-json"]')?.addEventListener("click", function () {
       app.exportArenasJson();
+    });
+    root.querySelector('[data-action="add-event"]')?.addEventListener("click", function () {
+      app.addEvent();
+    });
+    root.querySelector('[data-action="duplicate-event"]')?.addEventListener("click", function () {
+      app.duplicateEvent();
+    });
+    root.querySelector('[data-action="delete-event"]')?.addEventListener("click", function () {
+      app.deleteEvent();
+    });
+    root.querySelector('[data-action="export-events-json"]')?.addEventListener("click", function () {
+      app.exportEventsJson();
+    });
+    root.querySelector('[data-action="add-event-trainer"]')?.addEventListener("click", function () {
+      app.addEventTrainer();
+    });
+    root.querySelectorAll('[data-action="delete-event-trainer"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.deleteEventTrainer(Number(button.getAttribute("data-event-trainer-index")));
+      });
+    });
+    root.querySelectorAll('[data-action="add-event-rule-value"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        const selectId = button.getAttribute("data-event-rule-select-id") || "";
+        const select = selectId ? root.querySelector("#" + CSS.escape(selectId)) : null;
+        const value = select instanceof HTMLSelectElement ? select.value : "";
+        app.addEventRuleValue(button.getAttribute("data-event-rule-path") || "", value);
+      });
+    });
+    root.querySelectorAll('[data-action="remove-event-rule-value"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.removeEventRuleValue(
+          button.getAttribute("data-event-rule-path") || "",
+          button.getAttribute("data-event-rule-value") || ""
+        );
+      });
     });
     root.querySelector('[data-action="add-trainer"]')?.addEventListener("click", function () {
       app.addTrainer();
@@ -12109,6 +13430,11 @@
     root.querySelectorAll("[data-dev-select-arena]").forEach(function (button) {
       button.addEventListener("click", function () {
         app.selectArena(button.getAttribute("data-dev-select-arena"));
+      });
+    });
+    root.querySelectorAll("[data-dev-select-event]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.selectEvent(button.getAttribute("data-dev-select-event"));
       });
     });
     root.querySelectorAll("[data-dev-select-trainer]").forEach(function (button) {
@@ -12427,6 +13753,30 @@
         });
       }
     });
+    root.querySelectorAll("[data-dev-skill-affinity-field]").forEach(function (field) {
+      const useDeferredRender = field.tagName !== "SELECT";
+      const eventName = field.tagName === "SELECT" ? "change" : "input";
+      field.addEventListener(eventName, function () {
+        app.updateSkillAffinityRequirementField(
+          Number(field.getAttribute("data-skill-affinity-index") || 0),
+          field.getAttribute("data-dev-skill-affinity-field"),
+          field.value,
+          !useDeferredRender
+        );
+        if (useDeferredRender) {
+          app.clearDeferredRender();
+        }
+      });
+      if (useDeferredRender) {
+        field.addEventListener("change", function () {
+          app.updateSkillAffinityRequirementField(
+            Number(field.getAttribute("data-skill-affinity-index") || 0),
+            field.getAttribute("data-dev-skill-affinity-field"),
+            field.value
+          );
+        });
+      }
+    });
     root.querySelectorAll("[data-dev-skill-level-override-field]").forEach(function (field) {
       const useDeferredRender = isDeferredDevTextField(field);
       const eventName = field.tagName === "SELECT" ? "change" : "input";
@@ -12506,6 +13856,30 @@
         app.updateArenaPoolMember(
           Number(field.getAttribute("data-pool-index")),
           field.getAttribute("data-dev-arena-pool-field"),
+          field.value
+        );
+      });
+    });
+    root.querySelectorAll("[data-dev-event-field]").forEach(function (field) {
+      const useDeferredRender = isDeferredDevTextField(field);
+      const eventName = field.tagName === "SELECT" ? "change" : "input";
+      field.addEventListener(eventName, function () {
+        app.updateEventField(field.getAttribute("data-dev-event-field"), field.value, !useDeferredRender);
+        if (useDeferredRender) {
+          app.clearDeferredRender();
+        }
+      });
+      if (useDeferredRender) {
+        field.addEventListener("change", function () {
+          app.updateEventField(field.getAttribute("data-dev-event-field"), field.value);
+        });
+      }
+    });
+    root.querySelectorAll("[data-dev-event-trainer-field]").forEach(function (field) {
+      field.addEventListener("change", function () {
+        app.updateEventTrainerField(
+          Number(field.getAttribute("data-event-trainer-index")),
+          field.getAttribute("data-dev-event-trainer-field"),
           field.value
         );
       });
@@ -12689,6 +14063,12 @@
             app.setDevSection("arenas");
             return;
           }
+          if (action === "dev-section-events") {
+            event.preventDefault();
+            event.stopPropagation();
+            app.setDevSection("events");
+            return;
+          }
           if (action === "dev-section-monsters") {
             event.preventDefault();
             event.stopPropagation();
@@ -12784,6 +14164,12 @@
         const arenaEl = target.closest("[data-dev-select-arena]");
         if (arenaEl instanceof HTMLElement) {
           app.selectArena(arenaEl.getAttribute("data-dev-select-arena"));
+          return;
+        }
+
+        const eventEl = target.closest("[data-dev-select-event]");
+        if (eventEl instanceof HTMLElement) {
+          app.selectEvent(eventEl.getAttribute("data-dev-select-event"));
           return;
         }
 
@@ -12886,6 +14272,7 @@
           return content.mapMetadata[mapId]?.isTown;
         }) || "",
         selectedArenaId: ensureArenaCatalog(content)[0]?.id || "",
+        selectedEventId: ensureEventCatalog(content)[0]?.id || "",
         selectedTrainerId: ensureTrainerCatalog(content)[0]?.id || "",
         selectedTransitionId: "",
         selectedSpawnId: "",
@@ -13170,6 +14557,11 @@
         if (this.state.screen !== "world" || !ELEMENTAL_AFFINITIES.includes(element) || ![-1, 1].includes(Number(delta))) {
           return;
         }
+        if (isTournamentPartyLocked(this.state)) {
+          this.state.message = getTournamentPartyLockMessage();
+          this.render();
+          return;
+        }
 
         const source = collection === "bank" ? this.state.bank : this.state.party;
         const monster = source?.[index];
@@ -13192,6 +14584,17 @@
         }
 
         monster.elementalAffinityPoints[element] = Math.max(0, currentPoints + Number(delta));
+        if (Number(delta) < 0) {
+          const violations = getLearnedSkillAffinityViolations(monster, this.content);
+          if (violations.length) {
+            monster.elementalAffinityPoints[element] = currentPoints;
+            this.state.message = (getSpecies(this.content, monster.speciesId)?.name || "Monster") + " needs that affinity for " + violations.map(function (entry) {
+              return entry.skill.name || entry.skill.id;
+            }).join(", ") + ".";
+            this.render();
+            return;
+          }
+        }
         this.state.message = (getSpecies(this.content, monster.speciesId)?.name || "Monster") + (Number(delta) > 0
           ? " gained +1 " + element + " affinity."
           : " refunded 1 " + element + " affinity point.");
@@ -13199,6 +14602,11 @@
       },
       adjustMonsterStatPoint: function (collection, index, statKey, delta) {
         if (this.state.screen !== "world" || !MONSTER_STAT_KEYS.includes(statKey) || ![-1, 1].includes(Number(delta))) {
+          return;
+        }
+        if (isTournamentPartyLocked(this.state)) {
+          this.state.message = getTournamentPartyLockMessage();
+          this.render();
           return;
         }
 
@@ -13268,6 +14676,11 @@
         if (this.state.screen !== "world" || index <= 0 || index >= this.state.party.length) {
           return;
         }
+        if (isTournamentPartyLocked(this.state)) {
+          this.state.message = getTournamentPartyLockMessage();
+          this.render();
+          return;
+        }
 
         const moved = this.state.party.splice(index, 1)[0];
         this.state.party.unshift(moved);
@@ -13298,6 +14711,11 @@
       },
       movePartyMonster: function (index, direction) {
         if (this.state.screen !== "world") {
+          return;
+        }
+        if (isTournamentPartyLocked(this.state)) {
+          this.state.message = getTournamentPartyLockMessage();
+          this.render();
           return;
         }
 
@@ -13335,6 +14753,11 @@
       },
       movePartyMonsterToBank: function (index) {
         if (this.state.screen !== "world" || this.state.party.length <= 1 || index < 0 || index >= this.state.party.length) {
+          return;
+        }
+        if (isTournamentPartyLocked(this.state)) {
+          this.state.message = getTournamentPartyLockMessage();
+          this.render();
           return;
         }
 
@@ -13379,6 +14802,11 @@
         if (this.state.screen !== "world" || !skillId) {
           return;
         }
+        if (isTournamentPartyLocked(this.state)) {
+          this.state.message = getTournamentPartyLockMessage();
+          this.render();
+          return;
+        }
 
         ensurePlayerSkillProgressState(this.state, this.content);
         const roster = collection === "bank" ? this.state.bank : this.state.party;
@@ -13417,6 +14845,12 @@
           this.render();
           return;
         }
+        const affinityStatus = getMonsterSkillAffinityRequirementStatus(monster, skill);
+        if (!affinityStatus.met) {
+          this.state.message = (species?.name || "Monster") + " cannot learn " + skill.name + " yet. " + getMonsterSkillAffinityRequirementText(monster, skill);
+          this.render();
+          return;
+        }
 
         monster.skills = Array.isArray(monster.skills) ? monster.skills.slice() : [];
         monster.skills.push(skillId);
@@ -13425,6 +14859,11 @@
       },
       removeMonsterSkill: function (collection, index, skillId) {
         if (this.state.screen !== "world" || !skillId) {
+          return;
+        }
+        if (isTournamentPartyLocked(this.state)) {
+          this.state.message = getTournamentPartyLockMessage();
+          this.render();
           return;
         }
 
@@ -13452,6 +14891,11 @@
           || index >= this.state.bank.length
           || this.state.party.length >= Number(this.state.settings.partySize || 0)
         ) {
+          return;
+        }
+        if (isTournamentPartyLocked(this.state)) {
+          this.state.message = getTournamentPartyLockMessage();
+          this.render();
           return;
         }
 
@@ -13752,6 +15196,21 @@
         startArenaBattle(this.state, this.content, arena, interaction);
         this.render();
       },
+      startEventFromInteraction: function () {
+        if (this.state.screen !== "world" || !this.state.interaction || this.state.interaction.type !== "event") {
+          return;
+        }
+
+        const interaction = getMapInteractionById(this.content, this.state.world.currentMapId, this.state.interaction.id);
+        if (!interaction) {
+          this.state.interaction = null;
+          this.render();
+          return;
+        }
+
+        startEventRunFromInteraction(this.state, this.content, interaction);
+        this.render();
+      },
       startTrainerBattleFromInteraction: function () {
         if (this.state.screen !== "world" || !this.state.interaction || this.state.interaction.type !== "trainer-battle") {
           return;
@@ -13792,10 +15251,12 @@
           this.content = nextContent;
           syncMonsterDevSelection(this.content, this.devTools);
           syncArenaDevSelection(this.content, this.devTools);
+          syncEventDevSelection(this.content, this.devTools);
           syncTrainerDevSelection(this.content, this.devTools);
           this.devTools.selectedMapId = Object.keys(nextContent.maps)[0] || "";
           this.devTools.selectedTownMapId = Object.keys(nextContent.maps).find((mapId) => nextContent.mapMetadata[mapId]?.isTown) || "";
           this.devTools.selectedArenaId = ensureArenaCatalog(nextContent)[0]?.id || "";
+          this.devTools.selectedEventId = ensureEventCatalog(nextContent)[0]?.id || "";
           this.devTools.selectedTrainerId = ensureTrainerCatalog(nextContent)[0]?.id || "";
           this.devTools.selectedTransitionId = nextContent.mapMetadata[this.devTools.selectedMapId]?.transitions?.[0]?.id || "";
           this.devTools.selectedSpawnId = getEditableVisibleSpawns(nextContent.mapMetadata[this.devTools.selectedMapId])[0]?.id || "";
@@ -13923,6 +15384,10 @@
         this.devTools.selectedArenaId = arenaId;
         this.render();
       },
+      selectEvent: function (eventId) {
+        this.devTools.selectedEventId = eventId;
+        this.render();
+      },
       selectTrainer: function (trainerId) {
         this.devTools.selectedTrainerId = trainerId;
         this.render();
@@ -13934,6 +15399,9 @@
         }
         if (section === "arenas") {
           syncArenaDevSelection(this.content, this.devTools);
+        }
+        if (section === "events") {
+          syncEventDevSelection(this.content, this.devTools);
         }
         if (section === "trainers") {
           syncTrainerDevSelection(this.content, this.devTools);
@@ -14049,7 +15517,7 @@
           this.devTools.characterSheetFrameOffsets[this.devTools.characterSheetSelectedRow][this.devTools.characterSheetSelectedFrame].height = Number(rawValue || 0);
         } else if (field === "previewScale") {
           this.devTools.characterSheetPreviewScale = Math.max(0.5, Number(rawValue || 0.5));
-        } else if (field.indexOf("crestLevelCap") === 0 || field.indexOf("crestArena") === 0 || field.indexOf("crestLeaderBonusStatPoints") === 0) {
+        } else if (field.indexOf("crestLevelCap") === 0 || field.indexOf("crestArena") === 0 || field.indexOf("crestLeaderPartySize") === 0 || field.indexOf("crestLeaderBonusStatPoints") === 0) {
           const fieldParts = field.split(":");
           const crestField = fieldParts[0];
           const crestIndex = Math.max(0, Number(fieldParts[1] || 0));
@@ -14066,6 +15534,8 @@
               entry.arenaMinLevel = Math.max(1, Number(rawValue || 1));
             } else if (crestField === "crestArenaMaxLevel") {
               entry.arenaMaxLevel = Math.max(1, Number(rawValue || 1));
+            } else if (crestField === "crestLeaderPartySize") {
+              entry.leaderPartySize = Math.max(1, Number(rawValue || 1));
             } else if (crestField === "crestLeaderBonusStatPoints") {
               entry.leaderBonusStatPoints = Math.max(0, Number(rawValue || 0));
             }
@@ -14430,6 +15900,53 @@
           requirement.level = Math.max(1, Number(rawValue || 1));
         } else {
           requirement[field] = String(rawValue || "").trim();
+        }
+        ensureSkillEffectCollections(skill);
+        if (shouldRender !== false) {
+          this.render();
+        }
+      },
+      addSkillAffinityRequirement: function () {
+        const skill = ensureSkillCatalog(this.content).find((entry) => entry.id === this.devTools.selectedSkillId);
+        if (!skill) {
+          return;
+        }
+
+        ensureSkillEffectCollections(skill);
+        skill.unlockRequirements.requiredAffinities.push(createEmptySkillAffinityRequirement());
+        ensureSkillEffectCollections(skill);
+        this.render();
+      },
+      deleteSkillAffinityRequirement: function (requirementIndex) {
+        const skill = ensureSkillCatalog(this.content).find((entry) => entry.id === this.devTools.selectedSkillId);
+        if (!skill) {
+          return;
+        }
+
+        ensureSkillEffectCollections(skill);
+        if (!skill.unlockRequirements.requiredAffinities[requirementIndex]) {
+          return;
+        }
+
+        skill.unlockRequirements.requiredAffinities.splice(requirementIndex, 1);
+        this.render();
+      },
+      updateSkillAffinityRequirementField: function (requirementIndex, field, rawValue, shouldRender) {
+        const skill = ensureSkillCatalog(this.content).find((entry) => entry.id === this.devTools.selectedSkillId);
+        if (!skill) {
+          return;
+        }
+
+        ensureSkillEffectCollections(skill);
+        const requirement = skill.unlockRequirements.requiredAffinities[requirementIndex];
+        if (!requirement) {
+          return;
+        }
+
+        if (field === "points") {
+          requirement.points = Math.max(1, Number(rawValue || 1));
+        } else if (field === "element") {
+          requirement.element = ELEMENTAL_AFFINITIES.includes(rawValue) ? rawValue : ELEMENTAL_AFFINITIES[0];
         }
         ensureSkillEffectCollections(skill);
         if (shouldRender !== false) {
@@ -14835,7 +16352,7 @@
           return;
         }
 
-        const value = ["id", "type", "label", "text", "data.shopId", "data.arenaId", "data.crestId"].includes(path)
+        const value = ["id", "type", "label", "text", "data.shopId", "data.arenaId", "data.eventId", "data.crestId"].includes(path)
           ? rawValue
           : Number(rawValue || 0);
 
@@ -15275,6 +16792,189 @@
           this.render();
         }
       },
+      updateEventField: function (path, rawValue, shouldRender) {
+        const event = ensureEventCatalog(this.content).find((entry) => entry.id === this.devTools.selectedEventId);
+        if (!event) {
+          return;
+        }
+
+        const previousId = event.id;
+        const numericFields = new Set(["unlock.requiredCrestCount", "reward.money", "bracketSize"]);
+        const ruleFields = new Set([
+          "rules.allowedSpeciesIds",
+          "rules.bannedSpeciesIds",
+          "rules.allowedVariantIds",
+          "rules.bannedVariantIds",
+          "rules.allowedSkillIds",
+          "rules.bannedSkillIds",
+        ]);
+
+        if (path.includes(".")) {
+          const parts = path.split(".");
+          let current = event;
+          for (let index = 0; index < parts.length - 1; index += 1) {
+            if (!current[parts[index]] || typeof current[parts[index]] !== "object") {
+              current[parts[index]] = {};
+            }
+            current = current[parts[index]];
+          }
+          const leaf = parts[parts.length - 1];
+          current[leaf] = numericFields.has(path)
+            ? Math.max(0, Number(rawValue || 0))
+            : ruleFields.has(path)
+              ? parseEventRuleList(rawValue)
+              : rawValue;
+        } else {
+          event[path] = path === "type"
+            ? normalizeEventType(rawValue)
+            : path === "bracketSize"
+              ? Math.max(2, Number(rawValue || 2))
+              : rawValue;
+        }
+
+        normalizeEventRecord(event, 0);
+        Object.assign(event, normalizeEventRecord(event, 0));
+        if (path === "id") {
+          replaceEventReferences(this.content, previousId, rawValue);
+          this.devTools.selectedEventId = rawValue;
+        }
+
+        if (shouldRender !== false) {
+          this.render();
+        }
+      },
+      addEvent: function () {
+        const events = ensureEventCatalog(this.content);
+        const next = createEmptyEvent(events.length + 1);
+        events.push(next);
+        this.devTools.selectedEventId = next.id;
+        this.devTools.section = "events";
+        this.render();
+      },
+      duplicateEvent: function () {
+        const events = ensureEventCatalog(this.content);
+        const current = events.find((entry) => entry.id === this.devTools.selectedEventId);
+        if (!current) {
+          return;
+        }
+        const duplicate = JSON.parse(JSON.stringify(current));
+        duplicate.id = (current.id || "event") + "-copy";
+        duplicate.name = current.name ? current.name + " Copy" : "Copied Event";
+        events.push(normalizeEventRecord(duplicate, events.length));
+        this.devTools.selectedEventId = duplicate.id;
+        this.render();
+      },
+      deleteEvent: function () {
+        const targetId = this.devTools.selectedEventId;
+        replaceEventReferences(this.content, targetId, "");
+        this.content.events.events = ensureEventCatalog(this.content).filter((entry) => entry.id !== targetId);
+        syncEventDevSelection(this.content, this.devTools);
+        this.render();
+      },
+      addEventTrainer: function () {
+        const event = ensureEventCatalog(this.content).find((entry) => entry.id === this.devTools.selectedEventId);
+        if (!event) {
+          return;
+        }
+        if (!Array.isArray(event.trainerIds)) {
+          event.trainerIds = [];
+        }
+        event.trainerIds.push(ensureTrainerCatalog(this.content)[0]?.id || "");
+        event.trainerIds = normalizeEventRuleArray(event.trainerIds);
+        this.render();
+      },
+      deleteEventTrainer: function (trainerIndex) {
+        const event = ensureEventCatalog(this.content).find((entry) => entry.id === this.devTools.selectedEventId);
+        if (!event?.trainerIds?.[trainerIndex]) {
+          return;
+        }
+        event.trainerIds.splice(trainerIndex, 1);
+        this.render();
+      },
+      updateEventTrainerField: function (trainerIndex, field, rawValue, shouldRender) {
+        const event = ensureEventCatalog(this.content).find((entry) => entry.id === this.devTools.selectedEventId);
+        if (!event || field !== "trainerId") {
+          return;
+        }
+        event.trainerIds[trainerIndex] = rawValue;
+        event.trainerIds = normalizeEventRuleArray(event.trainerIds);
+        if (shouldRender !== false) {
+          this.render();
+        }
+      },
+      addEventRuleValue: function (path, rawValue) {
+        const event = ensureEventCatalog(this.content).find((entry) => entry.id === this.devTools.selectedEventId);
+        if (!event || !path || !rawValue) {
+          return;
+        }
+        const parts = path.split(".");
+        let current = event;
+        for (let index = 0; index < parts.length - 1; index += 1) {
+          if (!current[parts[index]] || typeof current[parts[index]] !== "object") {
+            current[parts[index]] = {};
+          }
+          current = current[parts[index]];
+        }
+        const leaf = parts[parts.length - 1];
+        current[leaf] = normalizeEventRuleArray((current[leaf] || []).concat([rawValue]));
+        if (path === "rules.allowedSpeciesIds") {
+          event.rules.bannedSpeciesIds = [];
+          const allowedSpecies = new Set(event.rules.allowedSpeciesIds || []);
+          event.rules.allowedVariantIds = normalizeEventRuleArray((event.rules.allowedVariantIds || []).filter(function (variantId) {
+            return allVariantBelongsToAllowedSpecies(this.content, allowedSpecies, variantId);
+          }, this));
+          event.rules.bannedVariantIds = normalizeEventRuleArray((event.rules.bannedVariantIds || []).filter(function (variantId) {
+            return allVariantBelongsToAllowedSpecies(this.content, allowedSpecies, variantId);
+          }, this));
+        } else if (path === "rules.bannedSpeciesIds") {
+          event.rules.allowedSpeciesIds = [];
+        } else if (path === "rules.allowedVariantIds") {
+          event.rules.bannedVariantIds = [];
+        } else if (path === "rules.bannedVariantIds") {
+          event.rules.allowedVariantIds = [];
+        } else if (path === "rules.allowedSkillIds") {
+          event.rules.bannedSkillIds = [];
+        } else if (path === "rules.bannedSkillIds") {
+          event.rules.allowedSkillIds = [];
+        }
+        this.render();
+      },
+      removeEventRuleValue: function (path, rawValue) {
+        const event = ensureEventCatalog(this.content).find((entry) => entry.id === this.devTools.selectedEventId);
+        if (!event || !path || !rawValue) {
+          return;
+        }
+        const parts = path.split(".");
+        let current = event;
+        for (let index = 0; index < parts.length - 1; index += 1) {
+          current = current?.[parts[index]];
+        }
+        const leaf = parts[parts.length - 1];
+        if (!current || !Array.isArray(current[leaf])) {
+          return;
+        }
+        current[leaf] = current[leaf].filter(function (entry) {
+          return String(entry || "") !== String(rawValue || "");
+        });
+        this.render();
+      },
+      exportEventsJson: function () {
+        const payload = {
+          events: ensureEventCatalog(this.content),
+        };
+
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = "events.json";
+        anchor.click();
+        URL.revokeObjectURL(url);
+        this.state.message = "Exported events.json.";
+        if (this.state.screen === "world") {
+          this.render();
+        }
+      },
       addCrestLevelCap: function () {
         const caps = ensureDevToolsCrestLevelCapSettings(this.devTools, this.content);
         const lastEntry = caps[caps.length - 1] || DEFAULT_CREST_LEVEL_CAPS[0];
@@ -15285,6 +16985,7 @@
           levelCap: Math.max(1, Number(lastEntry.levelCap || DEFAULT_CREST_LEVEL_CAPS[0].levelCap)),
           arenaMinLevel: Math.max(1, Number(lastEntry.arenaMinLevel || DEFAULT_CREST_LEVEL_CAPS[0].arenaMinLevel)),
           arenaMaxLevel: Math.max(1, Number(lastEntry.arenaMaxLevel || DEFAULT_CREST_LEVEL_CAPS[0].arenaMaxLevel)),
+          leaderPartySize: Math.max(1, Number(lastEntry.leaderPartySize || DEFAULT_CREST_LEVEL_CAPS[0].leaderPartySize || 1)),
           leaderBonusStatPoints: Math.max(0, Number(lastEntry.leaderBonusStatPoints || DEFAULT_CREST_LEVEL_CAPS[0].leaderBonusStatPoints || 0)),
         });
         syncDevToolsCrestLevelCapSettings(this.content, this.devTools);

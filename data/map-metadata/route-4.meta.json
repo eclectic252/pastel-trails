@@ -20,7 +20,7 @@
     {
       "id": "route4-to-moonflower",
       "x": 2432,
-      "y": 1152,
+      "y": 1280,
       "width": 640,
       "height": 128,
       "targetMapId": "moonflower-woods",
@@ -54,7 +54,24 @@
       }
     }
   ],
-  "interactions": [],
+  "interactions": [
+    {
+      "id": "route4-league-championship",
+      "type": "event",
+      "label": "League Championship Desk",
+      "text": "A traveling league official can register crest holders for the championship gauntlet.",
+      "x": 2368,
+      "y": 1088,
+      "width": 128,
+      "height": 128,
+      "data": {
+        "shopId": "",
+        "arenaId": "",
+        "crestId": "",
+        "eventId": "league-championship"
+      }
+    }
+  ],
   "spawnZones": [
     {
       "id": "default-zone",

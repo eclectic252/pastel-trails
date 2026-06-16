@@ -2301,7 +2301,8 @@
               3
             ],
             "frameDurationMs": 180
-          }
+          },
+          "label": "Default"
         },
         {
           "id": "kitari-snow",

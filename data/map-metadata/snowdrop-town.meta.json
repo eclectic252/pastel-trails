@@ -48,6 +48,22 @@
         "arenaId": "",
         "crestId": ""
       }
+    },
+    {
+      "id": "interaction-3",
+      "type": "event",
+      "x": 1408,
+      "y": 1536,
+      "width": 128,
+      "height": 128,
+      "label": "Winter Classic Tournament",
+      "text": "Add interaction text here.",
+      "data": {
+        "shopId": "",
+        "arenaId": "",
+        "crestId": "",
+        "eventId": "winter-classic"
+      }
     }
   ],
   "spawnZones": [

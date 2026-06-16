@@ -1,0 +1,78 @@
+{
+  "events": [
+    {
+      "id": "league-championship",
+      "name": "League Championship",
+      "type": "championship",
+      "description": "Face the region's top trainers in a final authored gauntlet once you have enough crests.",
+      "entryInteractionLabel": "Challenge the Championship",
+      "introText": "The championship committee is ready. Defeat each trainer in order to claim the title.",
+      "completionText": "The crowd erupts as your championship clear is recorded in the league ledger.",
+      "leaderSheetId": "",
+      "unlock": {
+        "requiredCrestCount": 4
+      },
+      "reward": {
+        "money": 1200,
+        "text": "League officials hand over the championship purse."
+      },
+      "trainerIds": [
+        "trainer-3",
+        "trainer-4",
+        "trainer-5"
+      ],
+      "bracketSize": 4,
+      "seedingMode": "authored",
+      "rules": {
+        "allowedSpeciesIds": [],
+        "bannedSpeciesIds": [],
+        "allowedVariantIds": [],
+        "bannedVariantIds": [],
+        "allowedSkillIds": [],
+        "bannedSkillIds": []
+      }
+    },
+    {
+      "id": "winter-classic",
+      "name": "Winter Classic",
+      "type": "tournament",
+      "description": "An elimination tournament with a curated trainer field and a frosty ruleset.",
+      "entryInteractionLabel": "Enter the Winter Classic",
+      "introText": "Registration is open. Once you enter, your current party is locked until the bracket is over.",
+      "completionText": "You lift the Winter Classic trophy after surviving the bracket.",
+      "leaderSheetId": "",
+      "unlock": {
+        "requiredCrestCount": 0
+      },
+      "reward": {
+        "money": 650,
+        "text": "Tournament staff award your winnings and mark your name in the event record."
+      },
+      "trainerIds": [
+        "route-2-scout-mira"
+      ],
+      "bracketSize": 4,
+      "seedingMode": "authored",
+      "rules": {
+        "allowedSpeciesIds": [
+          "equira",
+          "Owlet",
+          "monster-8",
+          "Caniri"
+        ],
+        "bannedSpeciesIds": [],
+        "allowedVariantIds": [
+          "Equira-snow",
+          "default-snow",
+          "owlet-snow",
+          "Caniri-snow"
+        ],
+        "bannedVariantIds": [],
+        "allowedSkillIds": [],
+        "bannedSkillIds": [
+          "skill-22"
+        ]
+      }
+    }
+  ]
+}

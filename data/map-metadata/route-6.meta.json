@@ -30,7 +30,24 @@
       }
     }
   ],
-  "interactions": [],
+  "interactions": [
+    {
+      "id": "route6-winter-classic",
+      "type": "event",
+      "label": "Winter Classic Registration",
+      "text": "A tournament registrar is taking entries for the Winter Classic.",
+      "x": 2496,
+      "y": 576,
+      "width": 128,
+      "height": 128,
+      "data": {
+        "shopId": "",
+        "arenaId": "",
+        "crestId": "",
+        "eventId": "winter-classic"
+      }
+    }
+  ],
   "spawnZones": [
     {
       "id": "default-zone",
@@ -82,7 +99,7 @@
         },
         {
           "id": "spawn-2",
-          "speciesId": "Owlet",
+          "speciesId": "monster-10",
           "spawnChance": 100,
           "x": 3008,
           "y": 832,
@@ -92,9 +109,9 @@
           "respawnSeconds": 120,
           "monsterOptions": [
             {
-              "speciesId": "Owlet",
+              "speciesId": "monster-10",
               "weight": 25,
-              "variantId": "owlet-snow"
+              "variantId": "varkaw-default"
             },
             {
               "speciesId": "pawlit",
@@ -169,6 +186,25 @@
     }
   ],
   "trainers": [],
-  "npcs": [],
+  "npcs": [
+    {
+      "id": "npc-1",
+      "type": "trainer",
+      "x": 2368,
+      "y": 576,
+      "label": "Trainer Paul",
+      "text": "Hello there!",
+      "sheetId": "assets-characters-boardwalk-girl-sprite-frost-male",
+      "facing": "down",
+      "interactionRadius": 88,
+      "movementMode": "wander",
+      "moveRadius": 500,
+      "lookSpeed": 1,
+      "moveSpeed": 70,
+      "data": {
+        "trainerId": "trainer-5"
+      }
+    }
+  ],
   "mapMonstersPanel": []
 }

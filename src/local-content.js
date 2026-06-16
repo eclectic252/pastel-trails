@@ -27,7 +27,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "levelCap": 5,
           "arenaMinLevel": 1,
           "arenaMaxLevel": 5,
-          "leaderBonusStatPoints": 1
+          "leaderPartySize": 1,
+          "leaderBonusStatPoints": 2
         },
         {
           "crestMin": 2,
@@ -35,7 +36,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "levelCap": 10,
           "arenaMinLevel": 6,
           "arenaMaxLevel": 10,
-          "leaderBonusStatPoints": 2
+          "leaderPartySize": 1,
+          "leaderBonusStatPoints": 3
         },
         {
           "crestMin": 4,
@@ -43,7 +45,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "levelCap": 15,
           "arenaMinLevel": 11,
           "arenaMaxLevel": 15,
-          "leaderBonusStatPoints": 4
+          "leaderPartySize": 2,
+          "leaderBonusStatPoints": 5
         },
         {
           "crestMin": 6,
@@ -51,7 +54,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "levelCap": 20,
           "arenaMinLevel": 16,
           "arenaMaxLevel": 20,
-          "leaderBonusStatPoints": 5
+          "leaderPartySize": 2,
+          "leaderBonusStatPoints": 6
         },
         {
           "crestMin": 8,
@@ -59,7 +63,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "levelCap": 25,
           "arenaMinLevel": 21,
           "arenaMaxLevel": 25,
-          "leaderBonusStatPoints": 7
+          "leaderPartySize": 3,
+          "leaderBonusStatPoints": 8
         }
       ],
       "battleModel": {
@@ -205,7 +210,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         ],
         "unlockRequirements": {
           "arenaClears": [],
-          "requiredSkillLevels": []
+          "requiredSkillLevels": [],
+          "requiredAffinities": []
         },
         "statModifiers": {
           "self": [],
@@ -231,7 +237,13 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "accuracy": 100,
         "unlockRequirements": {
           "arenaClears": [],
-          "requiredSkillLevels": []
+          "requiredSkillLevels": [],
+          "requiredAffinities": [
+            {
+              "element": "Air",
+              "points": 1
+            }
+          ]
         },
         "statModifiers": {
           "self": [],
@@ -263,10 +275,12 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             {
               "skillId": "skill-2",
               "level": 2
-            },
+            }
+          ],
+          "requiredAffinities": [
             {
-              "skillId": "basic-attack",
-              "level": 1
+              "element": "Air",
+              "points": 2
             }
           ]
         },
@@ -288,7 +302,13 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "accuracy": 100,
         "unlockRequirements": {
           "arenaClears": [],
-          "requiredSkillLevels": []
+          "requiredSkillLevels": [],
+          "requiredAffinities": [
+            {
+              "element": "Air",
+              "points": 1
+            }
+          ]
         },
         "statModifiers": {
           "self": [],
@@ -316,7 +336,13 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "accuracy": 100,
         "unlockRequirements": {
           "arenaClears": [],
-          "requiredSkillLevels": []
+          "requiredSkillLevels": [],
+          "requiredAffinities": [
+            {
+              "element": "Air",
+              "points": 1
+            }
+          ]
         },
         "statModifiers": {
           "self": [
@@ -344,7 +370,13 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "accuracy": 100,
         "unlockRequirements": {
           "arenaClears": [],
-          "requiredSkillLevels": []
+          "requiredSkillLevels": [],
+          "requiredAffinities": [
+            {
+              "element": "Earth",
+              "points": 1
+            }
+          ]
         },
         "statModifiers": {
           "self": [],
@@ -372,7 +404,13 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "accuracy": 100,
         "unlockRequirements": {
           "arenaClears": [],
-          "requiredSkillLevels": []
+          "requiredSkillLevels": [],
+          "requiredAffinities": [
+            {
+              "element": "Earth",
+              "points": 1
+            }
+          ]
         },
         "statModifiers": {
           "self": [
@@ -408,7 +446,13 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "accuracy": 100,
         "unlockRequirements": {
           "arenaClears": [],
-          "requiredSkillLevels": []
+          "requiredSkillLevels": [],
+          "requiredAffinities": [
+            {
+              "element": "Earth",
+              "points": 1
+            }
+          ]
         },
         "statModifiers": {
           "self": [],
@@ -441,6 +485,12 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               "skillId": "skill-8",
               "level": 2
             }
+          ],
+          "requiredAffinities": [
+            {
+              "element": "Earth",
+              "points": 2
+            }
           ]
         },
         "statModifiers": {
@@ -469,7 +519,13 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "accuracy": 100,
         "unlockRequirements": {
           "arenaClears": [],
-          "requiredSkillLevels": []
+          "requiredSkillLevels": [],
+          "requiredAffinities": [
+            {
+              "element": "Fire",
+              "points": 1
+            }
+          ]
         },
         "statModifiers": {
           "self": [],
@@ -502,6 +558,12 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               "skillId": "skill-10",
               "level": 2
             }
+          ],
+          "requiredAffinities": [
+            {
+              "element": "Fire",
+              "points": 2
+            }
           ]
         },
         "statModifiers": {
@@ -522,7 +584,13 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "accuracy": 100,
         "unlockRequirements": {
           "arenaClears": [],
-          "requiredSkillLevels": []
+          "requiredSkillLevels": [],
+          "requiredAffinities": [
+            {
+              "element": "Fire",
+              "points": 1
+            }
+          ]
         },
         "statModifiers": {
           "self": [],
@@ -553,7 +621,13 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "accuracy": 100,
         "unlockRequirements": {
           "arenaClears": [],
-          "requiredSkillLevels": []
+          "requiredSkillLevels": [],
+          "requiredAffinities": [
+            {
+              "element": "Fire",
+              "points": 1
+            }
+          ]
         },
         "statModifiers": {
           "self": [
@@ -589,7 +663,13 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "accuracy": 100,
         "unlockRequirements": {
           "arenaClears": [],
-          "requiredSkillLevels": []
+          "requiredSkillLevels": [],
+          "requiredAffinities": [
+            {
+              "element": "Water",
+              "points": 1
+            }
+          ]
         },
         "statModifiers": {
           "self": [],
@@ -622,6 +702,12 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               "skillId": "skill-14",
               "level": 2
             }
+          ],
+          "requiredAffinities": [
+            {
+              "element": "Water",
+              "points": 2
+            }
           ]
         },
         "statModifiers": {
@@ -642,7 +728,13 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "accuracy": 100,
         "unlockRequirements": {
           "arenaClears": [],
-          "requiredSkillLevels": []
+          "requiredSkillLevels": [],
+          "requiredAffinities": [
+            {
+              "element": "Water",
+              "points": 1
+            }
+          ]
         },
         "statModifiers": {
           "self": [],
@@ -670,7 +762,13 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "accuracy": 100,
         "unlockRequirements": {
           "arenaClears": [],
-          "requiredSkillLevels": []
+          "requiredSkillLevels": [],
+          "requiredAffinities": [
+            {
+              "element": "Water",
+              "points": 1
+            }
+          ]
         },
         "statModifiers": {
           "self": [
@@ -706,7 +804,13 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "accuracy": 100,
         "unlockRequirements": {
           "arenaClears": [],
-          "requiredSkillLevels": []
+          "requiredSkillLevels": [],
+          "requiredAffinities": [
+            {
+              "element": "Light",
+              "points": 1
+            }
+          ]
         },
         "statModifiers": {
           "self": [],
@@ -739,6 +843,12 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               "skillId": "skill-18",
               "level": 2
             }
+          ],
+          "requiredAffinities": [
+            {
+              "element": "Light",
+              "points": 2
+            }
           ]
         },
         "statModifiers": {
@@ -759,7 +869,13 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "accuracy": 100,
         "unlockRequirements": {
           "arenaClears": [],
-          "requiredSkillLevels": []
+          "requiredSkillLevels": [],
+          "requiredAffinities": [
+            {
+              "element": "Dark",
+              "points": 1
+            }
+          ]
         },
         "statModifiers": {
           "self": [],
@@ -798,7 +914,13 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "accuracy": 100,
         "unlockRequirements": {
           "arenaClears": [],
-          "requiredSkillLevels": []
+          "requiredSkillLevels": [],
+          "requiredAffinities": [
+            {
+              "element": "Dark",
+              "points": 1
+            }
+          ]
         },
         "statModifiers": {
           "self": [],
@@ -831,6 +953,12 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               "skillId": "skill-21",
               "level": 2
             }
+          ],
+          "requiredAffinities": [
+            {
+              "element": "Dark",
+              "points": 2
+            }
           ]
         },
         "statModifiers": {
@@ -839,6 +967,35 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         },
         "statusEffects": [],
         "power": 6,
+        "description": ""
+      },
+      {
+        "id": "skill-23",
+        "name": "Light Stun",
+        "kind": "Status",
+        "element": "Light",
+        "maxLevel": 1,
+        "levelOverrides": [],
+        "accuracy": 100,
+        "unlockRequirements": {
+          "arenaClears": [],
+          "requiredSkillLevels": [],
+          "requiredAffinities": []
+        },
+        "statModifiers": {
+          "self": [],
+          "foe": [
+            {
+              "type": "modify",
+              "stat": "accuracy",
+              "amount": -1,
+              "label": "",
+              "showLabel": true
+            }
+          ]
+        },
+        "statusEffects": [],
+        "power": 0,
         "description": ""
       }
     ]
@@ -3146,7 +3303,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
                 3
               ],
               "frameDurationMs": 180
-            }
+            },
+            "label": "Default"
           },
           {
             "id": "kitari-snow",
@@ -4115,6 +4273,84 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       }
     ]
   },
+  "events": {
+    "events": [
+      {
+        "id": "league-championship",
+        "name": "League Championship",
+        "type": "championship",
+        "description": "Face the region's top trainers in a final authored gauntlet once you have enough crests.",
+        "entryInteractionLabel": "Challenge the Championship",
+        "introText": "The championship committee is ready. Defeat each trainer in order to claim the title.",
+        "completionText": "The crowd erupts as your championship clear is recorded in the league ledger.",
+        "leaderSheetId": "",
+        "unlock": {
+          "requiredCrestCount": 4
+        },
+        "reward": {
+          "money": 1200,
+          "text": "League officials hand over the championship purse."
+        },
+        "trainerIds": [
+          "trainer-3",
+          "trainer-4",
+          "trainer-5"
+        ],
+        "bracketSize": 4,
+        "seedingMode": "authored",
+        "rules": {
+          "allowedSpeciesIds": [],
+          "bannedSpeciesIds": [],
+          "allowedVariantIds": [],
+          "bannedVariantIds": [],
+          "allowedSkillIds": [],
+          "bannedSkillIds": []
+        }
+      },
+      {
+        "id": "winter-classic",
+        "name": "Winter Classic",
+        "type": "tournament",
+        "description": "An elimination tournament with a curated trainer field and a frosty ruleset.",
+        "entryInteractionLabel": "Enter the Winter Classic",
+        "introText": "Registration is open. Once you enter, your current party is locked until the bracket is over.",
+        "completionText": "You lift the Winter Classic trophy after surviving the bracket.",
+        "leaderSheetId": "",
+        "unlock": {
+          "requiredCrestCount": 0
+        },
+        "reward": {
+          "money": 650,
+          "text": "Tournament staff award your winnings and mark your name in the event record."
+        },
+        "trainerIds": [
+          "route-2-scout-mira"
+        ],
+        "bracketSize": 4,
+        "seedingMode": "authored",
+        "rules": {
+          "allowedSpeciesIds": [
+            "equira",
+            "Owlet",
+            "monster-8",
+            "Caniri"
+          ],
+          "bannedSpeciesIds": [],
+          "allowedVariantIds": [
+            "Equira-snow",
+            "default-snow",
+            "owlet-snow",
+            "Caniri-snow"
+          ],
+          "bannedVariantIds": [],
+          "allowedSkillIds": [],
+          "bannedSkillIds": [
+            "skill-22"
+          ]
+        }
+      }
+    ]
+  },
   "trainers": {
     "trainers": [
       {
@@ -4244,6 +4480,40 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           {
             "speciesId": "equira",
             "variantId": "Equira-Fire"
+          }
+        ]
+      },
+      {
+        "id": "trainer-5",
+        "name": "Paul",
+        "title": "Trainer",
+        "introText": "Let's battle.",
+        "rewardMoney": 25,
+        "rewardText": "",
+        "victoryText": "",
+        "recommendedLevel": 5,
+        "partySize": 2,
+        "refightPartyMode": "flexible",
+        "team": [
+          {
+            "speciesId": "Caniri",
+            "variantId": "Caniri-snow",
+            "level": 5
+          },
+          {
+            "speciesId": "monster-10",
+            "variantId": "varkaw-snow",
+            "level": 5
+          }
+        ],
+        "pool": [
+          {
+            "speciesId": "Fluffram",
+            "variantId": "fluffram-snow"
+          },
+          {
+            "speciesId": "monster-8",
+            "variantId": "default-snow"
           }
         ]
       }
@@ -7972,7 +8242,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       "assets/Monsters/Varkaw/varkaw_default.png",
       "assets/Monsters/Varkaw/varkaw_electric.png",
       "assets/Monsters/Varkaw/varkaw_grass.png",
-      "assets/Monsters/Varkaw/varkaw_snow.png"
+      "assets/Monsters/Varkaw/varkaw_snow.png",
+      "assets/Monsters/Varkaw/varkaw_water.png"
     ]
   },
   "townAssets": {
@@ -77803,7 +78074,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         {
           "id": "route4-to-moonflower",
           "x": 2432,
-          "y": 1152,
+          "y": 1280,
           "width": 640,
           "height": 128,
           "targetMapId": "moonflower-woods",
@@ -77837,7 +78108,24 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           }
         }
       ],
-      "interactions": [],
+      "interactions": [
+        {
+          "id": "route4-league-championship",
+          "type": "event",
+          "label": "League Championship Desk",
+          "text": "A traveling league official can register crest holders for the championship gauntlet.",
+          "x": 2368,
+          "y": 1088,
+          "width": 128,
+          "height": 128,
+          "data": {
+            "shopId": "",
+            "arenaId": "",
+            "crestId": "",
+            "eventId": "league-championship"
+          }
+        }
+      ],
       "spawnZones": [
         {
           "id": "default-zone",
@@ -78230,7 +78518,24 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           }
         }
       ],
-      "interactions": [],
+      "interactions": [
+        {
+          "id": "route6-winter-classic",
+          "type": "event",
+          "label": "Winter Classic Registration",
+          "text": "A tournament registrar is taking entries for the Winter Classic.",
+          "x": 2496,
+          "y": 576,
+          "width": 128,
+          "height": 128,
+          "data": {
+            "shopId": "",
+            "arenaId": "",
+            "crestId": "",
+            "eventId": "winter-classic"
+          }
+        }
+      ],
       "spawnZones": [
         {
           "id": "default-zone",
@@ -78282,7 +78587,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             },
             {
               "id": "spawn-2",
-              "speciesId": "Owlet",
+              "speciesId": "monster-10",
               "spawnChance": 100,
               "x": 3008,
               "y": 832,
@@ -78292,9 +78597,9 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
               "respawnSeconds": 120,
               "monsterOptions": [
                 {
-                  "speciesId": "Owlet",
+                  "speciesId": "monster-10",
                   "weight": 25,
-                  "variantId": "owlet-snow"
+                  "variantId": "varkaw-default"
                 },
                 {
                   "speciesId": "pawlit",
@@ -78369,7 +78674,26 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         }
       ],
       "trainers": [],
-      "npcs": [],
+      "npcs": [
+        {
+          "id": "npc-1",
+          "type": "trainer",
+          "x": 2368,
+          "y": 576,
+          "label": "Trainer Paul",
+          "text": "Hello there!",
+          "sheetId": "assets-characters-boardwalk-girl-sprite-frost-male",
+          "facing": "down",
+          "interactionRadius": 88,
+          "movementMode": "wander",
+          "moveRadius": 500,
+          "lookSpeed": 1,
+          "moveSpeed": 70,
+          "data": {
+            "trainerId": "trainer-5"
+          }
+        }
+      ],
       "mapMonstersPanel": []
     },
     "snowdrop-town": {
@@ -78421,6 +78745,22 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "shopId": "",
             "arenaId": "",
             "crestId": ""
+          }
+        },
+        {
+          "id": "interaction-3",
+          "type": "event",
+          "x": 1408,
+          "y": 1536,
+          "width": 128,
+          "height": 128,
+          "label": "Winter Classic Tournament",
+          "text": "Add interaction text here.",
+          "data": {
+            "shopId": "",
+            "arenaId": "",
+            "crestId": "",
+            "eventId": "winter-classic"
           }
         }
       ],

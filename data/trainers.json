@@ -129,6 +129,40 @@
           "variantId": "Equira-Fire"
         }
       ]
+    },
+    {
+      "id": "trainer-5",
+      "name": "Paul",
+      "title": "Trainer",
+      "introText": "Let's battle.",
+      "rewardMoney": 25,
+      "rewardText": "",
+      "victoryText": "",
+      "recommendedLevel": 5,
+      "partySize": 2,
+      "refightPartyMode": "flexible",
+      "team": [
+        {
+          "speciesId": "Caniri",
+          "variantId": "Caniri-snow",
+          "level": 5
+        },
+        {
+          "speciesId": "monster-10",
+          "variantId": "varkaw-snow",
+          "level": 5
+        }
+      ],
+      "pool": [
+        {
+          "speciesId": "Fluffram",
+          "variantId": "fluffram-snow"
+        },
+        {
+          "speciesId": "monster-8",
+          "variantId": "default-snow"
+        }
+      ]
     }
   ]
 }
