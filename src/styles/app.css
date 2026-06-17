@@ -1035,6 +1035,13 @@ button {
   align-items: start;
 }
 
+.dev-home-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
 .dev-sidebar {
   position: sticky;
   top: 1rem;
@@ -1047,6 +1054,92 @@ button {
 
 .dev-preview-controls {
   padding: 1rem;
+}
+
+.dev-workspace-panel,
+.dev-guide-card,
+.dev-workflow-card,
+.dev-topbar-layers,
+.dev-dirty-strip {
+  padding: 1rem 1.1rem;
+}
+
+.dev-guide-card,
+.dev-workflow-card,
+.dev-topbar-layers,
+.dev-dirty-strip {
+  background: rgba(255, 249, 240, 0.94);
+}
+
+.dev-guide-tag,
+.dev-topbar-label {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.72rem;
+}
+
+.dev-workflow-chip-row,
+.dev-dirty-chip-row,
+.dev-pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.dev-workflow-chip,
+.dev-dirty-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.38rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(214, 237, 246, 0.72);
+  border: 1px solid rgba(57, 79, 91, 0.12);
+  color: var(--text);
+  font-size: 0.84rem;
+}
+
+.dev-dirty-strip {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(240, 139, 110, 0.24);
+  background: rgba(255, 244, 238, 0.94);
+}
+
+.dev-dirty-strip-clean {
+  border-color: rgba(96, 163, 111, 0.24);
+  background: rgba(243, 251, 244, 0.94);
+}
+
+.dev-topbar-summary {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  max-width: 60ch;
+}
+
+.dev-topbar-layers {
+  display: grid;
+  gap: 0.9rem;
+  margin-top: 1rem;
+  border-radius: var(--radius-md);
+}
+
+.dev-topbar-layer {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.dev-guide-checklist {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0.9rem 0 0;
+}
+
+.dev-guide-checklist li {
+  color: var(--text);
 }
 
 .dev-preview-grid {
@@ -2593,6 +2686,10 @@ button {
   color: #2f6b45;
 }
 
+.dev-tools-topbar {
+  border-radius: var(--radius-lg);
+}
+
 .monster-preview-card {
   display: grid;
   grid-template-columns: 180px minmax(0, 1fr);
@@ -3288,7 +3385,8 @@ button {
   }
 
   .dev-town-card-preview-grid,
-  .dev-town-card-settings-grid {
+  .dev-town-card-settings-grid,
+  .dev-home-grid {
     grid-template-columns: 1fr;
   }
 

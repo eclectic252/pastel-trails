@@ -11092,10 +11092,27 @@
 
     root.innerHTML = [
       '<main class="dev-screen">',
-      renderDevToolsTopbar(devToolsState.section, "Map Editor"),
+      renderDevToolsTopbar(devToolsState.section, "Map Editor", devToolsState),
       '<section class="dev-screen-layout">',
       '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>Maps</h2></div><ul class="compact-list dev-map-list">' + mapList + "</ul></aside>",
       '<section class="dev-main">',
+      renderDevToolsGuideCard(
+        "Map Editing Workspace",
+        "Use Maps when you need to place transitions, wild spawns, interactions, or NPCs on the world itself. Arena, event, and trainer records are linked here but authored in their own workflow screens.",
+        ["Pick the map", "Choose the editor mode", "Place or tune the selected item", "Export map metadata when finished"],
+        [
+          { label: "Spawn Index", section: "spawn-index" },
+          { label: "Arena Records", section: "arenas" },
+          { label: "Event Records", section: "events" },
+          { label: "Town Data", section: "towns" },
+        ]
+      ),
+      renderDevToolsExportPanel(
+        "Map Metadata Export",
+        "Map positions, spawn zones, interactions, and NPC links all save through the map metadata export for the currently selected map.",
+        [{ action: "export-map-metadata", label: "Export Map Metadata JSON" }],
+        "Arena and event records are edited elsewhere, but their world entry links are configured here."
+      ),
       '<section class="panel-block dev-preview-controls"><div class="section-heading"><h2>Preview Zoom</h2><span>' + previewZoom + '%</span></div><div class="title-actions"><button class="' + (previewZoom === 100 ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-zoom" data-zoom="100">100%</button><button class="' + (previewZoom === 80 ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-zoom" data-zoom="80">80%</button><button class="' + (previewZoom === 60 ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-zoom" data-zoom="60">60%</button><button class="' + (previewZoom === 30 ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-zoom" data-zoom="30">30%</button><button class="' + (previewZoom === 10 ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-zoom" data-zoom="10">10%</button></div></section>',
       '<section class="dev-preview-grid">',
       '<section class="map-panel dev-map-panel"><div class="dev-canvas-scroll" data-preview-role="source"><canvas class="dev-map-canvas" width="' + sourcePreviewSize.width + '" height="' + sourcePreviewSize.height + '"></canvas></div><div class="map-caption">Source map preview. Click to place the selected ' + (devToolsState.editorMode === "spawns" ? "wild spawn point." : devToolsState.editorMode === "interactions" ? "interaction zone." : devToolsState.editorMode === "npcs" ? "NPC." : "transition rectangle.") + "</div></section>",
@@ -11523,11 +11540,38 @@
       validation,
       html: [
         '<main class="dev-screen">',
-        renderDevToolsTopbar(devToolsState.section, "Monster Editor"),
+        renderDevToolsTopbar(devToolsState.section, "Monster Editor", devToolsState),
         '<section class="dev-screen-layout">',
         '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>' + (monsterSubMode === "species" ? "Monster Species" : "Skills") + '</h2><button class="secondary-button" type="button" data-action="' + addAction + '">' + addLabel + '</button></div><ul class="compact-list dev-map-list">' + (sidebarItems || "<li>No entries yet.</li>") + '</ul></aside>',
         '<section class="dev-main">',
-        '<section class="panel-block dev-preview-controls"><div class="section-heading"><h2>Monster Tools</h2></div><p>Edit monsters and skills in-memory, then export JSON into <code>data/</code> and rebuild local content before reloading the game.</p><div class="editor-mode-toggle"><button class="' + (monsterSubMode === "species" ? "primary-button" : "secondary-button") + '" type="button" data-action="monster-mode-species">Species</button><button class="' + (monsterSubMode === "skills" ? "primary-button" : "secondary-button") + '" type="button" data-action="monster-mode-skills">Skills</button></div>' + renderValidationBanner() + '<div class="title-actions"><button class="secondary-button" type="button" data-action="export-monsters-json">Export monsters.json</button><button class="secondary-button" type="button" data-action="export-skills-json">Export skills.json</button>' + (monsterSubMode === "skills" ? '<button class="secondary-button" type="button" data-action="export-settings-json">Export settings.json</button>' : '') + '</div>' + (monsterSubMode === "skills" ? '<p class="dev-helper-text">The elemental chart, damage model, and XP tuning are saved in <code>settings.json</code>, not in <code>skills.json</code>.</p>' : '') + '</section>',
+        renderDevToolsGuideCard(
+          "Monster Setup",
+          monsterSubMode === "species"
+            ? "Species owns base stats, affinities, and variants. Jump to Skills when you need move behavior or unlock rules."
+            : "Skills owns move behavior, unlock rules, and affinity requirements. Jump back to Species when you need to decide who can learn the move.",
+          monsterSubMode === "species"
+            ? ["Edit base stats and growth", "Tune variants and art setup", "Assign skills to species"]
+            : ["Edit move behavior", "Set affinity or arena requirements", "Check settings export for battle model changes"],
+          monsterSubMode === "species"
+            ? [
+                { label: "Open Skills", section: "monsters", monsterSubMode: "skills" },
+                { label: "Progression", section: "progression" },
+              ]
+            : [
+                { label: "Open Species", section: "monsters", monsterSubMode: "species" },
+                { label: "Progression", section: "progression" },
+              ]
+        ),
+        renderDevToolsExportPanel(
+          "Monster Data & Export",
+          "Species and skills are edited in memory here, then exported to their JSON files. Battle model and elemental-chart tuning still live in <code>settings.json</code>.",
+          [
+            { action: "export-monsters-json", label: "Export monsters.json" },
+            { action: "export-skills-json", label: "Export skills.json" },
+          ].concat(monsterSubMode === "skills" ? [{ action: "export-settings-json", label: "Export settings.json" }] : []),
+          monsterSubMode === "skills" ? "Use settings export too when move work changes the elemental chart, XP tuning, or battle model." : ""
+        ),
+        '<section class="panel-block dev-preview-controls"><div class="section-heading"><h2>Editor Mode</h2></div><div class="editor-mode-toggle"><button class="' + (monsterSubMode === "species" ? "primary-button" : "secondary-button") + '" type="button" data-action="monster-mode-species">Species</button><button class="' + (monsterSubMode === "skills" ? "primary-button" : "secondary-button") + '" type="button" data-action="monster-mode-skills">Skills</button></div>' + renderValidationBanner() + '</section>',
         '<section class="panel-block dev-editor-panel">' + (monsterSubMode === "species" ? renderSpeciesEditor() : renderSkillsEditor()) + '</section>',
         '</section>',
         '</section>',
@@ -11596,11 +11640,26 @@
 
     root.innerHTML = [
       '<main class="dev-screen">',
-      renderDevToolsTopbar(devToolsState.section, "Spawn Index"),
+      renderDevToolsTopbar(devToolsState.section, "Spawn Index", devToolsState),
       '<section class="dev-screen-layout">',
       '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>Spawn Summary</h2></div><p class="dev-helper-text">Track wild spawn coverage by monster variant, then jump back into the map or species editors when you need deeper edits.</p><ul class="compact-list"><li><span>Variant rows</span><strong>' + filteredRows.length + '</strong></li><li><span>Total variants with wild spawns</span><strong>' + allRows.length + '</strong></li><li><span>Total maps with wild spawns</span><strong>' + Object.keys(content.mapMetadata || {}).filter(function (mapId) { return getEditableVisibleSpawns(content.mapMetadata[mapId] || {}).length > 0; }).length + '</strong></li></ul></aside>',
       '<section class="dev-main">',
-      '<section class="panel-block dev-preview-controls"><div class="section-heading"><h2>Spawn Index</h2></div><p>One row per monster variant, with expandable wild spawn entries for inline tuning. Export changes from the Maps tab using the existing map metadata export.</p><div class="form-grid"><label class="input-group"><span>Search</span><input data-dev-spawn-index-filter="search" value="' + escapeHtml(devToolsState.spawnIndexSearch || "") + '" placeholder="Species, variant, or map" /></label><label class="input-group"><span>Map</span><select data-dev-spawn-index-filter="map">' + mapOptions + '</select></label><label class="input-group"><span>Species</span><select data-dev-spawn-index-filter="species">' + speciesOptions + '</select></label></div></section>',
+      renderDevToolsGuideCard(
+        "Spawn Index",
+        "This is the fastest way to audit wild monster coverage across the whole game. Use quick actions to jump into the exact map spawn or monster species when you need deeper edits.",
+        ["Search by species, variant, or map", "Expand a row for inline tuning", "Jump to Maps or Monsters for deeper edits"],
+        [
+          { label: "Open Maps", section: "maps", editorMode: "spawns" },
+          { label: "Open Monsters", section: "monsters", monsterSubMode: "species" },
+        ]
+      ),
+      renderDevToolsExportPanel(
+        "Export Reminder",
+        "Spawn Index edits still save through map metadata exports because the underlying spawn records live on maps.",
+        [{ action: "export-map-metadata", label: "Export Current Map Metadata" }],
+        "Use the quick map jump from a row when you need to export a specific map after inline tuning."
+      ),
+      '<section class="panel-block dev-preview-controls"><div class="section-heading"><h2>Spawn Index</h2></div><div class="form-grid"><label class="input-group"><span>Search</span><input data-dev-spawn-index-filter="search" value="' + escapeHtml(devToolsState.spawnIndexSearch || "") + '" placeholder="Species, variant, or map" /></label><label class="input-group"><span>Map</span><select data-dev-spawn-index-filter="map">' + mapOptions + '</select></label><label class="input-group"><span>Species</span><select data-dev-spawn-index-filter="species">' + speciesOptions + '</select></label></div></section>',
       '<section class="panel-block dev-editor-panel"><div class="section-heading"><h2>Wild Spawn Variant Index</h2></div><div class="table-scroll"><table class="spawn-index-table"><thead><tr><th>Species</th><th>Variant</th><th>Maps / Locations</th><th>Spawn Count</th><th>Quick Actions</th></tr></thead><tbody>' + (tableRows || '<tr><td colspan="5">No matching wild spawn variants found.</td></tr>') + '</tbody></table></div></section>',
       '</section>',
       '</section>',
@@ -11736,11 +11795,25 @@
 
     root.innerHTML = [
       '<main class="dev-screen">',
-      renderDevToolsTopbar(devToolsState.section, "Arena Editor"),
+      renderDevToolsTopbar(devToolsState.section, "Arena Editor", devToolsState),
       '<section class="dev-screen-layout">',
       '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>Arenas</h2><button class="secondary-button" type="button" data-action="add-arena">Add Arena</button></div><ul class="compact-list dev-map-list">' + (arenaItems || "<li>No arenas yet.</li>") + '</ul></aside>',
       '<section class="dev-main">',
-      '<section class="panel-block dev-preview-controls"><div class="section-heading"><h2>Arena Tools</h2></div><p>Edit arena leader and crest metadata in-memory, then export <code>arenas.json</code> into <code>data/</code> and rebuild local content before reloading the game.</p><div class="title-actions"><button class="secondary-button" type="button" data-action="export-arenas-json">Export arenas.json</button></div></section>',
+      renderDevToolsGuideCard(
+        "Arena Setup",
+        "Arena records own the leader roster, crest data, and authored team. Map entry points and crest-tier difficulty live in related editors.",
+        ["Edit leader and crest data", "Author the team and fallback pool", "Check map entry and progression links"],
+        [
+          { label: "Map Arena Entry", section: "maps", editorMode: "interactions", mapId: selectedArena?.mapId || "" },
+          { label: "Progression Tiers", section: "progression" },
+        ]
+      ),
+      renderDevToolsExportPanel(
+        "Arena Data & Export",
+        "Edit arena leader and crest metadata in memory here, then export <code>arenas.json</code> when the record is ready.",
+        [{ action: "export-arenas-json", label: "Export arenas.json" }],
+        "Arena entry points are still configured on Maps, and first-clear scaling still lives in Progression."
+      ),
       arenaEditor,
       '</section>',
       '</section>',
@@ -11874,10 +11947,27 @@
 
     root.innerHTML = [
       '<main class="dev-screen">',
-      renderDevToolsTopbar(devToolsState.section, "Events Editor"),
+      renderDevToolsTopbar(devToolsState.section, "Events Editor", devToolsState),
       '<section class="dev-screen-layout">',
       '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>Events</h2><button class="secondary-button" type="button" data-action="add-event">Add Event</button></div><ul class="compact-list dev-map-list">' + (eventItems || "<li>No events yet.</li>") + '</ul></aside>',
-      '<section class="dev-main"><section class="panel-block dev-preview-controls"><div class="section-heading"><h2>Event Tools</h2></div><p>Author crest-gated championship gauntlets and tournament brackets here. Trainers are referenced by ID from <code>trainers.json</code>, and map entry points should link to these records through map interaction <code>eventId</code>.</p><div class="title-actions"><button class="secondary-button" type="button" data-action="export-events-json">Export events.json</button></div></section>' + eventEditor + '</section>',
+      '<section class="dev-main">' +
+        renderDevToolsGuideCard(
+          "Tournament & Championship Setup",
+          "Events own the championship and tournament definitions. Trainers are reused here by ID, and world entry is linked from map interactions.",
+          ["Define event settings", "Pick the trainer pool or gauntlet order", "Set legality rules", "Wire the event into a map interaction"],
+          [
+            { label: "Open Trainers", section: "trainers" },
+            { label: "Map Event Entry", section: "maps", editorMode: "interactions" },
+          ]
+        ) +
+        renderDevToolsExportPanel(
+          "Event Data & Export",
+          "Championship and tournament records are edited in memory here, then exported to <code>events.json</code>.",
+          [{ action: "export-events-json", label: "Export events.json" }],
+          "Map entry points still live on the Maps editor through interaction <code>eventId</code> links."
+        ) +
+        eventEditor +
+      '</section>',
       '</section>',
       '</main>',
     ].join("");
@@ -11956,10 +12046,27 @@
 
     root.innerHTML = [
       '<main class="dev-screen">',
-      renderDevToolsTopbar(devToolsState.section, "Trainer Editor"),
+      renderDevToolsTopbar(devToolsState.section, "Trainer Editor", devToolsState),
       '<section class="dev-screen-layout">',
       '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>Trainers</h2><button class="secondary-button" type="button" data-action="add-trainer">Add Trainer</button></div><ul class="compact-list dev-map-list">' + (trainerItems || "<li>No trainers yet.</li>") + '</ul></aside>',
-      '<section class="dev-main"><section class="panel-block dev-preview-controls"><div class="section-heading"><h2>Trainer Tools</h2></div><p>Edit trainer rosters in-memory, then export <code>trainers.json</code> into <code>data/</code> and rebuild local content before reloading the game.</p><div class="title-actions"><button class="secondary-button" type="button" data-action="export-trainers-json">Export trainers.json</button></div></section>' + trainerEditor + '</section>',
+      '<section class="dev-main">' +
+        renderDevToolsGuideCard(
+          "Trainer Roster Setup",
+          "Trainer records own authored teams, refight behavior, and rewards. Events and trainer NPCs link back to these records instead of duplicating roster data.",
+          ["Edit team and fallback pool", "Set refight behavior", "Link trainers into NPCs or events"],
+          [
+            { label: "Trainer NPCs On Maps", section: "maps", editorMode: "npcs" },
+            { label: "Open Events", section: "events" },
+          ]
+        ) +
+        renderDevToolsExportPanel(
+          "Trainer Data & Export",
+          "Edit trainer rosters in memory here, then export <code>trainers.json</code> when the roster is ready.",
+          [{ action: "export-trainers-json", label: "Export trainers.json" }],
+          "NPC battle entry points are still linked from Maps."
+        ) +
+        trainerEditor +
+      '</section>',
       '</section>',
       '</main>',
     ].join("");
@@ -12056,10 +12163,24 @@
 
     root.innerHTML = [
       '<main class="dev-screen">',
-      renderDevToolsTopbar(devToolsState.section, "Town Editor"),
+      renderDevToolsTopbar(devToolsState.section, "Town Editor", devToolsState),
       '<section class="dev-screen-layout">',
       '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>Towns</h2></div><ul class="compact-list dev-map-list">' + (townList || "<li>No town maps available.</li>") + "</ul></aside>",
       '<section class="dev-main">',
+      renderDevToolsGuideCard(
+        "Town Setup",
+        "Town data owns New Game presentation, starter availability, and arrival spawn. Use Maps when you need to change the actual world tiles or place interactions in town.",
+        ["Pick the town map", "Place the arrival spawn", "Tune New Game card visuals", "Export towns when finished"],
+        [
+          { label: "Open Maps", section: "maps" },
+        ]
+      ),
+      renderDevToolsExportPanel(
+        "Town Data & Export",
+        "Town presentation and starter selection data are edited in memory here, then exported to <code>towns.json</code>.",
+        [{ action: "export-towns-json", label: "Export towns.json" }],
+        "Town world geometry and interactions still live on the Maps editor."
+      ),
       '<section class="panel-block dev-preview-controls"><div class="section-heading"><h2>Preview Zoom</h2><span>' + previewZoom + '%</span></div><p>Click the town map preview to place the starting spawn icon for this town.</p><div class="title-actions"><button class="' + (previewZoom === 100 ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-zoom" data-zoom="100">100%</button><button class="' + (previewZoom === 80 ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-zoom" data-zoom="80">80%</button><button class="' + (previewZoom === 60 ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-zoom" data-zoom="60">60%</button><button class="' + (previewZoom === 30 ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-zoom" data-zoom="30">30%</button><button class="' + (previewZoom === 10 ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-zoom" data-zoom="10">10%</button></div></section>',
       '<section class="map-panel dev-map-panel"><div class="section-heading"><h2>' + escapeHtml(mapMeta?.displayName || selectedTownMapId || "Town Preview") + '</h2><span>' + escapeHtml(town?.id || "") + '</span></div><div class="dev-canvas-scroll" data-preview-role="source"><canvas class="dev-town-canvas" width="' + previewSize.width + '" height="' + previewSize.height + '"></canvas></div><div class="map-caption">Visible marker shows the New Game / town arrival spawn.</div></section>',
       '<section class="panel-block dev-editor-panel"><div class="section-heading"><h2>Town Settings</h2></div><div class="form-grid">' +
@@ -12135,10 +12256,29 @@
 
     root.innerHTML = [
       '<main class="dev-screen">',
-      renderDevToolsTopbar(devToolsState.section, "Sprite Sheet Checker"),
+      renderDevToolsTopbar(devToolsState.section, "Sprite Sheet Checker", devToolsState),
       '<section class="dev-screen-layout">',
       '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>Sprite Sheets</h2></div><div class="dev-sheet-group-wrap">' + sidebarItems + '</div></aside>',
       '<section class="dev-main">',
+      renderDevToolsGuideCard(
+        "Presentation Setup",
+        "Use this screen for sheet slicing, offsets, and global sprite presentation defaults. Monster species and arenas reference these sheets, but those records are still edited elsewhere.",
+        ["Pick the sprite sheet", "Tune offsets and preview scale", "Export character sheets after visual fixes"],
+        [
+          { label: "Open Monsters", section: "monsters", monsterSubMode: "species" },
+          { label: "Open Arenas", section: "arenas" },
+          { label: "Progression", section: "progression" },
+        ]
+      ),
+      renderDevToolsExportPanel(
+        "Character Sheet Export",
+        "Sprite sheet defaults and slicing data are edited in memory here, then exported to <code>character-sheets.json</code>. Global width defaults also touch <code>settings.json</code>.",
+        [
+          { action: "export-character-sheets-json", label: "Export character-sheets.json" },
+          { action: "export-settings-json", label: "Export settings.json" },
+        ],
+        "Export settings too when you changed global sprite widths or anchor defaults."
+      ),
       '<section class="panel-block dev-editor-panel">',
       '<div class="section-heading"><h2>' + (isMonsterSheet ? "Monster Sprite Defaults" : "Character Sprite Defaults") + '</h2></div>',
       '<div class="form-grid">' +
@@ -12692,24 +12832,216 @@
     }
   }
 
-  function renderDevToolsTopbar(section, title) {
+  const DEV_TOOL_SECTIONS = [
+    { id: "maps", label: "Maps", workflow: "world-spawns" },
+    { id: "spawn-index", label: "Spawn Index", workflow: "world-spawns" },
+    { id: "towns", label: "Towns", workflow: "world-spawns" },
+    { id: "arenas", label: "Arenas", workflow: "arena-setup" },
+    { id: "events", label: "Events", workflow: "trainer-events" },
+    { id: "trainers", label: "Trainers", workflow: "trainer-events" },
+    { id: "monsters", label: "Monsters", workflow: "monster-setup" },
+    { id: "characters", label: "Characters", workflow: "progression-presentation" },
+    { id: "progression", label: "Progression", workflow: "progression-presentation" },
+  ];
+
+  const DEV_TOOL_WORKFLOWS = [
+    {
+      id: "arena-setup",
+      label: "Arena Setup",
+      description: "Build an arena challenge from leader roster to map entry and crest-tier scaling.",
+      startSection: "arenas",
+      sections: ["arenas", "maps", "progression"],
+      checklist: ["Leader and crest data", "Map interaction link", "First-clear tier rules", "Refight settings check"],
+    },
+    {
+      id: "monster-setup",
+      label: "Monster Setup",
+      description: "Edit monster species, variants, affinities, and learnable skills in one workflow.",
+      startSection: "monsters",
+      sections: ["monsters", "progression"],
+      checklist: ["Species stats and variants", "Skill learnability", "Affinity-based requirements", "Battle/settings export check"],
+    },
+    {
+      id: "world-spawns",
+      label: "World & Spawns",
+      description: "Set up maps, wild spawns, interactions, NPCs, and starter towns.",
+      startSection: "maps",
+      sections: ["maps", "spawn-index", "towns"],
+      checklist: ["Map metadata", "Wild spawn tuning", "Interaction or NPC links", "Starter town data"],
+    },
+    {
+      id: "trainer-events",
+      label: "Trainer & Events",
+      description: "Author trainer rosters and wire them into championships, tournaments, and map entry points.",
+      startSection: "trainers",
+      sections: ["trainers", "events", "maps"],
+      checklist: ["Trainer roster", "Event definition", "Entry interaction", "Rewards and unlocks"],
+    },
+    {
+      id: "progression-presentation",
+      label: "Progression & Presentation",
+      description: "Tune progression settings and sprite sheet presentation defaults.",
+      startSection: "progression",
+      sections: ["progression", "characters"],
+      checklist: ["Crest progression tiers", "Arena/trainer scaling", "Sprite sheet tuning", "Settings export"],
+    },
+  ];
+
+  const DEV_TOOL_DIRTY_LABELS = {
+    maps: "Map Metadata",
+    towns: "Towns",
+    arenas: "Arenas",
+    events: "Events",
+    trainers: "Trainers",
+    monsters: "Monsters",
+    skills: "Skills",
+    settings: "Settings",
+    characters: "Character Sheets",
+  };
+
+  function getDevToolSectionMeta(sectionId) {
+    return DEV_TOOL_SECTIONS.find(function (entry) {
+      return entry.id === sectionId;
+    }) || DEV_TOOL_SECTIONS[0];
+  }
+
+  function getDevToolWorkflowMeta(workflowId) {
+    return DEV_TOOL_WORKFLOWS.find(function (entry) {
+      return entry.id === workflowId;
+    }) || DEV_TOOL_WORKFLOWS[0];
+  }
+
+  function getDevToolWorkflowForSection(sectionId, devToolsState) {
+    if (sectionId === "home") {
+      return getDevToolWorkflowMeta(devToolsState?.workflow).id;
+    }
+    return getDevToolSectionMeta(sectionId).workflow;
+  }
+
+  function createDefaultDevWorkflowHistory() {
+    return DEV_TOOL_WORKFLOWS.reduce(function (history, workflow) {
+      history[workflow.id] = workflow.startSection;
+      return history;
+    }, {});
+  }
+
+  function ensureDevToolsWorkflowState(devToolsState) {
+    if (!devToolsState) {
+      return;
+    }
+    if (!devToolsState.workflow) {
+      devToolsState.workflow = DEV_TOOL_WORKFLOWS[0].id;
+    }
+    if (!devToolsState.lastVisitedByWorkflow || typeof devToolsState.lastVisitedByWorkflow !== "object") {
+      devToolsState.lastVisitedByWorkflow = createDefaultDevWorkflowHistory();
+    }
+    DEV_TOOL_WORKFLOWS.forEach(function (workflow) {
+      if (!devToolsState.lastVisitedByWorkflow[workflow.id]) {
+        devToolsState.lastVisitedByWorkflow[workflow.id] = workflow.startSection;
+      }
+    });
+    if (typeof devToolsState.showAllEditors !== "boolean") {
+      devToolsState.showAllEditors = false;
+    }
+    if (!devToolsState.dirtyDomains || typeof devToolsState.dirtyDomains !== "object") {
+      devToolsState.dirtyDomains = {};
+    }
+  }
+
+  function renderDevJumpButton(config) {
+    const attrs = [
+      'class="secondary-button"',
+      'type="button"',
+      'data-action="dev-jump"',
+      'data-dev-jump-section="' + escapeHtml(config.section || "") + '"',
+    ];
+    if (config.workflow) {
+      attrs.push('data-dev-jump-workflow="' + escapeHtml(config.workflow) + '"');
+    }
+    if (config.editorMode) {
+      attrs.push('data-dev-jump-editor-mode="' + escapeHtml(config.editorMode) + '"');
+    }
+    if (config.monsterSubMode) {
+      attrs.push('data-dev-jump-monster-sub-mode="' + escapeHtml(config.monsterSubMode) + '"');
+    }
+    if (config.mapId) {
+      attrs.push('data-dev-jump-map-id="' + escapeHtml(config.mapId) + '"');
+    }
+    if (config.labelPrefix) {
+      attrs.push('data-dev-jump-label-prefix="' + escapeHtml(config.labelPrefix) + '"');
+    }
+    return "<button " + attrs.join(" ") + ">" + escapeHtml(config.label) + "</button>";
+  }
+
+  function renderDevToolsGuideCard(title, summary, checklist, relatedActions) {
+    const checklistMarkup = (checklist || []).length
+      ? '<ul class="compact-list dev-guide-checklist">' + checklist.map(function (item) {
+          return "<li>" + escapeHtml(item) + "</li>";
+        }).join("") + "</ul>"
+      : "";
+    const actionsMarkup = (relatedActions || []).length
+      ? '<div class="title-actions">' + relatedActions.map(renderDevJumpButton).join("") + "</div>"
+      : "";
+    return '<section class="panel-block dev-guide-card"><div class="section-heading"><h2>' + escapeHtml(title) + '</h2><span class="dev-guide-tag">Where To Edit This</span></div><p class="dev-helper-text">' + summary + "</p>" + checklistMarkup + actionsMarkup + "</section>";
+  }
+
+  function renderDevToolsExportPanel(title, description, actions, dirtyNotice) {
+    const actionMarkup = (actions || []).map(function (action) {
+      return '<button class="secondary-button" type="button" data-action="' + escapeHtml(action.action) + '">' + escapeHtml(action.label) + "</button>";
+    }).join("");
+    return '<section class="panel-block dev-preview-controls dev-workspace-panel"><div class="section-heading"><h2>' + escapeHtml(title) + '</h2><span class="dev-guide-tag">In Memory First</span></div><p class="dev-helper-text">' + description + '</p>' +
+      (dirtyNotice ? '<p class="dev-helper-text dev-helper-text-warning">' + dirtyNotice + "</p>" : "") +
+      '<div class="title-actions">' + actionMarkup + "</div></section>";
+  }
+
+  function renderDevToolsDirtyStrip(devToolsState) {
+    ensureDevToolsWorkflowState(devToolsState);
+    const dirtyKeys = Object.keys(devToolsState.dirtyDomains || {}).filter(function (key) {
+      return !!devToolsState.dirtyDomains[key];
+    });
+    if (!dirtyKeys.length) {
+      return '<section class="dev-dirty-strip dev-dirty-strip-clean"><strong>Workspace status:</strong><span>No pending in-memory changes flagged.</span></section>';
+    }
+    return '<section class="dev-dirty-strip"><strong>Pending in-memory changes:</strong><div class="dev-dirty-chip-row">' + dirtyKeys.map(function (key) {
+      return '<span class="dev-dirty-chip">' + escapeHtml(DEV_TOOL_DIRTY_LABELS[key] || key) + '</span>';
+    }).join("") + '</div></section>';
+  }
+
+  function renderDevToolsTopbar(section, title, devToolsState) {
+    ensureDevToolsWorkflowState(devToolsState);
+    const activeWorkflowId = getDevToolWorkflowForSection(section, devToolsState);
+    const activeWorkflow = getDevToolWorkflowMeta(activeWorkflowId);
+    const workflowButtons = DEV_TOOL_WORKFLOWS.map(function (workflow) {
+      const buttonClass = workflow.id === activeWorkflowId ? "primary-button" : "secondary-button";
+      return '<button class="' + buttonClass + '" type="button" data-action="dev-workflow" data-dev-workflow-id="' + escapeHtml(workflow.id) + '">' + escapeHtml(workflow.label) + "</button>";
+    }).join("");
+    const workflowSectionButtons = activeWorkflow.sections.map(function (sectionId) {
+      const meta = getDevToolSectionMeta(sectionId);
+      const buttonClass = section === sectionId ? "primary-button" : "secondary-button";
+      return '<button class="' + buttonClass + '" type="button" data-action="dev-section-' + escapeHtml(sectionId) + '">' + escapeHtml(meta.label) + "</button>";
+    }).join("");
+    const allSectionButtons = DEV_TOOL_SECTIONS.map(function (entry) {
+      const buttonClass = section === entry.id ? "primary-button" : "secondary-button";
+      return '<button class="' + buttonClass + '" type="button" data-action="dev-section-' + escapeHtml(entry.id) + '">' + escapeHtml(entry.label) + "</button>";
+    }).join("");
     return [
-      '<header class="game-topbar">',
-      '<div><span class="eyebrow">Dev Tools</span><strong>' + escapeHtml(title) + '</strong></div>',
+      '<header class="game-topbar dev-tools-topbar">',
+      '<div><span class="eyebrow">Dev Tools</span><strong>' + escapeHtml(title) + '</strong><p class="dev-topbar-summary">' + escapeHtml(activeWorkflow.description) + "</p></div>",
       '<div class="topbar-stats">',
-      '<button class="' + (section === "maps" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-maps">Maps</button>',
-      '<button class="' + (section === "spawn-index" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-spawn-index">Spawn Index</button>',
-      '<button class="' + (section === "towns" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-towns">Towns</button>',
-      '<button class="' + (section === "arenas" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-arenas">Arenas</button>',
-      '<button class="' + (section === "events" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-events">Events</button>',
-      '<button class="' + (section === "trainers" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-trainers">Trainers</button>',
-      '<button class="' + (section === "monsters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-monsters">Monsters</button>',
-      '<button class="' + (section === "characters" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-characters">Characters</button>',
-      '<button class="' + (section === "progression" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-progression">Progression</button>',
+      '<button class="' + (section === "home" ? "primary-button" : "secondary-button") + '" type="button" data-action="dev-section-home">Workflow Home</button>',
+      '<button class="secondary-button" type="button" data-action="dev-toggle-all-editors">' + (devToolsState.showAllEditors ? "Hide All Editors" : "All Editors") + '</button>',
       '<button class="secondary-button" type="button" data-action="back-to-title">Back</button>',
       '<button class="secondary-button" type="button" data-action="load-folder">Load Project Folder</button>',
       '</div>',
       '</header>',
+      '<section class="dev-topbar-layers panel-block">',
+      '<div class="dev-topbar-layer"><span class="dev-topbar-label">Workflow</span><div class="dev-pill-row">' + workflowButtons + '</div></div>',
+      '<div class="dev-topbar-layer"><span class="dev-topbar-label">Editors In This Workflow</span><div class="dev-pill-row">' + workflowSectionButtons + '</div></div>',
+      (devToolsState.showAllEditors
+        ? '<div class="dev-topbar-layer"><span class="dev-topbar-label">All Editors</span><div class="dev-pill-row">' + allSectionButtons + "</div></div>"
+        : ""),
+      '</section>',
+      renderDevToolsDirtyStrip(devToolsState),
     ].join("");
   }
 
@@ -12732,15 +13064,30 @@
 
     root.innerHTML = [
       '<main class="dev-screen">',
-      renderDevToolsTopbar(devToolsState.section, "Progression Settings"),
+      renderDevToolsTopbar(devToolsState.section, "Progression Settings", devToolsState),
       '<section class="dev-screen-layout">',
       '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>Progression</h2></div><p class="dev-helper-text">Manage crest milestones, wild/refight level caps, first-battle arena leader level ranges and party sizes, and any extra arena leader stat-point bonus unlocked by each tier.</p></aside>',
       '<section class="dev-main">',
+      renderDevToolsGuideCard(
+        "Progression Workflow",
+        "This screen owns crest-gated level caps, first-clear arena scaling, and other settings saved to <code>settings.json</code>. If a monster or arena change depends on tier scaling, this is where to finish the tuning.",
+        ["Set crest thresholds", "Tune arena level ranges and party size", "Export settings after progression changes"],
+        [
+          { label: "Open Arenas", section: "arenas" },
+          { label: "Open Monsters", section: "monsters", monsterSubMode: "skills" },
+          { label: "Sprite Presentation", section: "characters" },
+        ]
+      ),
+      renderDevToolsExportPanel(
+        "Data & Export",
+        "Progression values are edited in memory here, then exported to <code>settings.json</code> when the tier rules look right.",
+        [{ action: "export-settings-json", label: "Export settings.json" }],
+        "Rebuild local content after exporting if your workflow expects regenerated data files."
+      ),
       '<section class="panel-block dev-editor-panel">',
       '<div class="section-heading"><h2>Crest Progression Level Caps</h2><div class="topbar-stats"><button class="secondary-button" type="button" data-action="add-crest-level-cap">Add Tier</button></div></div>',
       crestLevelCapMarkup,
-      '<p class="dev-helper-text">These tiers control the player wild/refight level cap based on earned crests, plus the min/max range, first-clear party size, and extra stat points used for arena leaders. Collected arena refights still use the player arena settings for levels and size, but they also receive the current tier&apos;s leader bonus stat points. They are saved to <code>settings.json</code>.</p>',
-      '<div class="title-actions"><button class="secondary-button" type="button" data-action="export-settings-json">Export settings.json</button></div>',
+      '<p class="dev-helper-text">These tiers control the player wild/refight level cap based on earned crests, plus the min/max range, first-clear party size, and extra stat points used for arena leaders. Collected arena refights still use the player arena settings for levels and size, but they also receive the current tier&apos;s leader bonus stat points.</p>',
       '</section>',
       '</section>',
       '</section>',
@@ -12748,7 +13095,46 @@
     ].join("");
   }
 
+  function renderDevToolsHomeScreen(root, content, devToolsState) {
+    ensureDevToolsWorkflowState(devToolsState);
+    const workflowCards = DEV_TOOL_WORKFLOWS.map(function (workflow) {
+      const sectionLabels = workflow.sections.map(function (sectionId) {
+        return '<span class="dev-workflow-chip">' + escapeHtml(getDevToolSectionMeta(sectionId).label) + "</span>";
+      }).join("");
+      const checklist = workflow.checklist.map(function (item) {
+        return "<li>" + escapeHtml(item) + "</li>";
+      }).join("");
+      const lastSection = devToolsState.lastVisitedByWorkflow?.[workflow.id] || workflow.startSection;
+      return [
+        '<article class="panel-block dev-workflow-card">',
+        '<div class="section-heading"><h2>' + escapeHtml(workflow.label) + '</h2><span class="dev-guide-tag">Workflow</span></div>',
+        '<p class="dev-helper-text">' + escapeHtml(workflow.description) + '</p>',
+        '<div class="dev-workflow-chip-row">' + sectionLabels + '</div>',
+        '<ul class="compact-list dev-guide-checklist">' + checklist + '</ul>',
+        '<div class="title-actions">',
+        '<button class="primary-button" type="button" data-action="dev-workflow" data-dev-workflow-id="' + escapeHtml(workflow.id) + '">Open ' + escapeHtml(workflow.label) + '</button>',
+        renderDevJumpButton({ label: "Resume " + getDevToolSectionMeta(lastSection).label, section: lastSection, workflow: workflow.id }),
+        '</div>',
+        '</article>',
+      ].join("");
+    }).join("");
+
+    root.innerHTML = [
+      '<main class="dev-screen">',
+      renderDevToolsTopbar(devToolsState.section, "Workflow First", devToolsState),
+      '<section class="dev-home-grid">',
+      workflowCards,
+      '</section>',
+      '</main>',
+    ].join("");
+  }
+
   function renderDevToolsScreen(root, content, devToolsState) {
+    ensureDevToolsWorkflowState(devToolsState);
+    if (devToolsState.section === "home") {
+      return renderDevToolsHomeScreen(root, content, devToolsState);
+    }
+
     if (devToolsState.section === "characters") {
       return renderCharacterDevToolsScreen(root, content, devToolsState);
     }
@@ -13075,6 +13461,17 @@
       app.showTitle();
     });
 
+    root.querySelector('[data-action="dev-section-home"]')?.addEventListener("click", function () {
+      app.setDevSection("home");
+    });
+    root.querySelectorAll('[data-action="dev-workflow"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.setDevWorkflow(button.getAttribute("data-dev-workflow-id") || "");
+      });
+    });
+    root.querySelector('[data-action="dev-toggle-all-editors"]')?.addEventListener("click", function () {
+      app.toggleDevAllEditors();
+    });
     root.querySelector('[data-action="dev-section-maps"]')?.addEventListener("click", function () {
       app.setDevSection("maps");
     });
@@ -13086,6 +13483,9 @@
     });
     root.querySelector('[data-action="dev-section-arenas"]')?.addEventListener("click", function () {
       app.setDevSection("arenas");
+    });
+    root.querySelector('[data-action="dev-section-events"]')?.addEventListener("click", function () {
+      app.setDevSection("events");
     });
     root.querySelector('[data-action="dev-section-trainers"]')?.addEventListener("click", function () {
       app.setDevSection("trainers");
@@ -13101,6 +13501,17 @@
     });
     root.querySelector('[data-action="load-folder"]')?.addEventListener("click", function () {
       app.loadProjectFolder(true);
+    });
+    root.querySelectorAll('[data-action="dev-jump"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.jumpToDevTool({
+          workflow: button.getAttribute("data-dev-jump-workflow") || "",
+          section: button.getAttribute("data-dev-jump-section") || "",
+          editorMode: button.getAttribute("data-dev-jump-editor-mode") || "",
+          monsterSubMode: button.getAttribute("data-dev-jump-monster-sub-mode") || "",
+          mapId: button.getAttribute("data-dev-jump-map-id") || "",
+        });
+      });
     });
     root.querySelector('[data-action="delete-missing-character-sheets"]')?.addEventListener("click", function () {
       app.deleteMissingCharacterSheets();
@@ -14039,6 +14450,24 @@
             app.loadProjectFolder(true);
             return;
           }
+          if (action === "dev-section-home") {
+            event.preventDefault();
+            event.stopPropagation();
+            app.setDevSection("home");
+            return;
+          }
+          if (action === "dev-workflow") {
+            event.preventDefault();
+            event.stopPropagation();
+            app.setDevWorkflow(actionEl.getAttribute("data-dev-workflow-id") || "");
+            return;
+          }
+          if (action === "dev-toggle-all-editors") {
+            event.preventDefault();
+            event.stopPropagation();
+            app.toggleDevAllEditors();
+            return;
+          }
           if (action === "dev-section-maps") {
             event.preventDefault();
             event.stopPropagation();
@@ -14085,6 +14514,18 @@
             event.preventDefault();
             event.stopPropagation();
             app.setDevSection("progression");
+            return;
+          }
+          if (action === "dev-jump") {
+            event.preventDefault();
+            event.stopPropagation();
+            app.jumpToDevTool({
+              workflow: actionEl.getAttribute("data-dev-jump-workflow") || "",
+              section: actionEl.getAttribute("data-dev-jump-section") || "",
+              editorMode: actionEl.getAttribute("data-dev-jump-editor-mode") || "",
+              monsterSubMode: actionEl.getAttribute("data-dev-jump-monster-sub-mode") || "",
+              mapId: actionEl.getAttribute("data-dev-jump-map-id") || "",
+            });
             return;
           }
           if (action === "add-crest-level-cap") {
@@ -14266,7 +14707,11 @@
       titleNotice: "",
       devTools: {
         open: false,
-        section: "maps",
+        section: "home",
+        workflow: DEV_TOOL_WORKFLOWS[0].id,
+        lastVisitedByWorkflow: createDefaultDevWorkflowHistory(),
+        showAllEditors: false,
+        dirtyDomains: {},
         selectedMapId: Object.keys(content.maps)[0] || "",
         selectedTownMapId: Object.keys(content.maps).find(function (mapId) {
           return content.mapMetadata[mapId]?.isTown;
@@ -14368,7 +14813,26 @@
       restoreWorldPanelScroll: function () {
         restoreScrollState(root.querySelector(".world-panel-body"), this.devTools.worldPanelScroll?.body);
       },
+      markDevToolsDirty: function () {
+        ensureDevToolsWorkflowState(this.devTools);
+        Array.from(arguments).forEach((domain) => {
+          if (!domain) {
+            return;
+          }
+          this.devTools.dirtyDomains[domain] = true;
+        });
+      },
+      clearDevToolsDirty: function () {
+        ensureDevToolsWorkflowState(this.devTools);
+        Array.from(arguments).forEach((domain) => {
+          if (!domain) {
+            return;
+          }
+          delete this.devTools.dirtyDomains[domain];
+        });
+      },
       showDevTools: function (mapId) {
+        ensureDevToolsWorkflowState(this.devTools);
         this.devTools.open = true;
         this.devTools.selectedMapId = mapId || this.devTools.selectedMapId || Object.keys(this.content.maps)[0] || "";
         const transitions = this.content.mapMetadata[this.devTools.selectedMapId]?.transitions || [];
@@ -14382,6 +14846,7 @@
         syncMonsterDevSelection(this.content, this.devTools);
         syncArenaDevSelection(this.content, this.devTools);
         ensureCharacterDevSelection(this.devTools, this.content);
+        this.devTools.section = "home";
         this.state = { screen: "dev-tools" };
         this.render();
       },
@@ -15393,7 +15858,13 @@
         this.render();
       },
       setDevSection: function (section) {
+        ensureDevToolsWorkflowState(this.devTools);
         this.devTools.section = section;
+        if (section !== "home") {
+          const workflowId = getDevToolWorkflowForSection(section, this.devTools);
+          this.devTools.workflow = workflowId;
+          this.devTools.lastVisitedByWorkflow[workflowId] = section;
+        }
         if (section === "towns" && !this.devTools.selectedTownMapId) {
           this.devTools.selectedTownMapId = Object.keys(this.content.maps).find((mapId) => this.content.mapMetadata[mapId]?.isTown) || "";
         }
@@ -15409,6 +15880,49 @@
         syncMonsterDevSelection(this.content, this.devTools);
         applyCharacterSheetToDevTools(this.content, this.devTools, this.devTools.selectedCharacterSheetId);
         this.render();
+      },
+      setDevWorkflow: function (workflowId) {
+        ensureDevToolsWorkflowState(this.devTools);
+        const workflow = getDevToolWorkflowMeta(workflowId);
+        this.devTools.workflow = workflow.id;
+        const nextSection = this.devTools.lastVisitedByWorkflow[workflow.id] || workflow.startSection;
+        this.setDevSection(nextSection);
+      },
+      toggleDevAllEditors: function () {
+        ensureDevToolsWorkflowState(this.devTools);
+        this.devTools.showAllEditors = !this.devTools.showAllEditors;
+        this.render();
+      },
+      jumpToDevTool: function (config) {
+        ensureDevToolsWorkflowState(this.devTools);
+        const section = String(config?.section || "");
+        if (!section) {
+          return;
+        }
+        if (config.workflow) {
+          this.devTools.workflow = String(config.workflow);
+        }
+        if (config.mapId) {
+          const mapId = String(config.mapId || "");
+          if (mapId && this.content.maps[mapId]) {
+            this.devTools.selectedMapId = mapId;
+            const transitions = this.content.mapMetadata[mapId]?.transitions || [];
+            this.devTools.selectedTransitionId = transitions[0]?.id || "";
+            const visibleSpawns = getEditableVisibleSpawns(this.content.mapMetadata[mapId]);
+            this.devTools.selectedSpawnId = visibleSpawns[0]?.id || "";
+            const interactions = getEditableInteractions(this.content.mapMetadata[mapId]);
+            this.devTools.selectedInteractionId = interactions[0]?.id || "";
+            const npcs = getEditableNpcs(this.content.mapMetadata[mapId]);
+            this.devTools.selectedNpcId = npcs[0]?.id || "";
+          }
+        }
+        if (config.editorMode) {
+          this.devTools.editorMode = String(config.editorMode);
+        }
+        if (config.monsterSubMode) {
+          this.devTools.monsterSubMode = String(config.monsterSubMode);
+        }
+        this.setDevSection(section);
       },
       updateSpawnIndexFilter: function (field, rawValue, shouldRender) {
         if (field === "search") {
@@ -15438,6 +15952,8 @@
       },
       openSpeciesFromSpawnIndex: function (speciesId) {
         this.devTools.section = "monsters";
+        this.devTools.workflow = "monster-setup";
+        this.devTools.lastVisitedByWorkflow["monster-setup"] = "monsters";
         this.devTools.monsterSubMode = "species";
         this.devTools.selectedSpeciesId = String(speciesId || "");
         const species = this.content.monsters.species.find((entry) => entry.id === this.devTools.selectedSpeciesId);
@@ -15446,6 +15962,8 @@
       },
       openMapSpawnFromSpawnIndex: function (mapId, spawnId) {
         this.devTools.section = "maps";
+        this.devTools.workflow = "world-spawns";
+        this.devTools.lastVisitedByWorkflow["world-spawns"] = "maps";
         this.devTools.selectedMapId = String(mapId || "");
         const transitions = this.content.mapMetadata[this.devTools.selectedMapId]?.transitions || [];
         this.devTools.selectedTransitionId = transitions[0]?.id || "";
@@ -15548,12 +16066,20 @@
         syncDevToolsMonsterSpriteSettings(this.content, this.devTools);
         syncDevToolsCrestLevelCapSettings(this.content, this.devTools);
         syncDevToolsCharacterSheet(this.content, this.devTools);
+        this.markDevToolsDirty(
+          field.indexOf("crestLevelCap") === 0 || field.indexOf("crestArena") === 0 || field.indexOf("crestLeaderPartySize") === 0 || field.indexOf("crestLeaderBonusStatPoints") === 0
+            ? "settings"
+            : ["playerSpriteRenderWidth", "monsterSpriteRenderWidth", "playerSpriteAnchorOffsetY"].includes(field)
+              ? "settings"
+              : "characters"
+        );
         if (shouldRender !== false) {
           this.render();
         }
       },
       updateProgressionField: function (field, rawValue, shouldRender) {
         this.updateCharacterSheetField(field, rawValue, false);
+        this.markDevToolsDirty("settings");
         if (shouldRender !== false) {
           this.render();
         }
@@ -15659,7 +16185,10 @@
         species.push(next);
         this.devTools.selectedSpeciesId = next.id;
         this.devTools.section = "monsters";
+        this.devTools.workflow = "monster-setup";
+        this.devTools.lastVisitedByWorkflow["monster-setup"] = "monsters";
         this.devTools.monsterSubMode = "species";
+        this.markDevToolsDirty("monsters");
         this.render();
       },
       duplicateSpecies: function () {
@@ -15674,12 +16203,14 @@
         duplicate.name = current.name + " Copy";
         this.content.monsters.species.push(duplicate);
         this.devTools.selectedSpeciesId = duplicate.id;
+        this.markDevToolsDirty("monsters");
         this.render();
       },
       deleteSpecies: function () {
         ensureMonsterEditorContent(this.content);
         this.content.monsters.species = this.content.monsters.species.filter((entry) => entry.id !== this.devTools.selectedSpeciesId);
         syncMonsterDevSelection(this.content, this.devTools);
+        this.markDevToolsDirty("monsters");
         this.render();
       },
       addSkill: function () {
@@ -15688,7 +16219,10 @@
         skills.push(next);
         this.devTools.selectedSkillId = next.id;
         this.devTools.section = "monsters";
+        this.devTools.workflow = "monster-setup";
+        this.devTools.lastVisitedByWorkflow["monster-setup"] = "monsters";
         this.devTools.monsterSubMode = "skills";
+        this.markDevToolsDirty("skills");
         this.render();
       },
       duplicateSkill: function () {
@@ -15703,6 +16237,7 @@
         duplicate.name = current.name + " Copy";
         skills.push(duplicate);
         this.devTools.selectedSkillId = duplicate.id;
+        this.markDevToolsDirty("skills");
         this.render();
       },
       deleteSkill: function () {
@@ -15711,6 +16246,7 @@
         this.content.skills.skills = skills;
         removeSkillReferences(this.content, removedSkillId);
         syncMonsterDevSelection(this.content, this.devTools);
+        this.markDevToolsDirty("skills", "monsters");
         this.render();
       },
       addSkillModifier: function (targetKey) {
@@ -15737,6 +16273,7 @@
         }
 
         bucket.splice(effectIndex, 1);
+        this.markDevToolsDirty("skills");
         this.render();
       },
       updateSkillModifierField: function (targetKey, effectIndex, field, rawValue, shouldRender) {
@@ -15761,6 +16298,7 @@
         }
 
         ensureSkillEffectCollections(skill);
+        this.markDevToolsDirty("skills");
         if (shouldRender !== false) {
           this.render();
         }
@@ -15773,6 +16311,7 @@
 
         ensureSkillEffectCollections(skill);
         skill.statusEffects.push(createEmptySkillStatusEffect());
+        this.markDevToolsDirty("skills");
         this.render();
       },
       deleteSkillStatusEffect: function (effectIndex) {
@@ -15787,6 +16326,7 @@
         }
 
         skill.statusEffects.splice(effectIndex, 1);
+        this.markDevToolsDirty("skills");
         this.render();
       },
       updateSkillStatusEffectField: function (effectIndex, field, rawValue, shouldRender) {
@@ -15810,6 +16350,7 @@
         }
 
         ensureSkillEffectCollections(skill);
+        this.markDevToolsDirty("skills");
         if (shouldRender !== false) {
           this.render();
         }
@@ -15824,6 +16365,7 @@
         const firstArenaId = ensureArenaCatalog(this.content)[0]?.id || "";
         skill.unlockRequirements.arenaClears.push(firstArenaId);
         ensureSkillEffectCollections(skill);
+        this.markDevToolsDirty("skills");
         this.render();
       },
       deleteSkillArenaGate: function (gateIndex) {
@@ -15838,6 +16380,7 @@
         }
 
         skill.unlockRequirements.arenaClears.splice(gateIndex, 1);
+        this.markDevToolsDirty("skills");
         this.render();
       },
       updateSkillArenaGateField: function (gateIndex, field, rawValue, shouldRender) {
@@ -15851,6 +16394,7 @@
           skill.unlockRequirements.arenaClears[gateIndex] = String(rawValue || "").trim();
         }
         ensureSkillEffectCollections(skill);
+        this.markDevToolsDirty("skills");
         if (shouldRender !== false) {
           this.render();
         }
@@ -15868,6 +16412,7 @@
           level: 1,
         });
         ensureSkillEffectCollections(skill);
+        this.markDevToolsDirty("skills");
         this.render();
       },
       deleteSkillPrerequisite: function (requirementIndex) {
@@ -15882,6 +16427,7 @@
         }
 
         skill.unlockRequirements.requiredSkillLevels.splice(requirementIndex, 1);
+        this.markDevToolsDirty("skills");
         this.render();
       },
       updateSkillPrerequisiteField: function (requirementIndex, field, rawValue, shouldRender) {
@@ -15902,6 +16448,7 @@
           requirement[field] = String(rawValue || "").trim();
         }
         ensureSkillEffectCollections(skill);
+        this.markDevToolsDirty("skills");
         if (shouldRender !== false) {
           this.render();
         }
@@ -15915,6 +16462,7 @@
         ensureSkillEffectCollections(skill);
         skill.unlockRequirements.requiredAffinities.push(createEmptySkillAffinityRequirement());
         ensureSkillEffectCollections(skill);
+        this.markDevToolsDirty("skills");
         this.render();
       },
       deleteSkillAffinityRequirement: function (requirementIndex) {
@@ -15929,6 +16477,7 @@
         }
 
         skill.unlockRequirements.requiredAffinities.splice(requirementIndex, 1);
+        this.markDevToolsDirty("skills");
         this.render();
       },
       updateSkillAffinityRequirementField: function (requirementIndex, field, rawValue, shouldRender) {
@@ -15949,6 +16498,7 @@
           requirement.element = ELEMENTAL_AFFINITIES.includes(rawValue) ? rawValue : ELEMENTAL_AFFINITIES[0];
         }
         ensureSkillEffectCollections(skill);
+        this.markDevToolsDirty("skills");
         if (shouldRender !== false) {
           this.render();
         }
@@ -15971,6 +16521,7 @@
 
         skill.levelOverrides.push(createEmptySkillLevelOverride(nextLevel));
         ensureSkillEffectCollections(skill);
+        this.markDevToolsDirty("skills");
         this.state.message = "Added a level " + nextLevel + " override for " + (skill.name || "the skill") + ".";
         this.render();
       },
@@ -15987,6 +16538,7 @@
 
         skill.levelOverrides.splice(overrideIndex, 1);
         ensureSkillEffectCollections(skill);
+        this.markDevToolsDirty("skills");
         this.render();
       },
       updateSkillLevelOverrideField: function (overrideIndex, field, rawValue, shouldRender) {
@@ -16009,6 +16561,7 @@
           override[field] = rawValue;
         }
         ensureSkillEffectCollections(skill);
+        this.markDevToolsDirty("skills");
         if (shouldRender !== false) {
           this.render();
         }
@@ -16043,6 +16596,7 @@
           })),
         });
         this.devTools.selectedPreviewVariantId = species.variants[species.variants.length - 1]?.id || this.devTools.selectedPreviewVariantId;
+        this.markDevToolsDirty("monsters");
         this.render();
       },
       duplicateVariant: function (variantIndex) {
@@ -16056,6 +16610,7 @@
         duplicate.id = current.id + "-copy";
         species.variants.splice(variantIndex + 1, 0, duplicate);
         this.devTools.selectedPreviewVariantId = duplicate.id;
+        this.markDevToolsDirty("monsters");
         this.render();
       },
       deleteVariant: function (variantIndex) {
@@ -16066,6 +16621,7 @@
 
         species.variants.splice(variantIndex, 1);
         this.devTools.selectedPreviewVariantId = getSpeciesVariant(species, this.devTools.selectedPreviewVariantId)?.id || species.variants?.[0]?.id || "";
+        this.markDevToolsDirty("monsters");
         this.render();
       },
       addTransition: function () {
@@ -16088,6 +16644,7 @@
         mapMeta.transitions.push(transition);
         this.devTools.selectedTransitionId = transition.id;
         this.devTools.open = true;
+        this.markDevToolsDirty("maps");
         this.render();
       },
       addSpawn: function () {
@@ -16114,6 +16671,7 @@
         visibleSpawns.push(spawn);
         this.devTools.selectedSpawnId = spawn.id;
         this.devTools.editorMode = "spawns";
+        this.markDevToolsDirty("maps");
         this.render();
       },
       addInteraction: function () {
@@ -16122,6 +16680,7 @@
         interactions.push(next);
         this.devTools.selectedInteractionId = next.id;
         this.devTools.editorMode = "interactions";
+        this.markDevToolsDirty("maps");
         this.render();
       },
       addNpc: function () {
@@ -16130,6 +16689,7 @@
         npcs.push(next);
         this.devTools.selectedNpcId = next.id;
         this.devTools.editorMode = "npcs";
+        this.markDevToolsDirty("maps");
         this.render();
       },
       duplicateTransition: function () {
@@ -16145,6 +16705,7 @@
         duplicate.y += 32;
         mapMeta.transitions.push(duplicate);
         this.devTools.selectedTransitionId = duplicate.id;
+        this.markDevToolsDirty("maps");
         this.render();
       },
       duplicateSpawn: function () {
@@ -16160,6 +16721,7 @@
         duplicate.y += 64;
         visibleSpawns.push(duplicate);
         this.devTools.selectedSpawnId = duplicate.id;
+        this.markDevToolsDirty("maps");
         this.render();
       },
       duplicateInteraction: function () {
@@ -16176,6 +16738,7 @@
         duplicate.y += 64;
         interactions.push(duplicate);
         this.devTools.selectedInteractionId = duplicate.id;
+        this.markDevToolsDirty("maps");
         this.render();
       },
       duplicateNpc: function () {
@@ -16192,12 +16755,14 @@
         duplicate.y += 64;
         npcs.push(duplicate);
         this.devTools.selectedNpcId = duplicate.id;
+        this.markDevToolsDirty("maps");
         this.render();
       },
       deleteTransition: function () {
         const mapMeta = this.content.mapMetadata[this.devTools.selectedMapId];
         mapMeta.transitions = mapMeta.transitions.filter((entry) => entry.id !== this.devTools.selectedTransitionId);
         this.devTools.selectedTransitionId = mapMeta.transitions[0]?.id || "";
+        this.markDevToolsDirty("maps");
         this.render();
       },
       deleteSpawn: function () {
@@ -16205,6 +16770,7 @@
         const nextSpawns = getEditableVisibleSpawns(mapMeta).filter((entry) => entry.id !== this.devTools.selectedSpawnId);
         ensureSpawnZone(mapMeta).visibleSpawns = nextSpawns;
         this.devTools.selectedSpawnId = nextSpawns[0]?.id || "";
+        this.markDevToolsDirty("maps");
         this.render();
       },
       deleteInteraction: function () {
@@ -16212,6 +16778,7 @@
         const nextInteractions = getEditableInteractions(mapMeta).filter((entry) => entry.id !== this.devTools.selectedInteractionId);
         mapMeta.interactions = nextInteractions;
         this.devTools.selectedInteractionId = nextInteractions[0]?.id || "";
+        this.markDevToolsDirty("maps");
         this.render();
       },
       deleteNpc: function () {
@@ -16219,6 +16786,7 @@
         const nextNpcs = getEditableNpcs(mapMeta).filter((entry) => entry.id !== this.devTools.selectedNpcId);
         mapMeta.npcs = nextNpcs;
         this.devTools.selectedNpcId = nextNpcs[0]?.id || "";
+        this.markDevToolsDirty("maps");
         this.render();
       },
       addSpawnOption: function () {
@@ -16234,6 +16802,7 @@
           weight: 100,
         });
         spawn.speciesId = getSpawnDisplaySpeciesId(spawn, this.content);
+        this.markDevToolsDirty("maps");
         this.render();
       },
       deleteSpawnOption: function (optionIndex) {
@@ -16251,6 +16820,7 @@
         options.splice(optionIndex, 1);
         ensureSpawnOptions(spawn, this.content);
         spawn.speciesId = getSpawnDisplaySpeciesId(spawn, this.content);
+        this.markDevToolsDirty("maps");
         this.render();
       },
       updateTransitionField: function (path, rawValue, shouldRender) {
@@ -16275,6 +16845,7 @@
             this.devTools.selectedTransitionId = rawValue;
           }
         }
+        this.markDevToolsDirty("maps");
 
         if (shouldRender !== false) {
           this.render();
@@ -16292,6 +16863,7 @@
         if (path === "id") {
           this.devTools.selectedSpawnId = rawValue;
         }
+        this.markDevToolsDirty("maps");
         if (shouldRender !== false) {
           this.render();
         }
@@ -16314,6 +16886,7 @@
           option.variantId = getSpeciesVariant(species, option.variantId)?.id || "";
         }
         spawn.speciesId = getSpawnDisplaySpeciesId(spawn, this.content);
+        this.markDevToolsDirty("maps");
         if (shouldRender !== false) {
           this.render();
         }
@@ -16325,6 +16898,7 @@
           return;
         }
         spawn[field] = Number(rawValue || 0);
+        this.markDevToolsDirty("maps");
         if (shouldRender !== false) {
           this.render();
         }
@@ -16341,6 +16915,7 @@
         }
         option[field] = field === "weight" ? Number(rawValue || 0) : rawValue;
         spawn.speciesId = getSpawnDisplaySpeciesId(spawn, this.content);
+        this.markDevToolsDirty("maps");
         if (shouldRender !== false) {
           this.render();
         }
@@ -16369,6 +16944,7 @@
             this.devTools.selectedInteractionId = rawValue;
           }
         }
+        this.markDevToolsDirty("maps");
 
         if (shouldRender !== false) {
           this.render();
@@ -16404,6 +16980,7 @@
         if (["x", "y", "facing", "movementMode", "moveRadius", "lookSpeed", "moveSpeed", "id"].includes(path)) {
           resetNpcRuntimeState(this.state, this.content, this.devTools.selectedMapId, npc);
         }
+        this.markDevToolsDirty("maps");
 
         if (shouldRender !== false) {
           this.render();
@@ -16433,6 +17010,7 @@
         } else if (path === "safezone") {
           mapMeta.safezone = rawValue === "true";
         }
+        this.markDevToolsDirty("maps");
 
         if (shouldRender !== false) {
           this.render();
@@ -16476,6 +17054,7 @@
 
         town.mapId = mapId;
         town.cardBackgrounds = normalizeTownCardBackgrounds(town.cardBackgrounds);
+        this.markDevToolsDirty("towns");
         if (shouldRender !== false) {
           this.render();
         }
@@ -16502,6 +17081,7 @@
             this.devTools.selectedSpeciesId = rawValue;
           }
         }
+        this.markDevToolsDirty("monsters");
 
         if (shouldRender !== false) {
           this.render();
@@ -16548,6 +17128,7 @@
           replaceSkillReferences(this.content, previousId, rawValue);
           this.devTools.selectedSkillId = rawValue;
         }
+        this.markDevToolsDirty("skills");
         if (shouldRender !== false) {
           this.render();
         }
@@ -16586,6 +17167,7 @@
         } else {
           battleModel[path] = numericValue;
         }
+        this.markDevToolsDirty("settings");
         if (shouldRender !== false) {
           this.render();
         }
@@ -16603,6 +17185,7 @@
           battleModel.elementalMatchupChart[attackElement] = {};
         }
         battleModel.elementalMatchupChart[attackElement][defenderAffinity] = normalizeElementalMatchupResult(result);
+        this.markDevToolsDirty("settings");
         this.render();
       },
       updateVariantField: function (variantIndex, field, rawValue, shouldRender) {
@@ -16636,6 +17219,7 @@
         } else {
           variant[field] = rawValue;
         }
+        this.markDevToolsDirty("monsters");
         if (shouldRender !== false) {
           this.render();
         }
@@ -16652,6 +17236,7 @@
         if (path === "id") {
           this.devTools.selectedArenaId = rawValue;
         }
+        this.markDevToolsDirty("arenas");
 
         if (shouldRender !== false) {
           this.render();
@@ -16673,6 +17258,7 @@
           replaceTrainerReferences(this.content, previousId, rawValue);
           this.devTools.selectedTrainerId = rawValue;
         }
+        this.markDevToolsDirty("trainers");
 
         if (shouldRender !== false) {
           this.render();
@@ -16691,6 +17277,7 @@
           next.delete(skillId);
         }
         species.skills = Array.from(next);
+        this.markDevToolsDirty("monsters");
         this.render();
       },
       exportCurrentMapMetadata: function () {
@@ -16717,6 +17304,7 @@
         anchor.download = mapId + ".meta.json";
         anchor.click();
         URL.revokeObjectURL(url);
+        this.clearDevToolsDirty("maps");
         this.state.message = "Exported metadata for " + mapMeta.displayName + ".";
         if (this.state.screen === "world") {
           this.render();
@@ -16734,6 +17322,7 @@
         anchor.download = "towns.json";
         anchor.click();
         URL.revokeObjectURL(url);
+        this.clearDevToolsDirty("towns");
       },
       exportCharacterSheetsJson: function () {
         syncDevToolsCharacterSheet(this.content, this.devTools);
@@ -16748,6 +17337,7 @@
         anchor.download = "character-sheets.json";
         anchor.click();
         URL.revokeObjectURL(url);
+        this.clearDevToolsDirty("characters");
         this.state.message = "Exported character-sheets.json.";
         if (this.state.screen === "world") {
           this.render();
@@ -16770,6 +17360,7 @@
         anchor.download = "settings.json";
         anchor.click();
         URL.revokeObjectURL(url);
+        this.clearDevToolsDirty("settings");
         this.state.message = "Exported settings.json.";
         if (this.state.screen === "world") {
           this.render();
@@ -16787,6 +17378,7 @@
         anchor.download = "trainers.json";
         anchor.click();
         URL.revokeObjectURL(url);
+        this.clearDevToolsDirty("trainers");
         this.state.message = "Exported trainers.json.";
         if (this.state.screen === "world") {
           this.render();
@@ -16834,6 +17426,7 @@
 
         normalizeEventRecord(event, 0);
         Object.assign(event, normalizeEventRecord(event, 0));
+        this.markDevToolsDirty("events");
         if (path === "id") {
           replaceEventReferences(this.content, previousId, rawValue);
           this.devTools.selectedEventId = rawValue;
@@ -16849,6 +17442,9 @@
         events.push(next);
         this.devTools.selectedEventId = next.id;
         this.devTools.section = "events";
+        this.devTools.workflow = "trainer-events";
+        this.devTools.lastVisitedByWorkflow["trainer-events"] = "events";
+        this.markDevToolsDirty("events");
         this.render();
       },
       duplicateEvent: function () {
@@ -16862,6 +17458,7 @@
         duplicate.name = current.name ? current.name + " Copy" : "Copied Event";
         events.push(normalizeEventRecord(duplicate, events.length));
         this.devTools.selectedEventId = duplicate.id;
+        this.markDevToolsDirty("events");
         this.render();
       },
       deleteEvent: function () {
@@ -16869,6 +17466,7 @@
         replaceEventReferences(this.content, targetId, "");
         this.content.events.events = ensureEventCatalog(this.content).filter((entry) => entry.id !== targetId);
         syncEventDevSelection(this.content, this.devTools);
+        this.markDevToolsDirty("events", "maps");
         this.render();
       },
       addEventTrainer: function () {
@@ -16881,6 +17479,7 @@
         }
         event.trainerIds.push(ensureTrainerCatalog(this.content)[0]?.id || "");
         event.trainerIds = normalizeEventRuleArray(event.trainerIds);
+        this.markDevToolsDirty("events");
         this.render();
       },
       deleteEventTrainer: function (trainerIndex) {
@@ -16889,6 +17488,7 @@
           return;
         }
         event.trainerIds.splice(trainerIndex, 1);
+        this.markDevToolsDirty("events");
         this.render();
       },
       updateEventTrainerField: function (trainerIndex, field, rawValue, shouldRender) {
@@ -16898,6 +17498,7 @@
         }
         event.trainerIds[trainerIndex] = rawValue;
         event.trainerIds = normalizeEventRuleArray(event.trainerIds);
+        this.markDevToolsDirty("events");
         if (shouldRender !== false) {
           this.render();
         }
@@ -16937,6 +17538,7 @@
         } else if (path === "rules.bannedSkillIds") {
           event.rules.allowedSkillIds = [];
         }
+        this.markDevToolsDirty("events");
         this.render();
       },
       removeEventRuleValue: function (path, rawValue) {
@@ -16956,6 +17558,7 @@
         current[leaf] = current[leaf].filter(function (entry) {
           return String(entry || "") !== String(rawValue || "");
         });
+        this.markDevToolsDirty("events");
         this.render();
       },
       exportEventsJson: function () {
@@ -16970,6 +17573,7 @@
         anchor.download = "events.json";
         anchor.click();
         URL.revokeObjectURL(url);
+        this.clearDevToolsDirty("events");
         this.state.message = "Exported events.json.";
         if (this.state.screen === "world") {
           this.render();
@@ -16989,6 +17593,7 @@
           leaderBonusStatPoints: Math.max(0, Number(lastEntry.leaderBonusStatPoints || DEFAULT_CREST_LEVEL_CAPS[0].leaderBonusStatPoints || 0)),
         });
         syncDevToolsCrestLevelCapSettings(this.content, this.devTools);
+        this.markDevToolsDirty("settings");
         this.render();
       },
       deleteCrestLevelCap: function (capIndex) {
@@ -16998,6 +17603,7 @@
         }
         caps.splice(capIndex, 1);
         syncDevToolsCrestLevelCapSettings(this.content, this.devTools);
+        this.markDevToolsDirty("settings");
         this.render();
       },
       addTrainer: function () {
@@ -17006,6 +17612,7 @@
         next.team.push(createEmptyTrainerTeamMember(this.content, next));
         trainers.push(next);
         this.devTools.selectedTrainerId = next.id;
+        this.markDevToolsDirty("trainers");
         this.render();
       },
       duplicateTrainer: function () {
@@ -17019,6 +17626,7 @@
         duplicate.name = current.name ? current.name + " Copy" : "Copied Trainer";
         trainers.push(duplicate);
         this.devTools.selectedTrainerId = duplicate.id;
+        this.markDevToolsDirty("trainers");
         this.render();
       },
       deleteTrainer: function () {
@@ -17029,6 +17637,7 @@
           return entry.id !== targetId;
         });
         syncTrainerDevSelection(this.content, this.devTools);
+        this.markDevToolsDirty("trainers", "events", "maps");
         this.render();
       },
       addTrainerTeamMember: function () {
@@ -17041,6 +17650,7 @@
         }
         trainer.team.push(createEmptyTrainerTeamMember(this.content, trainer));
         trainer.partySize = Math.max(Number(trainer.partySize || 1), trainer.team.length);
+        this.markDevToolsDirty("trainers");
         this.render();
       },
       addTrainerPoolMember: function () {
@@ -17052,6 +17662,7 @@
           trainer.pool = [];
         }
         trainer.pool.push(createEmptyTrainerPoolMember(this.content));
+        this.markDevToolsDirty("trainers");
         this.render();
       },
       deleteTrainerTeamMember: function (teamIndex) {
@@ -17061,6 +17672,7 @@
         }
         trainer.team.splice(teamIndex, 1);
         trainer.partySize = Math.max(1, Math.min(Number(trainer.partySize || 1), trainer.team.length || 1));
+        this.markDevToolsDirty("trainers");
         this.render();
       },
       deleteTrainerPoolMember: function (poolIndex) {
@@ -17069,6 +17681,7 @@
           return;
         }
         trainer.pool.splice(poolIndex, 1);
+        this.markDevToolsDirty("trainers");
         this.render();
       },
       updateTrainerTeamMember: function (teamIndex, field, rawValue, shouldRender) {
@@ -17082,6 +17695,7 @@
           const species = getSpecies(this.content, rawValue);
           member.variantId = getSpeciesVariant(species, member.variantId)?.id || species?.variants?.[0]?.id || "default";
         }
+        this.markDevToolsDirty("trainers");
         if (shouldRender !== false) {
           this.render();
         }
@@ -17097,6 +17711,7 @@
           const species = getSpecies(this.content, rawValue);
           member.variantId = getSpeciesVariant(species, member.variantId)?.id || species?.variants?.[0]?.id || "default";
         }
+        this.markDevToolsDirty("trainers");
         if (shouldRender !== false) {
           this.render();
         }
@@ -17113,6 +17728,7 @@
 
         arena.team.push(createEmptyArenaTeamMember(this.content, arena));
         arena.partySize = Math.max(Number(arena.partySize || 1), arena.team.length);
+        this.markDevToolsDirty("arenas");
         this.render();
       },
       addArenaPoolMember: function () {
@@ -17126,6 +17742,7 @@
         }
 
         arena.pool.push(createEmptyArenaPoolMember(this.content));
+        this.markDevToolsDirty("arenas");
         this.render();
       },
       deleteArenaTeamMember: function (teamIndex) {
@@ -17136,6 +17753,7 @@
 
         arena.team.splice(teamIndex, 1);
         arena.partySize = Math.max(1, Math.min(Number(arena.partySize || 1), arena.team.length || 1));
+        this.markDevToolsDirty("arenas");
         this.render();
       },
       deleteArenaPoolMember: function (poolIndex) {
@@ -17145,6 +17763,7 @@
         }
 
         arena.pool.splice(poolIndex, 1);
+        this.markDevToolsDirty("arenas");
         this.render();
       },
       updateArenaTeamMember: function (teamIndex, field, rawValue, shouldRender) {
@@ -17159,6 +17778,7 @@
           const species = getSpecies(this.content, rawValue);
           member.variantId = getSpeciesVariant(species, member.variantId || "default")?.id || species?.variants?.[0]?.id || "default";
         }
+        this.markDevToolsDirty("arenas");
 
         if (shouldRender !== false) {
           this.render();
@@ -17176,6 +17796,7 @@
           const species = getSpecies(this.content, rawValue);
           member.variantId = getSpeciesVariant(species, member.variantId || "default")?.id || species?.variants?.[0]?.id || "default";
         }
+        this.markDevToolsDirty("arenas");
         this.render();
       },
       addArena: function () {
@@ -17184,6 +17805,9 @@
         arenas.push(next);
         this.devTools.selectedArenaId = next.id;
         this.devTools.section = "arenas";
+        this.devTools.workflow = "arena-setup";
+        this.devTools.lastVisitedByWorkflow["arena-setup"] = "arenas";
+        this.markDevToolsDirty("arenas");
         this.render();
       },
       duplicateArena: function () {
@@ -17200,11 +17824,13 @@
         duplicate.crestName = current.crestName ? current.crestName + " Copy" : "Copied Crest";
         arenas.push(duplicate);
         this.devTools.selectedArenaId = duplicate.id;
+        this.markDevToolsDirty("arenas");
         this.render();
       },
       deleteArena: function () {
         this.content.arenas.arenas = ensureArenaCatalog(this.content).filter((entry) => entry.id !== this.devTools.selectedArenaId);
         syncArenaDevSelection(this.content, this.devTools);
+        this.markDevToolsDirty("arenas");
         this.render();
       },
       exportArenasJson: function () {
@@ -17218,6 +17844,7 @@
         anchor.download = "arenas.json";
         anchor.click();
         URL.revokeObjectURL(url);
+        this.clearDevToolsDirty("arenas");
       },
       placeTownSpawnFromDevCanvas: function (event) {
         if (this.state.screen !== "dev-tools" || this.devTools.section !== "towns") {
@@ -17236,6 +17863,7 @@
         const tileSize = map.tileSize;
         town.spawn.x = Math.max(0, Math.round(point.worldX / tileSize) * tileSize + tileSize / 2);
         town.spawn.y = Math.max(0, Math.round(point.worldY / tileSize) * tileSize + tileSize / 2);
+        this.markDevToolsDirty("towns");
         this.state.message = "Moved town spawn for " + town.name + " to " + town.spawn.x + ", " + town.spawn.y + ".";
         this.render();
       },
@@ -17257,6 +17885,7 @@
         anchor.download = "monsters.json";
         anchor.click();
         URL.revokeObjectURL(url);
+        this.clearDevToolsDirty("monsters");
       },
       exportSkillsJson: function () {
         const validation = validateMonsterEditorContent(this.content);
@@ -17276,6 +17905,7 @@
         anchor.download = "skills.json";
         anchor.click();
         URL.revokeObjectURL(url);
+        this.clearDevToolsDirty("skills");
         this.state.message = "Exported skills.json. Battle model and elemental chart changes are in settings.json.";
         if (this.state.screen === "world") {
           this.render();
