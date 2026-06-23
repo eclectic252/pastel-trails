@@ -81,6 +81,29 @@ async function collectPngFiles(directoryPath) {
   return files;
 }
 
+async function collectImageFiles(directoryPath) {
+  const entries = await fs.readdir(directoryPath, { withFileTypes: true });
+  const files = [];
+
+  for (const entry of entries) {
+    if (entry.name.startsWith(".")) {
+      continue;
+    }
+
+    const absolutePath = path.join(directoryPath, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...await collectImageFiles(absolutePath));
+      continue;
+    }
+
+    if (entry.isFile() && /\.(png|webp|jpg|jpeg)$/i.test(entry.name)) {
+      files.push(absolutePath);
+    }
+  }
+
+  return files;
+}
+
 function prettifyCharacterSheetLabel(pathValue) {
   const baseName = String(pathValue || "")
     .split("/")
@@ -135,6 +158,19 @@ async function loadCrestAssets() {
     const pngFiles = await collectPngFiles(crestRoot);
     return {
       images: pngFiles.map((absolutePath) => path.relative(projectRoot, absolutePath).split(path.sep).join("/")).sort(),
+    };
+  } catch {
+    return { images: [] };
+  }
+}
+
+async function loadBattleBackgroundAssets() {
+  const battleBackgroundRoot = path.join(projectRoot, "assets", "Battle Backgrounds");
+
+  try {
+    const imageFiles = await collectImageFiles(battleBackgroundRoot);
+    return {
+      images: imageFiles.map((absolutePath) => path.relative(projectRoot, absolutePath).split(path.sep).join("/")).sort(),
     };
   } catch {
     return { images: [] };
@@ -306,6 +342,10 @@ async function loadMapMetadata(mapIds, maps) {
       trainers: rawMeta.trainers || [],
       npcs: rawMeta.npcs || [],
       mapMonstersPanel: rawMeta.mapMonstersPanel || [],
+      battleBackgroundImagePath: String(rawMeta.battleBackgroundImagePath || ""),
+      battleBackgroundImagePaths: Array.isArray(rawMeta.battleBackgroundImagePaths)
+        ? rawMeta.battleBackgroundImagePaths.map((entry) => String(entry || "")).filter(Boolean)
+        : [],
     };
   }
 
@@ -313,7 +353,7 @@ async function loadMapMetadata(mapIds, maps) {
 }
 
 async function buildLocalContent() {
-  const [settings, themes, items, skills, monsters, towns, arenas, events, trainers, characterSheets, monsterAssets, townAssets, crestAssets, maps] = await Promise.all([
+  const [settings, themes, items, skills, monsters, towns, arenas, events, trainers, characterSheets, monsterAssets, townAssets, crestAssets, battleBackgroundAssets, maps] = await Promise.all([
     readJson("data/settings.json"),
     readJson("data/themes.json"),
     readJson("data/items.json"),
@@ -337,6 +377,7 @@ async function buildLocalContent() {
     loadMonsterAssets(),
     loadTownAssets(),
     loadCrestAssets(),
+    loadBattleBackgroundAssets(),
     loadMaps(),
   ]);
 
@@ -356,6 +397,7 @@ async function buildLocalContent() {
     monsterAssets,
     townAssets,
     crestAssets,
+    battleBackgroundAssets,
     maps,
     mapMetadata,
   };

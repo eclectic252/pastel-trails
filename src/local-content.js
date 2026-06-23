@@ -7,7 +7,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       "partySize": 6,
       "playerSpriteRenderWidth": 155,
       "monsterSpriteRenderWidth": 128,
-      "playerSpriteAnchorOffsetY": 20,
+      "playerSpriteAnchorOffsetY": 0,
       "shareExperience": true,
       "encounterPreview": false,
       "encounterPreviewMode": "available",
@@ -3279,7 +3279,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "skill-19",
           "skill-20",
           "skill-21",
-          "skill-22"
+          "skill-22",
+          "skill-23"
         ],
         "variants": [
           {
@@ -3302,7 +3303,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
                 2,
                 3
               ],
-              "frameDurationMs": 180
+              "frameDurationMs": 180,
+              "renderWidth": 100
             },
             "label": "Default"
           },
@@ -8272,6 +8274,15 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       "assets/Crests/crest7.png",
       "assets/Crests/crest8.png",
       "assets/Crests/crest9.png"
+    ]
+  },
+  "battleBackgroundAssets": {
+    "images": [
+      "assets/Battle Backgrounds/Route3-1.png",
+      "assets/Battle Backgrounds/Route3-2.png",
+      "assets/Battle Backgrounds/Route3-3.png",
+      "assets/Battle Backgrounds/Route5-1.png",
+      "assets/Battle Backgrounds/Route5-2.png"
     ]
   },
   "maps": {
@@ -76758,7 +76769,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "height": 512,
           "targetMapId": "route-3",
           "targetSpawn": {
-            "x": 2624,
+            "x": 2112,
             "y": 3776
           }
         }
@@ -76811,7 +76822,9 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       ],
       "trainers": [],
       "npcs": [],
-      "mapMonstersPanel": []
+      "mapMonstersPanel": [],
+      "battleBackgroundImagePath": "",
+      "battleBackgroundImagePaths": []
     },
     "camelia-ranch": {
       "mapId": "camelia-ranch",
@@ -76881,7 +76894,9 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       ],
       "trainers": [],
       "npcs": [],
-      "mapMonstersPanel": []
+      "mapMonstersPanel": [],
+      "battleBackgroundImagePath": "",
+      "battleBackgroundImagePaths": []
     },
     "jasmine-bay": {
       "mapId": "jasmine-bay",
@@ -76978,7 +76993,9 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       ],
       "trainers": [],
       "npcs": [],
-      "mapMonstersPanel": []
+      "mapMonstersPanel": [],
+      "battleBackgroundImagePath": "",
+      "battleBackgroundImagePaths": []
     },
     "lily-harbor": {
       "mapId": "lily-harbor",
@@ -77102,7 +77119,9 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           }
         }
       ],
-      "mapMonstersPanel": []
+      "mapMonstersPanel": [],
+      "battleBackgroundImagePath": "",
+      "battleBackgroundImagePaths": []
     },
     "moonflower-woods": {
       "mapId": "moonflower-woods",
@@ -77184,7 +77203,9 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       ],
       "trainers": [],
       "npcs": [],
-      "mapMonstersPanel": []
+      "mapMonstersPanel": [],
+      "battleBackgroundImagePath": "",
+      "battleBackgroundImagePaths": []
     },
     "plumeria-shores": {
       "mapId": "plumeria-shores",
@@ -77269,7 +77290,9 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       ],
       "trainers": [],
       "npcs": [],
-      "mapMonstersPanel": []
+      "mapMonstersPanel": [],
+      "battleBackgroundImagePath": "",
+      "battleBackgroundImagePaths": []
     },
     "rose-town": {
       "mapId": "rose-town",
@@ -77354,7 +77377,9 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       ],
       "trainers": [],
       "npcs": [],
-      "mapMonstersPanel": []
+      "mapMonstersPanel": [],
+      "battleBackgroundImagePath": "",
+      "battleBackgroundImagePaths": []
     },
     "route-1": {
       "mapId": "route-1",
@@ -77524,7 +77549,9 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       ],
       "trainers": [],
       "npcs": [],
-      "mapMonstersPanel": []
+      "mapMonstersPanel": [],
+      "battleBackgroundImagePath": "",
+      "battleBackgroundImagePaths": []
     },
     "route-2": {
       "mapId": "route-2",
@@ -77729,7 +77756,9 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "movementMode": "look"
         }
       ],
-      "mapMonstersPanel": []
+      "mapMonstersPanel": [],
+      "battleBackgroundImagePath": "",
+      "battleBackgroundImagePaths": []
     },
     "route-3": {
       "mapId": "route-3",
@@ -78050,7 +78079,13 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           }
         }
       ],
-      "mapMonstersPanel": []
+      "mapMonstersPanel": [],
+      "battleBackgroundImagePath": "",
+      "battleBackgroundImagePaths": [
+        "assets/Battle Backgrounds/Route3-1.png",
+        "assets/Battle Backgrounds/Route3-2.png",
+        "assets/Battle Backgrounds/Route3-3.png"
+      ]
     },
     "route-4": {
       "mapId": "route-4",
@@ -78302,7 +78337,9 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           }
         }
       ],
-      "mapMonstersPanel": []
+      "mapMonstersPanel": [],
+      "battleBackgroundImagePath": "",
+      "battleBackgroundImagePaths": []
     },
     "route-5": {
       "mapId": "route-5",
@@ -78484,7 +78521,12 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       ],
       "trainers": [],
       "npcs": [],
-      "mapMonstersPanel": []
+      "mapMonstersPanel": [],
+      "battleBackgroundImagePath": "",
+      "battleBackgroundImagePaths": [
+        "assets/Battle Backgrounds/Route5-1.png",
+        "assets/Battle Backgrounds/Route5-2.png"
+      ]
     },
     "route-6": {
       "mapId": "route-6",
@@ -78694,7 +78736,9 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           }
         }
       ],
-      "mapMonstersPanel": []
+      "mapMonstersPanel": [],
+      "battleBackgroundImagePath": "",
+      "battleBackgroundImagePaths": []
     },
     "snowdrop-town": {
       "mapId": "snowdrop-town",
@@ -78780,7 +78824,9 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       ],
       "trainers": [],
       "npcs": [],
-      "mapMonstersPanel": []
+      "mapMonstersPanel": [],
+      "battleBackgroundImagePath": "",
+      "battleBackgroundImagePaths": []
     },
     "sunflower-coast": {
       "mapId": "sunflower-coast",
@@ -78865,7 +78911,9 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       ],
       "trainers": [],
       "npcs": [],
-      "mapMonstersPanel": []
+      "mapMonstersPanel": [],
+      "battleBackgroundImagePath": "",
+      "battleBackgroundImagePaths": []
     }
   }
 };

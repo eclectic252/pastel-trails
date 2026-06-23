@@ -2277,7 +2277,8 @@
         "skill-19",
         "skill-20",
         "skill-21",
-        "skill-22"
+        "skill-22",
+        "skill-23"
       ],
       "variants": [
         {
@@ -2300,7 +2301,8 @@
               2,
               3
             ],
-            "frameDurationMs": 180
+            "frameDurationMs": 180,
+            "renderWidth": 100
           },
           "label": "Default"
         },

@@ -178,5 +178,10 @@
   ],
   "trainers": [],
   "npcs": [],
-  "mapMonstersPanel": []
+  "mapMonstersPanel": [],
+  "battleBackgroundImagePath": "",
+  "battleBackgroundImagePaths": [
+    "assets/Battle Backgrounds/Route5-1.png",
+    "assets/Battle Backgrounds/Route5-2.png"
+  ]
 }

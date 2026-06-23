@@ -27,6 +27,7 @@
   const MONSTER_RENDER_WIDTH = 128;
   const MIN_PLAYER_RENDER_WIDTH = 64;
   const MIN_MONSTER_RENDER_WIDTH = 16;
+  const PLAYER_SPRITE_FOOT_ANCHOR = 0.9;
   const PLAYER_SPRITE_ANCHOR_OFFSET_Y = 20;
   const INTERACTION_PROMPT_RADIUS = 88;
   const PLAYER_WALK_ANIMATION_MS = {
@@ -133,6 +134,7 @@
         trainerRefightCooldownSeconds: 180,
         wildMonsterMinLevel: 1,
         wildMonsterMaxLevel: 5,
+        defaultBattleBackgroundImagePath: "",
         crestLevelCaps: DEFAULT_CREST_LEVEL_CAPS.map(function (entry) {
           return Object.assign({}, entry);
         }),
@@ -279,6 +281,9 @@
     crestAssets: {
       images: [],
     },
+    battleBackgroundAssets: {
+      images: [],
+    },
     arenas: { arenas: [] },
     events: { events: [] },
     trainers: { trainers: [] },
@@ -308,6 +313,8 @@
         trainers: [],
         npcs: [],
         mapMonstersPanel: [],
+        battleBackgroundImagePath: "",
+        battleBackgroundImagePaths: [],
       },
     },
   };
@@ -362,6 +369,18 @@
       repeat,
       overlayOpacity: Number.isFinite(overlayOpacity) ? overlayOpacity : defaults.overlayOpacity,
     };
+  }
+
+  function normalizeBattleBackgroundImagePath(value) {
+    return String(value || "").trim();
+  }
+
+  function normalizeBattleBackgroundImagePaths(values) {
+    return Array.from(new Set((Array.isArray(values) ? values : [])
+      .map(function (entry) {
+        return normalizeBattleBackgroundImagePath(entry);
+      })
+      .filter(Boolean)));
   }
 
   function normalizeTownCardBackgrounds(backgrounds) {
@@ -481,6 +500,8 @@
         trainers: rawMeta.trainers || [],
         npcs: rawMeta.npcs || [],
         mapMonstersPanel: rawMeta.mapMonstersPanel || [],
+        battleBackgroundImagePath: normalizeBattleBackgroundImagePath(rawMeta.battleBackgroundImagePath),
+        battleBackgroundImagePaths: normalizeBattleBackgroundImagePaths(rawMeta.battleBackgroundImagePaths),
       };
     });
 
@@ -555,6 +576,11 @@
         ? rawContent.crestAssets.images.slice().sort()
         : [],
     };
+    const battleBackgroundAssets = {
+      images: Array.isArray(rawContent.battleBackgroundAssets?.images)
+        ? rawContent.battleBackgroundAssets.images.slice().sort()
+        : [],
+    };
 
     return {
       settings: rawContent.settings,
@@ -579,6 +605,7 @@
       monsterAssets,
       townAssets,
       crestAssets,
+      battleBackgroundAssets,
       arenas: rawContent.arenas || JSON.parse(JSON.stringify(fallbackContent.arenas)),
       events: rawContent.events || JSON.parse(JSON.stringify(fallbackContent.events)),
       trainers: rawContent.trainers,
@@ -723,11 +750,20 @@
     };
   }
 
+  function buildBattleBackgroundAssetCatalog(files) {
+    return {
+      images: files.map(function (file) {
+        return file.pathParts.join("/");
+      }).sort(),
+    };
+  }
+
   async function loadCharacterSheetsFromDirectory(rootHandle) {
     const discoveredSheets = [];
     let monsterAssets = { images: [] };
     let townAssets = { images: [] };
     let crestAssets = { images: [] };
+    let battleBackgroundAssets = { images: [] };
 
     try {
       const assetsHandle = await rootHandle.getDirectoryHandle("assets");
@@ -754,7 +790,8 @@
           const path = file.pathParts.join("/");
           return !path.startsWith("assets/Maps/")
             && !path.startsWith("assets/Characters/")
-            && !path.startsWith("assets/Monsters/");
+            && !path.startsWith("assets/Monsters/")
+            && !path.startsWith("assets/Battle Backgrounds/");
         });
         townAssets = buildTownAssetCatalog(townCardFiles);
       } catch {}
@@ -764,12 +801,19 @@
         const crestFiles = await collectImageFilesRecursive(crestsHandle, ["assets", "Crests"]);
         crestAssets = buildCrestAssetCatalog(crestFiles);
       } catch {}
+
+      try {
+        const battleBackgroundsHandle = await assetsHandle.getDirectoryHandle("Battle Backgrounds");
+        const battleBackgroundFiles = await collectImageFilesRecursive(battleBackgroundsHandle, ["assets", "Battle Backgrounds"]);
+        battleBackgroundAssets = buildBattleBackgroundAssetCatalog(battleBackgroundFiles);
+      } catch {}
     } catch {
       return {
         sheets: JSON.parse(JSON.stringify(fallbackContent.characterSheets.sheets)),
         monsterAssets: JSON.parse(JSON.stringify(fallbackContent.monsterAssets || { images: [] })),
         townAssets: JSON.parse(JSON.stringify(fallbackContent.townAssets || { images: [] })),
         crestAssets: JSON.parse(JSON.stringify(fallbackContent.crestAssets || { images: [] })),
+        battleBackgroundAssets: JSON.parse(JSON.stringify(fallbackContent.battleBackgroundAssets || { images: [] })),
       };
     }
 
@@ -778,6 +822,7 @@
       monsterAssets,
       townAssets,
       crestAssets,
+      battleBackgroundAssets,
     };
   }
 
@@ -840,6 +885,7 @@
     const monsterAssets = discoveredCharacterSheets.monsterAssets || { images: [] };
     const townAssets = discoveredCharacterSheets.townAssets || { images: [] };
     const crestAssets = discoveredCharacterSheets.crestAssets || { images: [] };
+    const battleBackgroundAssets = discoveredCharacterSheets.battleBackgroundAssets || { images: [] };
 
     const maps = await loadAuthoredMapsFromAssets(rootHandle);
     const mapMetadata = {};
@@ -847,7 +893,7 @@
       mapMetadata[mapId] = await tryReadJsonFromHandle(rootHandle, ["data", "map-metadata", mapId + ".meta.json"]) || {};
     }
 
-    return normalizeContent({ settings, themes, items, skills, monsters, towns, arenas, events, trainers, characterSheets, monsterAssets, townAssets, crestAssets, maps, mapMetadata }, "directory");
+    return normalizeContent({ settings, themes, items, skills, monsters, towns, arenas, events, trainers, characterSheets, monsterAssets, townAssets, crestAssets, battleBackgroundAssets, maps, mapMetadata }, "directory");
   }
 
   function loadEmbeddedContent() {
@@ -2810,6 +2856,178 @@
     return images.sort();
   }
 
+  function getBattleBackgroundImageOptions(content) {
+    const images = Array.isArray(content?.battleBackgroundAssets?.images) ? content.battleBackgroundAssets.images.slice() : [];
+    return images.sort();
+  }
+
+  function ensureBattleBackgroundSelection(record) {
+    if (!record || typeof record !== "object") {
+      return record;
+    }
+    record.battleBackgroundImagePath = normalizeBattleBackgroundImagePath(record.battleBackgroundImagePath);
+    record.battleBackgroundImagePaths = normalizeBattleBackgroundImagePaths(record.battleBackgroundImagePaths);
+    return record;
+  }
+
+  function getBattleBackgroundPreviewPath(record) {
+    ensureBattleBackgroundSelection(record);
+    return record?.battleBackgroundImagePath || record?.battleBackgroundImagePaths?.[0] || "";
+  }
+
+  function isKnownBattleBackgroundPath(content, imagePath) {
+    const normalizedPath = normalizeBattleBackgroundImagePath(imagePath);
+    if (!normalizedPath) {
+      return false;
+    }
+    const catalog = getBattleBackgroundImageOptions(content);
+    return !catalog.length || catalog.includes(normalizedPath);
+  }
+
+  function filterBattleBackgroundCandidates(content, paths) {
+    return normalizeBattleBackgroundImagePaths(paths).filter(function (imagePath) {
+      return isKnownBattleBackgroundPath(content, imagePath);
+    });
+  }
+
+  function chooseRandomBattleBackgroundPath(content, paths) {
+    const entries = filterBattleBackgroundCandidates(content, paths);
+    if (!entries.length) {
+      return "";
+    }
+    return entries[Math.floor(Math.random() * entries.length)] || "";
+  }
+
+  function getRecordBattleBackgroundSelection(content, record) {
+    ensureBattleBackgroundSelection(record);
+    if (!record) {
+      return "";
+    }
+    if (record.battleBackgroundImagePath) {
+      return isKnownBattleBackgroundPath(content, record.battleBackgroundImagePath)
+        ? record.battleBackgroundImagePath
+        : "";
+    }
+    return chooseRandomBattleBackgroundPath(content, record.battleBackgroundImagePaths);
+  }
+
+  function getDefaultBattleBackgroundImagePath(content) {
+    const explicitDefault = normalizeBattleBackgroundImagePath(content?.settings?.defaults?.defaultBattleBackgroundImagePath);
+    if (isKnownBattleBackgroundPath(content, explicitDefault)) {
+      return explicitDefault;
+    }
+    return getBattleBackgroundImageOptions(content)[0] || "";
+  }
+
+  function resolveBattleBackgroundImagePath(content, options) {
+    const battleType = String(options?.battleType || "").trim().toLowerCase();
+    if (battleType === "wild") {
+      return getRecordBattleBackgroundSelection(content, options?.mapMeta) || getDefaultBattleBackgroundImagePath(content);
+    }
+    if (battleType === "arena") {
+      return getRecordBattleBackgroundSelection(content, options?.arena)
+        || getRecordBattleBackgroundSelection(content, options?.trainer)
+        || getDefaultBattleBackgroundImagePath(content);
+    }
+    if (battleType === "event") {
+      return getRecordBattleBackgroundSelection(content, options?.event)
+        || getRecordBattleBackgroundSelection(content, options?.trainer)
+        || getDefaultBattleBackgroundImagePath(content);
+    }
+    return getRecordBattleBackgroundSelection(content, options?.trainer) || getDefaultBattleBackgroundImagePath(content);
+  }
+
+  function getBattleBackgroundEditorTarget(content, devToolsState, owner) {
+    if (owner === "map") {
+      return {
+        record: content.mapMetadata?.[devToolsState.selectedMapId] || null,
+        dirtyKey: "maps",
+      };
+    }
+    if (owner === "trainer") {
+      return {
+        record: ensureTrainerCatalog(content).find(function (entry) {
+          return entry.id === devToolsState.selectedTrainerId;
+        }) || null,
+        dirtyKey: "trainers",
+      };
+    }
+    if (owner === "arena") {
+      return {
+        record: ensureArenaCatalog(content).find(function (entry) {
+          return entry.id === devToolsState.selectedArenaId;
+        }) || null,
+        dirtyKey: "arenas",
+      };
+    }
+    if (owner === "event") {
+      return {
+        record: ensureEventCatalog(content).find(function (entry) {
+          return entry.id === devToolsState.selectedEventId;
+        }) || null,
+        dirtyKey: "events",
+      };
+    }
+    return { record: null, dirtyKey: "" };
+  }
+
+  function renderBattleBackgroundPreviewMarkup(imagePath, options) {
+    const path = normalizeBattleBackgroundImagePath(imagePath);
+    if (!path) {
+      return '<div class="battle-background-preview-frame battle-background-preview-frame-empty"><span>' + escapeHtml(options?.emptyLabel || "No background selected") + '</span></div>';
+    }
+    const label = path.split("/").pop() || path;
+    return '<div class="battle-background-preview-frame"><img class="battle-background-preview-image" src="' + escapeHtml(path) + '" alt="' + escapeHtml(label) + '" /></div>';
+  }
+
+  function renderBattleBackgroundPicker(content, record, options) {
+    ensureBattleBackgroundSelection(record);
+    const imageOptions = getBattleBackgroundImageOptions(content);
+    const owner = String(options?.owner || "");
+    const addSelectId = String(options?.addSelectId || ("battle-background-add-" + owner));
+    const fixedLabel = String(options?.fixedLabel || "Fixed Background");
+    const randomLabel = String(options?.randomLabel || "Random Background Set");
+    const pickerTitle = String(options?.title || "Battle Background");
+    const selectedPreviewPath = getBattleBackgroundPreviewPath(record);
+    const fixedOptions = ['<option value="">Use random set or fallback</option>'].concat(
+      imageOptions.map(function (imagePath) {
+        const selected = record?.battleBackgroundImagePath === imagePath ? " selected" : "";
+        return '<option value="' + escapeHtml(imagePath) + '"' + selected + ">" + escapeHtml(imagePath.replace(/^assets\//, "")) + "</option>";
+      })
+    ).join("");
+    const addOptions = ['<option value="">Select background</option>'].concat(
+      imageOptions
+        .filter(function (imagePath) {
+          return !(record?.battleBackgroundImagePaths || []).includes(imagePath);
+        })
+        .map(function (imagePath) {
+          return '<option value="' + escapeHtml(imagePath) + '">' + escapeHtml(imagePath.replace(/^assets\//, "")) + "</option>";
+        })
+    ).join("");
+    const selectedRandomMarkup = record?.battleBackgroundImagePaths?.length
+      ? '<ul class="compact-list">' + record.battleBackgroundImagePaths.map(function (imagePath) {
+          return '<li><span>' + escapeHtml(imagePath.replace(/^assets\//, "")) + '</span><button class="secondary-button" type="button" data-action="remove-battle-background-path" data-battle-background-owner="' + escapeHtml(owner) + '" data-battle-background-value="' + escapeHtml(imagePath) + '">Remove</button></li>';
+        }).join("") + "</ul>"
+      : '<p class="dev-helper-text">No random battle backgrounds selected. If the fixed background is blank too, this record falls back.</p>';
+    const assetNote = imageOptions.length
+      ? 'Drop images into <code>assets/Battle Backgrounds/</code>, then reload the project folder to refresh this list.'
+      : 'No battle background images discovered yet. Drop files into <code>assets/Battle Backgrounds/</code> and reload the project folder.';
+
+    return [
+      '<section class="panel-block dev-editor-panel">',
+      '<div class="section-heading"><h2>' + escapeHtml(pickerTitle) + "</h2></div>",
+      '<div class="battle-background-picker-grid">',
+      renderBattleBackgroundPreviewMarkup(selectedPreviewPath, { emptyLabel: "Using fallback background" }),
+      '<div class="battle-background-picker-fields">',
+      '<label class="input-group"><span>' + escapeHtml(fixedLabel) + '</span><select data-dev-' + escapeHtml(owner) + '-field="battleBackgroundImagePath">' + fixedOptions + '</select></label>',
+      '<div class="dev-subcard"><div class="section-heading"><h3>' + escapeHtml(randomLabel) + '</h3></div>' + selectedRandomMarkup + '<div class="form-grid"><label class="input-group"><span>Add Random Choice</span><select id="' + escapeHtml(addSelectId) + '" data-dev-battle-background-select="' + escapeHtml(owner) + '">' + addOptions + '</select></label><div class="title-actions"><button class="secondary-button" type="button" data-action="add-battle-background-path" data-battle-background-owner="' + escapeHtml(owner) + '" data-battle-background-select-id="' + escapeHtml(addSelectId) + '">Add</button></div></div></div>',
+      '<p class="dev-helper-text">' + assetNote + '</p>',
+      '</div>',
+      '</div>',
+      '</section>',
+    ].join("");
+  }
+
   function normalizeAssetLookupKey(value) {
     return String(value || "")
       .toLowerCase()
@@ -4385,6 +4603,7 @@
       leaderName: "Leader Name",
       leaderTitle: "Leader",
       leaderSheetId: "",
+      trainerId: "",
       crestId: "crest-" + index,
       crestName: "New Crest",
       crestImagePath: "",
@@ -4394,6 +4613,8 @@
       rewardText: "",
       description: "",
       mapId: "",
+      battleBackgroundImagePath: "",
+      battleBackgroundImagePaths: [],
       team: [],
       pool: [],
     };
@@ -4426,6 +4647,8 @@
       if (!Array.isArray(arena.pool)) {
         arena.pool = [];
       }
+      arena.trainerId = String(arena.trainerId || "");
+      ensureBattleBackgroundSelection(arena);
     });
   }
 
@@ -4460,6 +4683,7 @@
       if (typeof trainer.victoryText !== "string") {
         trainer.victoryText = "";
       }
+      ensureBattleBackgroundSelection(trainer);
     });
 
     return content.trainers.trainers;
@@ -4516,6 +4740,8 @@
         money: 0,
         text: "",
       },
+      battleBackgroundImagePath: "",
+      battleBackgroundImagePaths: [],
       trainerIds: [],
       bracketSize: 4,
       seedingMode: "authored",
@@ -4574,6 +4800,8 @@
         money: Math.max(0, Number(entry?.reward?.money || 0)),
         text: String(entry?.reward?.text || ""),
       },
+      battleBackgroundImagePath: normalizeBattleBackgroundImagePath(entry?.battleBackgroundImagePath),
+      battleBackgroundImagePaths: normalizeBattleBackgroundImagePaths(entry?.battleBackgroundImagePaths),
       trainerIds: normalizeEventRuleArray(entry?.trainerIds),
       bracketSize: Math.max(2, Number(entry?.bracketSize || fallback.bracketSize)),
       seedingMode: String(entry?.seedingMode || fallback.seedingMode || "authored"),
@@ -5212,6 +5440,8 @@
       recommendedLevel: 5,
       partySize: 1,
       refightPartyMode: "fixed",
+      battleBackgroundImagePath: "",
+      battleBackgroundImagePaths: [],
       team: [],
       pool: [],
     };
@@ -6252,7 +6482,13 @@
     });
 
     state.battle = {
+      type: "wild",
+      battleSource: "wild",
       enemy,
+      battleBackgroundImagePath: resolveBattleBackgroundImagePath(content, {
+        battleType: "wild",
+        mapMeta: content.mapMetadata?.[state.world.currentMapId] || null,
+      }),
       playerIndex: 0,
       participantMonsterIds: state.party[0]?.instanceId ? [state.party[0].instanceId] : [],
       pendingMonsterXpReward: 0,
@@ -6474,6 +6710,7 @@
       eventTrainerId: config?.eventTrainerId || "",
       eventRoundIndex: Number(config?.eventRoundIndex || 0),
       eventMatchIndex: Number(config?.eventMatchIndex || 0),
+      battleBackgroundImagePath: config?.battleBackgroundImagePath || "",
       enemyQueue: team,
       enemyIndex: 0,
       enemy: team[0],
@@ -6494,17 +6731,24 @@
 
   function startArenaBattle(state, content, arena, interaction) {
     const roster = buildArenaBattleRoster(state, content, arena);
+    const linkedTrainer = arena?.trainerId ? getTrainer(content, arena.trainerId) : null;
     startStructuredTrainerBattle(state, content, {
       roster,
       battleSource: "arena-leader",
       opponentName: arena.leaderName || "Arena Leader",
       opponentTitle: arena.leaderTitle || "Leader",
       leaderSheetId: arena.leaderSheetId || "",
+      trainerId: arena?.trainerId || "",
       arenaId: arena.id,
       crestId: arena.crestId || interaction.data?.crestId || "",
       crestName: arena.crestName || "Arena Crest",
       rewardMoney: Number(arena.rewardMoney || 0),
       rewardText: arena.rewardText || "",
+      battleBackgroundImagePath: resolveBattleBackgroundImagePath(content, {
+        battleType: "arena",
+        arena,
+        trainer: linkedTrainer,
+      }),
       introLog: (arena.leaderTitle || "Leader") + " " + (arena.leaderName || "Arena Leader") + " challenges you to a battle.",
       startMessage: "Arena battle started at " + (arena.name || interaction.label || "the arena") + ".",
       missingTeamMessage: "This arena does not have a leader team configured yet.",
@@ -6523,6 +6767,10 @@
       rewardMoney: Math.max(0, Number(trainer.rewardMoney || 0)),
       rewardText: trainer.rewardText || "",
       victoryText: trainer.victoryText || "",
+      battleBackgroundImagePath: resolveBattleBackgroundImagePath(content, {
+        battleType: "trainer",
+        trainer,
+      }),
       introLog: (trainer.title || "Trainer") + " " + (trainer.name || npc.label || "Trainer") + " challenges you to a battle.",
       startMessage: (trainer.name || npc.label || "Trainer") + " challenged you to a battle.",
       missingTeamMessage: "This trainer does not have a team configured yet.",
@@ -6553,6 +6801,11 @@
       eventId: event.id,
       eventType: "championship",
       eventTrainerId: trainer.id,
+      battleBackgroundImagePath: resolveBattleBackgroundImagePath(content, {
+        battleType: "event",
+        event,
+        trainer,
+      }),
       introLog: (trainer.title || "Trainer") + " " + (trainer.name || trainer.id || "Champion") + " challenges you in the " + (event.name || "championship") + ".",
       startMessage: "Championship battle started against " + (trainer.name || trainer.id || "the next challenger") + ".",
       missingTeamMessage: "This championship trainer does not have a team configured yet.",
@@ -6594,6 +6847,11 @@
       eventTrainerId: trainer.id,
       eventRoundIndex: Number(run.currentRoundIndex || 0),
       eventMatchIndex: Number(run.currentMatchIndex || 0),
+      battleBackgroundImagePath: resolveBattleBackgroundImagePath(content, {
+        battleType: "event",
+        event,
+        trainer,
+      }),
       introLog: (trainer.title || "Trainer") + " " + (trainer.name || trainer.id || "Trainer") + " steps into the " + (event.name || "tournament") + ".",
       startMessage: "Tournament match started against " + (trainer.name || trainer.id || "the next trainer") + ".",
       missingTeamMessage: "This tournament trainer does not have a team configured yet.",
@@ -8647,7 +8905,7 @@
     const spriteSize = Math.max(64, Number(globalPlayerSpriteSettings.playerSpriteRenderWidth || PLAYER_RENDER_WIDTH)) * zoomScale;
     const anchorOffsetY = Number(globalPlayerSpriteSettings.playerSpriteAnchorOffsetY || 0) * zoomScale;
     const drawX = Math.round(playerX - spriteSize / 2);
-    const drawY = Math.round(playerY - spriteSize / 2 - anchorOffsetY);
+    const drawY = Math.round(playerY - spriteSize * PLAYER_SPRITE_FOOT_ANCHOR - anchorOffsetY);
     const visual = ensurePlayerVisualState(state);
     const rowByFacing = {
       down: 0,
@@ -9239,6 +9497,7 @@
     const trainerIntroAwaitingContinue = Boolean(animation?.trainerIntro?.awaitingContinue);
     const mustSelectReplacement = Boolean(state.battle.mustSelectReplacement);
     const leaderSheetId = getBattleLeaderSheetId(state.battle);
+    const battleBackgroundImagePath = normalizeBattleBackgroundImagePath(state.battle?.battleBackgroundImagePath);
     const showPlayerIntro = Boolean(animation?.playerIntro?.phase === "enter");
     const suppressDefaultPlayerBattler = Boolean(
       isTrainerBattle
@@ -9334,6 +9593,9 @@
       }) +
       '</section>',
       '<section class="battle-stage">' +
+        (battleBackgroundImagePath
+          ? '<div class="battle-stage-background"><img class="battle-stage-background-image" src="' + escapeHtml(battleBackgroundImagePath) + '" alt="Battle background" /></div>'
+          : "") +
         '<div class="battle-field">' +
           (showTrainerIntro
             ? renderBattleTrainerIntro(content, state.battle, animation)
@@ -10049,6 +10311,13 @@
       '<label class="input-group"><span>Safezone</span><select data-dev-map-field="safezone"><option value="true"' + (mapMeta?.safezone ? " selected" : "") + '>Yes</option><option value="false"' + (!mapMeta?.safezone ? " selected" : "") + '>No</option></select></label>',
       '</div>',
       '</section>',
+      renderBattleBackgroundPicker(content, mapMeta, {
+        owner: "map",
+        title: "Wild Battle Backgrounds",
+        fixedLabel: "Fixed Wild Background",
+        randomLabel: "Random Wild Backgrounds",
+        addSelectId: "map-battle-background-add",
+      }),
     ].join("");
 
     return [
@@ -11687,6 +11956,12 @@
         return '<option value="' + escapeHtml(mapId) + '"' + selected + ">" + escapeHtml(label) + "</option>";
       })
     ).join("");
+    const linkedTrainerOptions = ['<option value="">None</option>'].concat(
+      ensureTrainerCatalog(content).map(function (trainer) {
+        const selected = selectedArena?.trainerId === trainer.id ? " selected" : "";
+        return '<option value="' + escapeHtml(trainer.id) + '"' + selected + ">" + escapeHtml((trainer.title || "Trainer") + " " + (trainer.name || trainer.id)) + "</option>";
+      })
+    ).join("");
     const crestImageOptions = ['<option value="">Auto Match From Crest ID/Name</option>'].concat(
       getCrestImageOptions(content).map(function (imagePath) {
         const selected = (selectedArena?.crestImagePath || "") === imagePath ? " selected" : "";
@@ -11768,6 +12043,7 @@
           '<label class="input-group"><span>Leader Name</span><input data-dev-arena-field="leaderName" value="' + escapeHtml(selectedArena.leaderName || "") + '" /></label>',
           '<label class="input-group"><span>Leader Title</span><input data-dev-arena-field="leaderTitle" value="' + escapeHtml(selectedArena.leaderTitle || "") + '" /></label>',
           '<label class="input-group"><span>Leader Sprite</span><select data-dev-arena-field="leaderSheetId">' + arenaLeaderSheetOptions + '</select></label>',
+          '<label class="input-group"><span>Linked Trainer Fallback</span><select data-dev-arena-field="trainerId">' + linkedTrainerOptions + '</select></label>',
           '<label class="input-group"><span>Crest ID</span><input data-dev-arena-field="crestId" value="' + escapeHtml(selectedArena.crestId || "") + '" /></label>',
           '<label class="input-group"><span>Crest Name</span><input data-dev-arena-field="crestName" value="' + escapeHtml(selectedArena.crestName || "") + '" /></label>',
           '<label class="input-group"><span>Crest Image</span><select data-dev-arena-field="crestImagePath">' + crestImageOptions + '</select></label>',
@@ -11779,6 +12055,13 @@
           '<label class="input-group dev-input-group-wide"><span>Reward Notes</span><textarea rows="4" data-dev-arena-field="rewardText">' + escapeHtml(selectedArena.rewardText || "") + '</textarea></label>',
           '</div>',
           '</section>',
+          renderBattleBackgroundPicker(content, selectedArena, {
+            owner: "arena",
+            title: "Arena Battle Backgrounds",
+            fixedLabel: "Fixed Arena Background",
+            randomLabel: "Random Arena Backgrounds",
+            addSelectId: "arena-battle-background-add",
+          }),
           '<section class="panel-block dev-editor-panel"><div class="section-heading"><h2>Leader Team</h2><div class="topbar-stats"><button class="secondary-button" type="button" data-action="add-arena-team-member">Add Team Member</button></div></div>' +
             ((selectedArena.team || []).length
               ? '<ul class="compact-list">' + teamEditor + "</ul>"
@@ -11939,6 +12222,13 @@
           '<label class="input-group dev-input-group-wide"><span>Reward Notes</span><textarea rows="3" data-dev-event-field="reward.text">' + escapeHtml(selectedEvent.reward?.text || "") + '</textarea></label>',
           '</div>',
           '</section>',
+          renderBattleBackgroundPicker(content, selectedEvent, {
+            owner: "event",
+            title: "Event Battle Backgrounds",
+            fixedLabel: "Fixed Event Background",
+            randomLabel: "Random Event Backgrounds",
+            addSelectId: "event-battle-background-add",
+          }),
           '<section class="panel-block dev-editor-panel"><div class="section-heading"><h2>' + escapeHtml(selectedEvent.type === "tournament" ? "Tournament Entrants" : "Championship Trainers") + '</h2><div class="topbar-stats"><button class="secondary-button" type="button" data-action="add-event-trainer">Add Trainer</button></div></div><p class="dev-helper-text">' + escapeHtml(selectedEvent.type === "tournament" ? "Choose the curated trainer pool used to fill the elimination bracket in authored order. The player is automatically added as one entrant." : "Choose the ordered trainer gauntlet for the championship run.") + '</p>' + ((selectedEvent.trainerIds || []).length ? '<ul class="compact-list">' + trainerListEditor + '</ul>' : '<p>No trainers added yet.</p>') + '</section>',
           '<section class="panel-block dev-editor-panel"><div class="section-heading"><h2>Rules</h2></div><p class="dev-helper-text">Each rule group uses either allow mode or ban mode. If an allow list has any entries, it takes over for that group and the opposite ban list is cleared automatically. Allowed variants are filtered to the species you have already allowlisted.</p>' + rulesEditor + '</section>',
           '<section class="panel-block"><div class="section-heading"><h2>Preview</h2></div><p><strong>' + escapeHtml(selectedEvent.name || selectedEvent.id || "Event") + '</strong></p><p>Type: ' + escapeHtml(selectedEvent.type) + ' · Unlock: ' + Number(selectedEvent.unlock?.requiredCrestCount || 0) + ' crests · Reward: $' + Number(selectedEvent.reward?.money || 0) + '</p><p>' + escapeHtml(selectedEvent.description || "No description yet.") + '</p><p>' + escapeHtml(describeTournamentRules(selectedEvent)) + '</p><h3>Linked Trainers</h3><ul class="compact-list">' + ((selectedEvent.trainerIds || []).map(function (trainerId, index) { const trainer = getTrainer(content, trainerId); return '<li><span>' + escapeHtml((trainer?.title || "Trainer") + " " + (trainer?.name || trainerId || "Unknown")) + '</span><strong>' + escapeHtml(selectedEvent.type === "tournament" ? ("Seed " + (index + 1)) : ("Battle " + (index + 1))) + "</strong></li>"; }).join("") || "<li><span>No trainers configured yet.</span></li>") + '</ul></section>',
@@ -12038,6 +12328,13 @@
           '<label class="input-group dev-input-group-wide"><span>Reward Notes</span><textarea rows="3" data-dev-trainer-field="rewardText">' + escapeHtml(selectedTrainer.rewardText || "") + '</textarea></label>',
           '<label class="input-group dev-input-group-wide"><span>Victory Text</span><textarea rows="3" data-dev-trainer-field="victoryText">' + escapeHtml(selectedTrainer.victoryText || "") + '</textarea></label>',
           '</div></section>',
+          renderBattleBackgroundPicker(content, selectedTrainer, {
+            owner: "trainer",
+            title: "Trainer Battle Backgrounds",
+            fixedLabel: "Fixed Trainer Background",
+            randomLabel: "Random Trainer Backgrounds",
+            addSelectId: "trainer-battle-background-add",
+          }),
           '<section class="panel-block dev-editor-panel"><div class="section-heading"><h2>Trainer Team</h2><div class="topbar-stats"><button class="secondary-button" type="button" data-action="add-trainer-team-member">Add Team Member</button></div></div>' + ((selectedTrainer.team || []).length ? '<ul class="compact-list">' + teamEditor + '</ul>' : '<p>Add at least one team member to make this trainer battleable.</p>') + '</section>',
           '<section class="panel-block dev-editor-panel"><div class="section-heading"><h2>Fallback Pool</h2><div class="topbar-stats"><button class="secondary-button" type="button" data-action="add-trainer-pool-member">Add Pool Monster</button></div></div><p class="dev-helper-text">Flexible trainer rematches can expand toward the global trainer refight party size using this pool. Fixed trainers ignore the global party-size setting.</p>' + ((selectedTrainer.pool || []).length ? '<ul class="compact-list">' + poolEditor + '</ul>' : '<p>No fallback pool monsters configured yet.</p>') + '</section>',
           '<section class="panel-block"><div class="section-heading"><h2>Preview</h2></div><p><strong>' + escapeHtml(selectedTrainer.title || "Trainer") + " " + escapeHtml(selectedTrainer.name || selectedTrainer.id || "Trainer") + '</strong></p><p>Recommended Level: ' + Number(selectedTrainer.recommendedLevel || 1) + ' · Party Size: ' + Number(selectedTrainer.partySize || 1) + ' · Refight Mode: ' + escapeHtml(normalizeTrainerRefightPartyMode(selectedTrainer.refightPartyMode)) + '</p><p>Reward Money: $' + Number(selectedTrainer.rewardMoney || 0) + '</p><p class="dev-helper-text">First battles use the authored team here. Rematches use the in-game trainer refight level settings, capped by crest progression. Flexible trainers grow toward the global trainer refight party-size setting; fixed trainers keep their authored size.</p><h3>Configured Team</h3><ul class="compact-list">' + (teamPreview || "<li><span>No team members configured yet.</span></li>") + '</ul></section>',
@@ -13675,6 +13972,22 @@
         );
       });
     });
+    root.querySelectorAll('[data-action="add-battle-background-path"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        const selectId = button.getAttribute("data-battle-background-select-id") || "";
+        const select = selectId ? root.querySelector("#" + CSS.escape(selectId)) : null;
+        const value = select instanceof HTMLSelectElement ? select.value : "";
+        app.addBattleBackgroundPath(button.getAttribute("data-battle-background-owner") || "", value);
+      });
+    });
+    root.querySelectorAll('[data-action="remove-battle-background-path"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.removeBattleBackgroundPath(
+          button.getAttribute("data-battle-background-owner") || "",
+          button.getAttribute("data-battle-background-value") || ""
+        );
+      });
+    });
     root.querySelector('[data-action="add-trainer"]')?.addEventListener("click", function () {
       app.addTrainer();
     });
@@ -14736,9 +15049,9 @@
         characterSheetColumns: getCharacterSheetConfig(content, CHARACTER_SHEET_OPTIONS[0]?.id || "")?.columns || CHARACTER_SHEET_OPTIONS[0]?.columns || 4,
         characterSheetRows: getCharacterSheetConfig(content, CHARACTER_SHEET_OPTIONS[0]?.id || "")?.rows || CHARACTER_SHEET_OPTIONS[0]?.rows || 4,
         characterSheetFrameHeight: getCharacterSheetConfig(content, CHARACTER_SHEET_OPTIONS[0]?.id || "")?.frameHeight || CHARACTER_SHEET_FRAME_HEIGHT,
-        playerSpriteRenderWidth: content.settings?.defaults?.playerSpriteRenderWidth || PLAYER_RENDER_WIDTH,
-        monsterSpriteRenderWidth: content.settings?.defaults?.monsterSpriteRenderWidth || MONSTER_RENDER_WIDTH,
-        playerSpriteAnchorOffsetY: content.settings?.defaults?.playerSpriteAnchorOffsetY || PLAYER_SPRITE_ANCHOR_OFFSET_Y,
+        playerSpriteRenderWidth: content.settings?.defaults?.playerSpriteRenderWidth ?? PLAYER_RENDER_WIDTH,
+        monsterSpriteRenderWidth: content.settings?.defaults?.monsterSpriteRenderWidth ?? MONSTER_RENDER_WIDTH,
+        playerSpriteAnchorOffsetY: content.settings?.defaults?.playerSpriteAnchorOffsetY ?? PLAYER_SPRITE_ANCHOR_OFFSET_Y,
         crestLevelCaps: ensureGlobalCrestLevelCapSettings(content).map(function (entry) {
           return Object.assign({}, entry);
         }),
@@ -15775,6 +16088,7 @@
           };
           this.content.monsterAssets = discoveredCharacterSheets.monsterAssets || { images: [] };
           this.content.townAssets = discoveredCharacterSheets.townAssets || { images: [] };
+          this.content.battleBackgroundAssets = discoveredCharacterSheets.battleBackgroundAssets || { images: [] };
           const selectedStillExists = ensureCharacterSheetCatalog(this.content).some((entry) => entry.id === this.devTools.selectedCharacterSheetId);
           applyCharacterSheetToDevTools(this.content, this.devTools, selectedStillExists ? this.devTools.selectedCharacterSheetId : ensureCharacterSheetCatalog(this.content)[0]?.id || "");
           this.state.message = "Character sheets resynced from the project folder.";
@@ -17009,7 +17323,10 @@
           }
         } else if (path === "safezone") {
           mapMeta.safezone = rawValue === "true";
+        } else if (path === "battleBackgroundImagePath") {
+          mapMeta.battleBackgroundImagePath = normalizeBattleBackgroundImagePath(rawValue);
         }
+        ensureBattleBackgroundSelection(mapMeta);
         this.markDevToolsDirty("maps");
 
         if (shouldRender !== false) {
@@ -17231,8 +17548,11 @@
         }
 
         const numericFields = new Set(["recommendedLevel", "partySize", "rewardMoney"]);
-        const value = numericFields.has(path) ? Number(rawValue || 0) : rawValue;
+        const value = path === "battleBackgroundImagePath"
+          ? normalizeBattleBackgroundImagePath(rawValue)
+          : (numericFields.has(path) ? Number(rawValue || 0) : rawValue);
         arena[path] = value;
+        ensureBattleBackgroundSelection(arena);
         if (path === "id") {
           this.devTools.selectedArenaId = rawValue;
         }
@@ -17252,8 +17572,11 @@
         const numericFields = new Set(["recommendedLevel", "partySize", "rewardMoney"]);
         const value = path === "refightPartyMode"
           ? normalizeTrainerRefightPartyMode(rawValue)
+          : path === "battleBackgroundImagePath"
+            ? normalizeBattleBackgroundImagePath(rawValue)
           : (numericFields.has(path) ? Number(rawValue || 0) : rawValue);
         trainer[path] = value;
+        ensureBattleBackgroundSelection(trainer);
         if (path === "id") {
           replaceTrainerReferences(this.content, previousId, rawValue);
           this.devTools.selectedTrainerId = rawValue;
@@ -17263,6 +17586,33 @@
         if (shouldRender !== false) {
           this.render();
         }
+      },
+      addBattleBackgroundPath: function (owner, rawValue) {
+        const target = getBattleBackgroundEditorTarget(this.content, this.devTools, owner);
+        const imagePath = normalizeBattleBackgroundImagePath(rawValue);
+        if (!target.record || !imagePath) {
+          return;
+        }
+        ensureBattleBackgroundSelection(target.record);
+        if (!target.record.battleBackgroundImagePaths.includes(imagePath)) {
+          target.record.battleBackgroundImagePaths.push(imagePath);
+          target.record.battleBackgroundImagePaths = normalizeBattleBackgroundImagePaths(target.record.battleBackgroundImagePaths);
+          this.markDevToolsDirty(target.dirtyKey);
+          this.render();
+        }
+      },
+      removeBattleBackgroundPath: function (owner, rawValue) {
+        const target = getBattleBackgroundEditorTarget(this.content, this.devTools, owner);
+        const imagePath = normalizeBattleBackgroundImagePath(rawValue);
+        if (!target.record || !imagePath) {
+          return;
+        }
+        ensureBattleBackgroundSelection(target.record);
+        target.record.battleBackgroundImagePaths = target.record.battleBackgroundImagePaths.filter(function (entry) {
+          return entry !== imagePath;
+        });
+        this.markDevToolsDirty(target.dirtyKey);
+        this.render();
       },
       toggleSpeciesSkill: function (skillId, checked) {
         const species = this.content.monsters.species.find((entry) => entry.id === this.devTools.selectedSpeciesId);
@@ -17283,6 +17633,7 @@
       exportCurrentMapMetadata: function () {
         const mapId = this.devTools.selectedMapId;
         const mapMeta = this.content.mapMetadata[mapId];
+        ensureBattleBackgroundSelection(mapMeta);
         const exportPayload = {
           mapId: mapMeta.mapId,
           displayName: mapMeta.displayName,
@@ -17295,6 +17646,8 @@
           trainers: mapMeta.trainers,
           npcs: mapMeta.npcs,
           mapMonstersPanel: mapMeta.mapMonstersPanel,
+          battleBackgroundImagePath: mapMeta.battleBackgroundImagePath,
+          battleBackgroundImagePaths: mapMeta.battleBackgroundImagePaths,
         };
 
         const blob = new Blob([JSON.stringify(exportPayload, null, 2)], { type: "application/json" });
@@ -17367,6 +17720,9 @@
         }
       },
       exportTrainersJson: function () {
+        ensureTrainerCatalog(this.content).forEach(function (trainer) {
+          ensureBattleBackgroundSelection(trainer);
+        });
         const payload = {
           trainers: ensureTrainerCatalog(this.content),
         };
@@ -17419,6 +17775,8 @@
         } else {
           event[path] = path === "type"
             ? normalizeEventType(rawValue)
+            : path === "battleBackgroundImagePath"
+              ? normalizeBattleBackgroundImagePath(rawValue)
             : path === "bracketSize"
               ? Math.max(2, Number(rawValue || 2))
               : rawValue;
@@ -17562,6 +17920,9 @@
         this.render();
       },
       exportEventsJson: function () {
+        ensureEventCatalog(this.content).forEach(function (event) {
+          ensureBattleBackgroundSelection(event);
+        });
         const payload = {
           events: ensureEventCatalog(this.content),
         };
@@ -17834,6 +18195,9 @@
         this.render();
       },
       exportArenasJson: function () {
+        ensureArenaCatalog(this.content).forEach(function (arena) {
+          ensureBattleBackgroundSelection(arena);
+        });
         const payload = {
           arenas: ensureArenaCatalog(this.content),
         };

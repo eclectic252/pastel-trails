@@ -6,7 +6,7 @@
     "partySize": 6,
     "playerSpriteRenderWidth": 155,
     "monsterSpriteRenderWidth": 128,
-    "playerSpriteAnchorOffsetY": 20,
+    "playerSpriteAnchorOffsetY": 0,
     "shareExperience": true,
     "encounterPreview": false,
     "encounterPreviewMode": "available",

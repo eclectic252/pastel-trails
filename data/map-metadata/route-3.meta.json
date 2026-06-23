@@ -317,5 +317,11 @@
       }
     }
   ],
-  "mapMonstersPanel": []
+  "mapMonstersPanel": [],
+  "battleBackgroundImagePath": "",
+  "battleBackgroundImagePaths": [
+    "assets/Battle Backgrounds/Route3-1.png",
+    "assets/Battle Backgrounds/Route3-2.png",
+    "assets/Battle Backgrounds/Route3-3.png"
+  ]
 }
