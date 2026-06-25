@@ -2230,6 +2230,88 @@ button {
   display: block;
 }
 
+.battle-scene-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.battle-scene-layer-background {
+  z-index: 0;
+}
+
+.battle-scene-layer-midground {
+  z-index: 1;
+  overflow: hidden;
+}
+
+.battle-scene-layer-foreground {
+  z-index: 2;
+}
+
+.battle-field-scene {
+  z-index: 3;
+}
+
+.battle-scene-midground-image {
+  position: absolute;
+  width: var(--battle-cloud-scale, 118%);
+  max-width: none;
+  height: auto;
+  left: var(--battle-cloud-offset-x, 0%);
+  top: var(--battle-cloud-offset-y, 0%);
+  display: block;
+}
+
+.battle-scene-clouds {
+  overflow: hidden;
+}
+
+.battle-scene-clouds-right .battle-scene-midground-image {
+  animation: battle-scene-clouds-right var(--battle-cloud-duration, 18s) linear infinite;
+}
+
+.battle-scene-clouds-left .battle-scene-midground-image {
+  animation: battle-scene-clouds-left var(--battle-cloud-duration, 18s) linear infinite;
+}
+
+.battle-scene-foreground-image {
+  object-fit: cover;
+}
+
+.battle-scene-particles {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.battle-scene-particle {
+  position: absolute;
+  top: -12%;
+  left: var(--particle-left, 50%);
+  opacity: var(--particle-opacity, 0.5);
+  animation: battle-scene-particle-fall var(--particle-duration, 8s) linear infinite;
+  animation-delay: calc(var(--particle-delay, 0s) * -1);
+}
+
+.battle-scene-particle-snow {
+  width: calc(10px * var(--particle-size, 1));
+  height: calc(10px * var(--particle-size, 1));
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 0 0 1px rgba(226, 238, 245, 0.75);
+}
+
+.battle-scene-particle-leaves {
+  width: calc(12px * var(--particle-size, 1));
+  height: calc(8px * var(--particle-size, 1));
+  border-radius: 70% 20% 70% 20%;
+  background: linear-gradient(135deg, rgba(255, 201, 108, 0.95), rgba(205, 121, 54, 0.92));
+  transform: rotate(var(--particle-rotation, 0deg));
+}
+
 .battle-field {
   position: relative;
   min-height: 300px;
@@ -2752,6 +2834,111 @@ button {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
+.battle-scene-preview-shell {
+  width: 100%;
+}
+
+.battle-scene-preview-stage {
+  min-height: 340px;
+  margin-top: 0;
+}
+
+.battle-scene-preview-frame {
+  position: relative;
+  min-height: 160px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid rgba(124, 96, 82, 0.18);
+  background: linear-gradient(180deg, rgba(246, 250, 255, 0.96), rgba(233, 243, 226, 0.94));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.battle-scene-preview-layer,
+.battle-scene-preview-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.battle-scene-preview-layer-background {
+  z-index: 0;
+}
+
+.battle-scene-preview-layer-midground {
+  z-index: 1;
+  overflow: hidden;
+}
+
+.battle-scene-preview-layer-midground .battle-scene-midground-image {
+  position: absolute;
+  inset: auto;
+  width: var(--battle-cloud-scale, 118%);
+  height: auto;
+  max-width: none;
+  left: var(--battle-cloud-offset-x, 0%);
+  top: var(--battle-cloud-offset-y, 0%);
+  object-fit: initial;
+}
+
+.battle-scene-preview-layer-foreground {
+  z-index: 2;
+}
+
+.battle-scene-preview-field {
+  min-height: 300px;
+  z-index: 3;
+}
+
+.battle-scene-preview-battler {
+  position: absolute;
+  display: grid;
+  place-items: center;
+}
+
+.battle-scene-preview-battler-enemy {
+  top: 14%;
+  left: 8%;
+}
+
+.battle-scene-preview-battler-player {
+  right: 8%;
+  bottom: 10%;
+}
+
+.battle-scene-preview-battler-body {
+  width: 136px;
+  height: 136px;
+  border-radius: 28px;
+  border: 2px solid rgba(61, 86, 97, 0.22);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(230, 240, 230, 0.76));
+  display: grid;
+  place-items: center;
+  color: #2d4f5c;
+  font-weight: 700;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(2px);
+}
+
+.battle-scene-preview-battler-body span {
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.battle-scene-preview-battler-row {
+  position: absolute;
+  inset: auto 1rem 1rem 1rem;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  color: #20404a;
+  font-weight: 700;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
 .battle-background-preview-frame-empty {
   display: grid;
   place-items: center;
@@ -2766,6 +2953,25 @@ button {
   height: 100%;
   display: block;
   object-fit: cover;
+}
+
+@keyframes battle-scene-clouds-right {
+  0% { transform: translateX(-130%); }
+  100% { transform: translateX(130%); }
+}
+
+@keyframes battle-scene-clouds-left {
+  0% { transform: translateX(130%); }
+  100% { transform: translateX(-130%); }
+}
+
+@keyframes battle-scene-particle-fall {
+  0% {
+    transform: translate3d(0, -8%, 0) rotate(var(--particle-rotation, 0deg));
+  }
+  100% {
+    transform: translate3d(var(--particle-drift, 0px), 122%, 0) rotate(calc(var(--particle-rotation, 0deg) + 120deg));
+  }
 }
 
 .dev-character-compare-label {

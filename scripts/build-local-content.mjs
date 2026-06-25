@@ -177,6 +177,25 @@ async function loadBattleBackgroundAssets() {
   }
 }
 
+async function loadBattleSceneAssets() {
+  const battleScenesRoot = path.join(projectRoot, "assets", "Battle Scenes");
+  const loadLayer = async (folderName) => {
+    const directoryPath = path.join(battleScenesRoot, folderName);
+    try {
+      const imageFiles = await collectImageFiles(directoryPath);
+      return imageFiles.map((absolutePath) => path.relative(projectRoot, absolutePath).split(path.sep).join("/")).sort();
+    } catch {
+      return [];
+    }
+  };
+
+  return {
+    backgrounds: await loadLayer("Backgrounds"),
+    midgrounds: await loadLayer("Midgrounds"),
+    foregrounds: await loadLayer("Foregrounds"),
+  };
+}
+
 async function loadCharacterSheets() {
   const saved = await readOptionalJson("data/character-sheets.json", { sheets: [] });
   const spriteRoots = [
@@ -342,9 +361,14 @@ async function loadMapMetadata(mapIds, maps) {
       trainers: rawMeta.trainers || [],
       npcs: rawMeta.npcs || [],
       mapMonstersPanel: rawMeta.mapMonstersPanel || [],
+      battleBackgroundMode: String(rawMeta.battleBackgroundMode || "static"),
       battleBackgroundImagePath: String(rawMeta.battleBackgroundImagePath || ""),
       battleBackgroundImagePaths: Array.isArray(rawMeta.battleBackgroundImagePaths)
         ? rawMeta.battleBackgroundImagePaths.map((entry) => String(entry || "")).filter(Boolean)
+        : [],
+      battleScenePresetId: String(rawMeta.battleScenePresetId || ""),
+      battleVisualPool: Array.isArray(rawMeta.battleVisualPool)
+        ? rawMeta.battleVisualPool.map((entry) => String(entry || "")).filter(Boolean)
         : [],
     };
   }
@@ -353,7 +377,7 @@ async function loadMapMetadata(mapIds, maps) {
 }
 
 async function buildLocalContent() {
-  const [settings, themes, items, skills, monsters, towns, arenas, events, trainers, characterSheets, monsterAssets, townAssets, crestAssets, battleBackgroundAssets, maps] = await Promise.all([
+  const [settings, themes, items, skills, monsters, towns, arenas, events, trainers, battleScenePresets, characterSheets, monsterAssets, townAssets, crestAssets, battleBackgroundAssets, battleSceneAssets, maps] = await Promise.all([
     readJson("data/settings.json"),
     readJson("data/themes.json"),
     readJson("data/items.json"),
@@ -373,11 +397,13 @@ async function buildLocalContent() {
     readOptionalJson("data/arenas.json", { arenas: [] }),
     readOptionalJson("data/events.json", { events: [] }),
     readJson("data/trainers.json"),
+    readOptionalJson("data/battle-scenes.json", { presets: [] }),
     loadCharacterSheets(),
     loadMonsterAssets(),
     loadTownAssets(),
     loadCrestAssets(),
     loadBattleBackgroundAssets(),
+    loadBattleSceneAssets(),
     loadMaps(),
   ]);
 
@@ -393,11 +419,13 @@ async function buildLocalContent() {
     arenas,
     events,
     trainers,
+    battleScenePresets,
     characterSheets,
     monsterAssets,
     townAssets,
     crestAssets,
     battleBackgroundAssets,
+    battleSceneAssets,
     maps,
     mapMetadata,
   };

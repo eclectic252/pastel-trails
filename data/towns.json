@@ -251,8 +251,8 @@
       "cardSubtitle": "",
       "mapId": "sunflower-coast",
       "spawn": {
-        "x": 128,
-        "y": 128
+        "x": 576,
+        "y": 1088
       },
       "includeInStarterSelection": true,
       "cardBackgrounds": {

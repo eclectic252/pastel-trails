@@ -206,5 +206,12 @@
       }
     }
   ],
-  "mapMonstersPanel": []
+  "mapMonstersPanel": [],
+  "battleBackgroundMode": "scene",
+  "battleBackgroundImagePath": "",
+  "battleBackgroundImagePaths": [
+    "assets/Battle Backgrounds/Route6-1.png",
+    "assets/Battle Backgrounds/route6-2.png"
+  ],
+  "battleScenePresetId": "battle-scene-1"
 }

@@ -1,0 +1,17 @@
+{
+  "presets": [
+    {
+      "id": "battle-scene-1",
+      "name": "Snow Tree Day Clouds",
+      "backgroundImagePath": "assets/Battle Scenes/Backgrounds/Gradient1.png",
+      "midgroundImagePath": "assets/Battle Scenes/Midgrounds/cloud-small-bordered-v1.png",
+      "foregroundImagePath": "assets/Battle Scenes/Foregrounds/snow-forest-backline-foreground.png",
+      "particleEffect": "none",
+      "cloudDriftDirection": "right",
+      "cloudDriftSpeed": 8,
+      "cloudScale": 42,
+      "cloudOffsetX": 0,
+      "cloudOffsetY": -24
+    }
+  ]
+}

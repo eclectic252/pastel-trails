@@ -134,7 +134,9 @@
         trainerRefightCooldownSeconds: 180,
         wildMonsterMinLevel: 1,
         wildMonsterMaxLevel: 5,
+        defaultBattleBackgroundMode: "static",
         defaultBattleBackgroundImagePath: "",
+        defaultBattleScenePresetId: "",
         crestLevelCaps: DEFAULT_CREST_LEVEL_CAPS.map(function (entry) {
           return Object.assign({}, entry);
         }),
@@ -284,6 +286,14 @@
     battleBackgroundAssets: {
       images: [],
     },
+    battleSceneAssets: {
+      backgrounds: [],
+      midgrounds: [],
+      foregrounds: [],
+    },
+    battleScenePresets: {
+      presets: [],
+    },
     arenas: { arenas: [] },
     events: { events: [] },
     trainers: { trainers: [] },
@@ -313,8 +323,11 @@
         trainers: [],
         npcs: [],
         mapMonstersPanel: [],
+        battleBackgroundMode: "static",
         battleBackgroundImagePath: "",
         battleBackgroundImagePaths: [],
+        battleScenePresetId: "",
+        battleVisualPool: [],
       },
     },
   };
@@ -375,12 +388,82 @@
     return String(value || "").trim();
   }
 
+  function normalizeBattleBackgroundMode(value) {
+    return String(value || "").trim().toLowerCase() === "scene"
+      ? "scene"
+      : "static";
+  }
+
+  function normalizeBattleScenePresetId(value) {
+    return String(value || "").trim();
+  }
+
   function normalizeBattleBackgroundImagePaths(values) {
     return Array.from(new Set((Array.isArray(values) ? values : [])
       .map(function (entry) {
         return normalizeBattleBackgroundImagePath(entry);
       })
       .filter(Boolean)));
+  }
+
+  function normalizeBattleVisualPoolEntry(entry) {
+    const raw = String(entry || "").trim();
+    if (!raw) {
+      return "";
+    }
+    if (raw.startsWith("scene:")) {
+      const presetId = normalizeBattleScenePresetId(raw.slice(6));
+      return presetId ? ("scene:" + presetId) : "";
+    }
+    if (raw.startsWith("image:")) {
+      const imagePath = normalizeBattleBackgroundImagePath(raw.slice(6));
+      return imagePath ? ("image:" + imagePath) : "";
+    }
+    const sceneId = normalizeBattleScenePresetId(raw);
+    return sceneId ? ("scene:" + sceneId) : "";
+  }
+
+  function normalizeBattleVisualPool(values) {
+    return Array.from(new Set((Array.isArray(values) ? values : [])
+      .map(function (entry) {
+        return normalizeBattleVisualPoolEntry(entry);
+      })
+      .filter(Boolean)));
+  }
+
+  function normalizeBattleSceneParticleEffect(value) {
+    const normalized = String(value || "").trim().toLowerCase();
+    return ["snow", "leaves"].includes(normalized)
+      ? normalized
+      : "none";
+  }
+
+  function normalizeBattleSceneCloudDirection(value) {
+    const normalized = String(value || "").trim().toLowerCase();
+    return ["left", "right"].includes(normalized)
+      ? normalized
+      : "none";
+  }
+
+  function normalizeBattleSceneCloudSpeed(value) {
+    const numeric = Number(value);
+    return Number.isFinite(numeric)
+      ? Math.max(2, Math.min(80, numeric))
+      : 12;
+  }
+
+  function normalizeBattleSceneCloudScale(value) {
+    const numeric = Number(value);
+    return Number.isFinite(numeric)
+      ? Math.max(20, Math.min(240, numeric))
+      : 118;
+  }
+
+  function normalizeBattleSceneCloudOffset(value) {
+    const numeric = Number(value);
+    return Number.isFinite(numeric)
+      ? Math.max(-120, Math.min(120, numeric))
+      : 0;
   }
 
   function normalizeTownCardBackgrounds(backgrounds) {
@@ -500,8 +583,11 @@
         trainers: rawMeta.trainers || [],
         npcs: rawMeta.npcs || [],
         mapMonstersPanel: rawMeta.mapMonstersPanel || [],
+        battleBackgroundMode: normalizeBattleBackgroundMode(rawMeta.battleBackgroundMode),
         battleBackgroundImagePath: normalizeBattleBackgroundImagePath(rawMeta.battleBackgroundImagePath),
         battleBackgroundImagePaths: normalizeBattleBackgroundImagePaths(rawMeta.battleBackgroundImagePaths),
+        battleScenePresetId: normalizeBattleScenePresetId(rawMeta.battleScenePresetId),
+        battleVisualPool: normalizeBattleVisualPool(rawMeta.battleVisualPool),
       };
     });
 
@@ -581,6 +667,17 @@
         ? rawContent.battleBackgroundAssets.images.slice().sort()
         : [],
     };
+    const battleSceneAssets = {
+      backgrounds: Array.isArray(rawContent.battleSceneAssets?.backgrounds)
+        ? rawContent.battleSceneAssets.backgrounds.slice().sort()
+        : [],
+      midgrounds: Array.isArray(rawContent.battleSceneAssets?.midgrounds)
+        ? rawContent.battleSceneAssets.midgrounds.slice().sort()
+        : [],
+      foregrounds: Array.isArray(rawContent.battleSceneAssets?.foregrounds)
+        ? rawContent.battleSceneAssets.foregrounds.slice().sort()
+        : [],
+    };
 
     return {
       settings: rawContent.settings,
@@ -606,6 +703,8 @@
       townAssets,
       crestAssets,
       battleBackgroundAssets,
+      battleSceneAssets,
+      battleScenePresets: rawContent.battleScenePresets || JSON.parse(JSON.stringify(fallbackContent.battleScenePresets)),
       arenas: rawContent.arenas || JSON.parse(JSON.stringify(fallbackContent.arenas)),
       events: rawContent.events || JSON.parse(JSON.stringify(fallbackContent.events)),
       trainers: rawContent.trainers,
@@ -758,12 +857,27 @@
     };
   }
 
+  function buildBattleSceneAssetCatalog(files) {
+    return {
+      backgrounds: files.backgrounds.map(function (file) {
+        return file.pathParts.join("/");
+      }).sort(),
+      midgrounds: files.midgrounds.map(function (file) {
+        return file.pathParts.join("/");
+      }).sort(),
+      foregrounds: files.foregrounds.map(function (file) {
+        return file.pathParts.join("/");
+      }).sort(),
+    };
+  }
+
   async function loadCharacterSheetsFromDirectory(rootHandle) {
     const discoveredSheets = [];
     let monsterAssets = { images: [] };
     let townAssets = { images: [] };
     let crestAssets = { images: [] };
     let battleBackgroundAssets = { images: [] };
+    let battleSceneAssets = { backgrounds: [], midgrounds: [], foregrounds: [] };
 
     try {
       const assetsHandle = await rootHandle.getDirectoryHandle("assets");
@@ -791,7 +905,8 @@
           return !path.startsWith("assets/Maps/")
             && !path.startsWith("assets/Characters/")
             && !path.startsWith("assets/Monsters/")
-            && !path.startsWith("assets/Battle Backgrounds/");
+            && !path.startsWith("assets/Battle Backgrounds/")
+            && !path.startsWith("assets/Battle Scenes/");
         });
         townAssets = buildTownAssetCatalog(townCardFiles);
       } catch {}
@@ -807,6 +922,28 @@
         const battleBackgroundFiles = await collectImageFilesRecursive(battleBackgroundsHandle, ["assets", "Battle Backgrounds"]);
         battleBackgroundAssets = buildBattleBackgroundAssetCatalog(battleBackgroundFiles);
       } catch {}
+
+      try {
+        const battleScenesHandle = await assetsHandle.getDirectoryHandle("Battle Scenes");
+        const layerFiles = {
+          backgrounds: [],
+          midgrounds: [],
+          foregrounds: [],
+        };
+        try {
+          const backgroundsHandle = await battleScenesHandle.getDirectoryHandle("Backgrounds");
+          layerFiles.backgrounds = await collectImageFilesRecursive(backgroundsHandle, ["assets", "Battle Scenes", "Backgrounds"]);
+        } catch {}
+        try {
+          const midgroundsHandle = await battleScenesHandle.getDirectoryHandle("Midgrounds");
+          layerFiles.midgrounds = await collectImageFilesRecursive(midgroundsHandle, ["assets", "Battle Scenes", "Midgrounds"]);
+        } catch {}
+        try {
+          const foregroundsHandle = await battleScenesHandle.getDirectoryHandle("Foregrounds");
+          layerFiles.foregrounds = await collectImageFilesRecursive(foregroundsHandle, ["assets", "Battle Scenes", "Foregrounds"]);
+        } catch {}
+        battleSceneAssets = buildBattleSceneAssetCatalog(layerFiles);
+      } catch {}
     } catch {
       return {
         sheets: JSON.parse(JSON.stringify(fallbackContent.characterSheets.sheets)),
@@ -814,6 +951,7 @@
         townAssets: JSON.parse(JSON.stringify(fallbackContent.townAssets || { images: [] })),
         crestAssets: JSON.parse(JSON.stringify(fallbackContent.crestAssets || { images: [] })),
         battleBackgroundAssets: JSON.parse(JSON.stringify(fallbackContent.battleBackgroundAssets || { images: [] })),
+        battleSceneAssets: JSON.parse(JSON.stringify(fallbackContent.battleSceneAssets || { backgrounds: [], midgrounds: [], foregrounds: [] })),
       };
     }
 
@@ -823,6 +961,7 @@
       townAssets,
       crestAssets,
       battleBackgroundAssets,
+      battleSceneAssets,
     };
   }
 
@@ -855,6 +994,7 @@
     const arenas = await tryReadJsonFromHandle(rootHandle, ["data", "arenas.json"]) || JSON.parse(JSON.stringify(fallbackContent.arenas));
     const events = await tryReadJsonFromHandle(rootHandle, ["data", "events.json"]) || JSON.parse(JSON.stringify(fallbackContent.events));
     const trainers = await readJsonFromHandle(rootHandle, ["data", "trainers.json"]);
+    const battleScenePresets = await tryReadJsonFromHandle(rootHandle, ["data", "battle-scenes.json"]) || JSON.parse(JSON.stringify(fallbackContent.battleScenePresets));
     const discoveredCharacterSheets = await loadCharacterSheetsFromDirectory(rootHandle);
     const characterSheetsData = await tryReadJsonFromHandle(rootHandle, ["data", "character-sheets.json"]);
     const characterSheets = {
@@ -886,6 +1026,7 @@
     const townAssets = discoveredCharacterSheets.townAssets || { images: [] };
     const crestAssets = discoveredCharacterSheets.crestAssets || { images: [] };
     const battleBackgroundAssets = discoveredCharacterSheets.battleBackgroundAssets || { images: [] };
+    const battleSceneAssets = discoveredCharacterSheets.battleSceneAssets || { backgrounds: [], midgrounds: [], foregrounds: [] };
 
     const maps = await loadAuthoredMapsFromAssets(rootHandle);
     const mapMetadata = {};
@@ -893,7 +1034,7 @@
       mapMetadata[mapId] = await tryReadJsonFromHandle(rootHandle, ["data", "map-metadata", mapId + ".meta.json"]) || {};
     }
 
-    return normalizeContent({ settings, themes, items, skills, monsters, towns, arenas, events, trainers, characterSheets, monsterAssets, townAssets, crestAssets, battleBackgroundAssets, maps, mapMetadata }, "directory");
+    return normalizeContent({ settings, themes, items, skills, monsters, towns, arenas, events, trainers, battleScenePresets, characterSheets, monsterAssets, townAssets, crestAssets, battleBackgroundAssets, battleSceneAssets, maps, mapMetadata }, "directory");
   }
 
   function loadEmbeddedContent() {
@@ -2861,6 +3002,17 @@
     return images.sort();
   }
 
+  function getBattleSceneLayerImageOptions(content, layerType) {
+    const catalog = content?.battleSceneAssets || {};
+    const key = layerType === "midground" || layerType === "midgrounds"
+      ? "midgrounds"
+      : layerType === "foreground" || layerType === "foregrounds"
+        ? "foregrounds"
+        : "backgrounds";
+    const images = Array.isArray(catalog[key]) ? catalog[key].slice() : [];
+    return images.sort();
+  }
+
   function ensureBattleBackgroundSelection(record) {
     if (!record || typeof record !== "object") {
       return record;
@@ -2870,8 +3022,127 @@
     return record;
   }
 
-  function getBattleBackgroundPreviewPath(record) {
+  function ensureBattleVisualSelection(record) {
+    if (!record || typeof record !== "object") {
+      return record;
+    }
     ensureBattleBackgroundSelection(record);
+    record.battleBackgroundMode = normalizeBattleBackgroundMode(record.battleBackgroundMode);
+    record.battleScenePresetId = normalizeBattleScenePresetId(record.battleScenePresetId);
+    record.battleVisualPool = normalizeBattleVisualPool(record.battleVisualPool);
+    return record;
+  }
+
+  function createEmptyBattleScenePreset(index) {
+    return {
+      id: "battle-scene-" + index,
+      name: "New Battle Scene",
+      backgroundImagePath: "",
+      midgroundImagePath: "",
+      foregroundImagePath: "",
+      particleEffect: "none",
+      cloudDriftDirection: "none",
+      cloudDriftSpeed: 12,
+      cloudScale: 118,
+      cloudOffsetX: 0,
+      cloudOffsetY: 0,
+    };
+  }
+
+  function normalizeBattleScenePresetRecord(entry, index) {
+    const fallback = createEmptyBattleScenePreset(index + 1);
+    return {
+      id: String(entry?.id || fallback.id),
+      name: String(entry?.name || fallback.name),
+      backgroundImagePath: normalizeBattleBackgroundImagePath(entry?.backgroundImagePath),
+      midgroundImagePath: normalizeBattleBackgroundImagePath(entry?.midgroundImagePath),
+      foregroundImagePath: normalizeBattleBackgroundImagePath(entry?.foregroundImagePath),
+      particleEffect: normalizeBattleSceneParticleEffect(entry?.particleEffect),
+      cloudDriftDirection: normalizeBattleSceneCloudDirection(entry?.cloudDriftDirection),
+      cloudDriftSpeed: normalizeBattleSceneCloudSpeed(entry?.cloudDriftSpeed),
+      cloudScale: normalizeBattleSceneCloudScale(entry?.cloudScale),
+      cloudOffsetX: normalizeBattleSceneCloudOffset(entry?.cloudOffsetX),
+      cloudOffsetY: normalizeBattleSceneCloudOffset(entry?.cloudOffsetY),
+    };
+  }
+
+  function ensureBattleScenePresetCatalog(content) {
+    if (!content.battleScenePresets || !Array.isArray(content.battleScenePresets.presets)) {
+      content.battleScenePresets = JSON.parse(JSON.stringify(fallbackContent.battleScenePresets));
+    }
+    content.battleScenePresets.presets = content.battleScenePresets.presets.map(function (entry, index) {
+      return normalizeBattleScenePresetRecord(entry, index);
+    });
+    return content.battleScenePresets.presets;
+  }
+
+  function getBattleScenePreset(content, presetId) {
+    return ensureBattleScenePresetCatalog(content).find(function (preset) {
+      return preset.id === presetId;
+    }) || null;
+  }
+
+  function syncBattleScenePresetDevSelection(content, devToolsState) {
+    const presets = ensureBattleScenePresetCatalog(content);
+    if (!presets.find(function (entry) { return entry.id === devToolsState.selectedBattleScenePresetId; })) {
+      devToolsState.selectedBattleScenePresetId = presets[0]?.id || "";
+    }
+  }
+
+  function replaceBattleScenePresetReferences(content, previousPresetId, nextPresetId) {
+    if (!previousPresetId || previousPresetId === nextPresetId) {
+      return;
+    }
+    const previousPoolEntry = "scene:" + previousPresetId;
+    const nextPoolEntry = nextPresetId ? ("scene:" + nextPresetId) : "";
+    Object.keys(content.mapMetadata || {}).forEach(function (mapId) {
+      const mapMeta = content.mapMetadata[mapId];
+      if (String(mapMeta?.battleScenePresetId || "") === String(previousPresetId)) {
+        mapMeta.battleScenePresetId = nextPresetId;
+      }
+      if (Array.isArray(mapMeta?.battleVisualPool)) {
+        mapMeta.battleVisualPool = normalizeBattleVisualPool(mapMeta.battleVisualPool.map(function (entry) {
+          return entry === previousPoolEntry ? nextPoolEntry : entry;
+        }));
+      }
+    });
+    ensureTrainerCatalog(content).forEach(function (trainer) {
+      if (String(trainer?.battleScenePresetId || "") === String(previousPresetId)) {
+        trainer.battleScenePresetId = nextPresetId;
+      }
+      if (Array.isArray(trainer?.battleVisualPool)) {
+        trainer.battleVisualPool = normalizeBattleVisualPool(trainer.battleVisualPool.map(function (entry) {
+          return entry === previousPoolEntry ? nextPoolEntry : entry;
+        }));
+      }
+    });
+    ensureArenaCatalog(content).forEach(function (arena) {
+      if (String(arena?.battleScenePresetId || "") === String(previousPresetId)) {
+        arena.battleScenePresetId = nextPresetId;
+      }
+      if (Array.isArray(arena?.battleVisualPool)) {
+        arena.battleVisualPool = normalizeBattleVisualPool(arena.battleVisualPool.map(function (entry) {
+          return entry === previousPoolEntry ? nextPoolEntry : entry;
+        }));
+      }
+    });
+    ensureEventCatalog(content).forEach(function (event) {
+      if (String(event?.battleScenePresetId || "") === String(previousPresetId)) {
+        event.battleScenePresetId = nextPresetId;
+      }
+      if (Array.isArray(event?.battleVisualPool)) {
+        event.battleVisualPool = normalizeBattleVisualPool(event.battleVisualPool.map(function (entry) {
+          return entry === previousPoolEntry ? nextPoolEntry : entry;
+        }));
+      }
+    });
+    if (String(content.settings?.defaults?.defaultBattleScenePresetId || "") === String(previousPresetId)) {
+      content.settings.defaults.defaultBattleScenePresetId = nextPresetId;
+    }
+  }
+
+  function getBattleBackgroundPreviewPath(record) {
+    ensureBattleVisualSelection(record);
     return record?.battleBackgroundImagePath || record?.battleBackgroundImagePaths?.[0] || "";
   }
 
@@ -2899,7 +3170,7 @@
   }
 
   function getRecordBattleBackgroundSelection(content, record) {
-    ensureBattleBackgroundSelection(record);
+    ensureBattleVisualSelection(record);
     if (!record) {
       return "";
     }
@@ -2911,6 +3182,48 @@
     return chooseRandomBattleBackgroundPath(content, record.battleBackgroundImagePaths);
   }
 
+  function resolveBattleVisualPoolEntry(content, entry) {
+    const normalizedEntry = normalizeBattleVisualPoolEntry(entry);
+    if (!normalizedEntry) {
+      return null;
+    }
+    if (normalizedEntry.startsWith("image:")) {
+      const imagePath = normalizeBattleBackgroundImagePath(normalizedEntry.slice(6));
+      if (!isKnownBattleBackgroundPath(content, imagePath)) {
+        return null;
+      }
+      return {
+        battleBackgroundMode: "static",
+        battleBackgroundImagePath: imagePath,
+        battleScenePresetId: "",
+      };
+    }
+    if (normalizedEntry.startsWith("scene:")) {
+      const presetId = getResolvedBattleScenePresetId(content, normalizedEntry.slice(6));
+      if (!presetId) {
+        return null;
+      }
+      return {
+        battleBackgroundMode: "scene",
+        battleBackgroundImagePath: "",
+        battleScenePresetId: presetId,
+      };
+    }
+    return null;
+  }
+
+  function chooseRandomBattleVisualFromPool(content, entries) {
+    const resolvedEntries = normalizeBattleVisualPool(entries)
+      .map(function (entry) {
+        return resolveBattleVisualPoolEntry(content, entry);
+      })
+      .filter(Boolean);
+    if (!resolvedEntries.length) {
+      return null;
+    }
+    return resolvedEntries[Math.floor(Math.random() * resolvedEntries.length)] || null;
+  }
+
   function getDefaultBattleBackgroundImagePath(content) {
     const explicitDefault = normalizeBattleBackgroundImagePath(content?.settings?.defaults?.defaultBattleBackgroundImagePath);
     if (isKnownBattleBackgroundPath(content, explicitDefault)) {
@@ -2919,22 +3232,146 @@
     return getBattleBackgroundImageOptions(content)[0] || "";
   }
 
-  function resolveBattleBackgroundImagePath(content, options) {
+  function isKnownBattleSceneLayerPath(content, layerType, imagePath) {
+    const normalizedPath = normalizeBattleBackgroundImagePath(imagePath);
+    if (!normalizedPath) {
+      return false;
+    }
+    const options = getBattleSceneLayerImageOptions(content, layerType);
+    return !options.length || options.includes(normalizedPath);
+  }
+
+  function getResolvedBattleScenePresetId(content, presetId) {
+    const normalizedId = normalizeBattleScenePresetId(presetId);
+    if (!normalizedId) {
+      return "";
+    }
+    return getBattleScenePreset(content, normalizedId)?.id || "";
+  }
+
+  function getDefaultBattleScenePresetId(content) {
+    const explicitDefault = normalizeBattleScenePresetId(content?.settings?.defaults?.defaultBattleScenePresetId);
+    if (getBattleScenePreset(content, explicitDefault)) {
+      return explicitDefault;
+    }
+    return ensureBattleScenePresetCatalog(content)[0]?.id || "";
+  }
+
+  function resolveBattleVisualFromRecord(content, record) {
+    ensureBattleVisualSelection(record);
+    if (!record) {
+      return null;
+    }
+    const pooledVisual = chooseRandomBattleVisualFromPool(content, record.battleVisualPool);
+    if (pooledVisual) {
+      return pooledVisual;
+    }
+    if (record.battleBackgroundMode === "scene") {
+      const presetId = getResolvedBattleScenePresetId(content, record.battleScenePresetId);
+      if (presetId) {
+        return {
+          battleBackgroundMode: "scene",
+          battleBackgroundImagePath: "",
+          battleScenePresetId: presetId,
+        };
+      }
+      return null;
+    }
+    const imagePath = getRecordBattleBackgroundSelection(content, record);
+    if (imagePath) {
+      return {
+        battleBackgroundMode: "static",
+        battleBackgroundImagePath: imagePath,
+        battleScenePresetId: "",
+      };
+    }
+    return null;
+  }
+
+  function getDefaultBattleVisual(content) {
+    const defaultMode = normalizeBattleBackgroundMode(content?.settings?.defaults?.defaultBattleBackgroundMode);
+    if (defaultMode === "scene") {
+      const presetId = getDefaultBattleScenePresetId(content);
+      if (presetId) {
+        return {
+          battleBackgroundMode: "scene",
+          battleBackgroundImagePath: "",
+          battleScenePresetId: presetId,
+        };
+      }
+    }
+    const imagePath = getDefaultBattleBackgroundImagePath(content);
+    if (imagePath) {
+      return {
+        battleBackgroundMode: "static",
+        battleBackgroundImagePath: imagePath,
+        battleScenePresetId: "",
+      };
+    }
+    const fallbackScenePresetId = getDefaultBattleScenePresetId(content);
+    if (fallbackScenePresetId) {
+      return {
+        battleBackgroundMode: "scene",
+        battleBackgroundImagePath: "",
+        battleScenePresetId: fallbackScenePresetId,
+      };
+    }
+    return {
+      battleBackgroundMode: "static",
+      battleBackgroundImagePath: "",
+      battleScenePresetId: "",
+    };
+  }
+
+  function resolveBattleVisual(content, options) {
     const battleType = String(options?.battleType || "").trim().toLowerCase();
-    if (battleType === "wild") {
-      return getRecordBattleBackgroundSelection(content, options?.mapMeta) || getDefaultBattleBackgroundImagePath(content);
+    const candidates = battleType === "wild"
+      ? [options?.mapMeta]
+      : battleType === "arena"
+        ? [options?.arena, options?.trainer]
+        : battleType === "event"
+          ? [options?.event, options?.trainer]
+          : [options?.trainer];
+    for (const candidate of candidates) {
+      const resolved = resolveBattleVisualFromRecord(content, candidate);
+      if (resolved) {
+        return resolved;
+      }
     }
-    if (battleType === "arena") {
-      return getRecordBattleBackgroundSelection(content, options?.arena)
-        || getRecordBattleBackgroundSelection(content, options?.trainer)
-        || getDefaultBattleBackgroundImagePath(content);
+    return getDefaultBattleVisual(content);
+  }
+
+  function createBattleSceneParticleConfigs(effect) {
+    const normalizedEffect = normalizeBattleSceneParticleEffect(effect);
+    if (normalizedEffect === "none") {
+      return [];
     }
-    if (battleType === "event") {
-      return getRecordBattleBackgroundSelection(content, options?.event)
-        || getRecordBattleBackgroundSelection(content, options?.trainer)
-        || getDefaultBattleBackgroundImagePath(content);
-    }
-    return getRecordBattleBackgroundSelection(content, options?.trainer) || getDefaultBattleBackgroundImagePath(content);
+    const count = normalizedEffect === "snow" ? 16 : 12;
+    return Array.from({ length: count }, function (_, index) {
+      return {
+        id: normalizedEffect + "-" + index + "-" + Math.round(Math.random() * 100000),
+        left: Math.round(Math.random() * 100),
+        delay: Number((Math.random() * 7).toFixed(2)),
+        duration: Number((normalizedEffect === "snow" ? 7 + Math.random() * 7 : 9 + Math.random() * 8).toFixed(2)),
+        drift: Math.round((Math.random() * 14) - 7),
+        size: Number((normalizedEffect === "snow" ? 0.45 + Math.random() * 0.8 : 0.8 + Math.random() * 0.9).toFixed(2)),
+        opacity: Number((0.35 + Math.random() * 0.45).toFixed(2)),
+        rotation: Math.round(Math.random() * 360),
+      };
+    });
+  }
+
+  function buildResolvedBattleVisualState(content, options) {
+    const resolved = resolveBattleVisual(content, options);
+    const preset = resolved.battleBackgroundMode === "scene"
+      ? getBattleScenePreset(content, resolved.battleScenePresetId)
+      : null;
+    return {
+      battleBackgroundMode: normalizeBattleBackgroundMode(resolved.battleBackgroundMode),
+      battleBackgroundImagePath: normalizeBattleBackgroundImagePath(resolved.battleBackgroundImagePath),
+      battleScenePresetId: normalizeBattleScenePresetId(resolved.battleScenePresetId),
+      battleSceneParticles: createBattleSceneParticleConfigs(preset?.particleEffect),
+    };
   }
 
   function getBattleBackgroundEditorTarget(content, devToolsState, owner) {
@@ -2968,6 +3405,12 @@
         dirtyKey: "events",
       };
     }
+    if (owner === "battle-scene-defaults") {
+      return {
+        record: content.settings?.defaults || null,
+        dirtyKey: "settings",
+      };
+    }
     return { record: null, dirtyKey: "" };
   }
 
@@ -2980,28 +3423,89 @@
     return '<div class="battle-background-preview-frame"><img class="battle-background-preview-image" src="' + escapeHtml(path) + '" alt="' + escapeHtml(label) + '" /></div>';
   }
 
+  function renderBattleScenePresetPreviewMarkup(content, presetId) {
+    const preset = getBattleScenePreset(content, presetId);
+    const showPlaceholders = ACTIVE_APP?.devTools?.battleScenePreviewShowBattlers !== false;
+    if (!preset) {
+      return '<div class="battle-background-preview-frame battle-background-preview-frame-empty"><span>No battle scene selected</span></div>';
+    }
+    const cloudDirection = normalizeBattleSceneCloudDirection(preset.cloudDriftDirection);
+    const cloudStyle = [
+      "--battle-cloud-duration:" + Number(getBattleSceneCloudDurationSeconds(preset)) + "s",
+      "--battle-cloud-scale:" + Number(normalizeBattleSceneCloudScale(preset.cloudScale)) + "%",
+      "--battle-cloud-offset-x:" + Number(normalizeBattleSceneCloudOffset(preset.cloudOffsetX)) + "%",
+      "--battle-cloud-offset-y:" + Number(normalizeBattleSceneCloudOffset(preset.cloudOffsetY)) + "%",
+    ].join(";");
+    return [
+      '<div class="battle-scene-preview-shell">',
+      '<div class="battle-stage battle-scene-preview-stage">',
+      (preset.backgroundImagePath
+        ? '<img class="battle-scene-preview-layer battle-scene-preview-layer-background battle-stage-background-image" src="' + escapeHtml(preset.backgroundImagePath) + '" alt="' + escapeHtml(preset.name || preset.id) + ' background" />'
+        : ""),
+      (preset.midgroundImagePath
+        ? '<div class="battle-scene-preview-layer battle-scene-preview-layer-midground battle-scene-clouds battle-scene-clouds-' + escapeHtml(cloudDirection) + '" style="' + cloudStyle + '"><img class="battle-scene-preview-image battle-scene-midground-image" src="' + escapeHtml(preset.midgroundImagePath) + '" alt="' + escapeHtml(preset.name || preset.id) + ' midground" /></div>'
+        : ""),
+      (preset.foregroundImagePath
+        ? '<img class="battle-scene-preview-layer battle-scene-preview-layer-foreground battle-stage-background-image battle-scene-foreground-image" src="' + escapeHtml(preset.foregroundImagePath) + '" alt="' + escapeHtml(preset.name || preset.id) + ' foreground" />'
+        : ""),
+      (showPlaceholders
+        ? '<div class="battle-field battle-field-scene battle-scene-preview-field"><div class="battle-scene-preview-battler battle-scene-preview-battler-enemy"><div class="battle-battler-shadow"></div><div class="battle-scene-preview-battler-body"><span>Enemy</span></div></div><div class="battle-scene-preview-battler battle-scene-preview-battler-player"><div class="battle-battler-shadow"></div><div class="battle-scene-preview-battler-body"><span>Player</span></div></div></div>'
+        : '<div class="battle-field battle-field-scene battle-scene-preview-field"></div>'),
+      (preset.particleEffect !== "none"
+        ? renderBattleSceneParticles(createBattleSceneParticleConfigs(preset.particleEffect).slice(0, 8), preset.particleEffect)
+        : ""),
+      '</div>',
+      '</div>',
+    ].join("");
+  }
+
   function renderBattleBackgroundPicker(content, record, options) {
-    ensureBattleBackgroundSelection(record);
+    ensureBattleVisualSelection(record);
     const imageOptions = getBattleBackgroundImageOptions(content);
+    const scenePresets = ensureBattleScenePresetCatalog(content);
     const owner = String(options?.owner || "");
     const addSelectId = String(options?.addSelectId || ("battle-background-add-" + owner));
+    const addStaticRandomSelectId = String(options?.addStaticRandomSelectId || ("battle-background-random-add-" + owner));
+    const addSceneSelectId = String(options?.addSceneSelectId || ("battle-scene-pool-add-" + owner));
+    const modeLabel = String(options?.modeLabel || "Background Mode");
     const fixedLabel = String(options?.fixedLabel || "Fixed Background");
     const randomLabel = String(options?.randomLabel || "Random Background Set");
+    const sceneLabel = String(options?.sceneLabel || "Animated Scene Preset");
+    const mixedPoolLabel = String(options?.mixedPoolLabel || "Mixed Random Pool");
     const pickerTitle = String(options?.title || "Battle Background");
-    const selectedPreviewPath = getBattleBackgroundPreviewPath(record);
+    const mode = normalizeBattleBackgroundMode(record?.battleBackgroundMode);
+    const selectedPreviewMarkup = mode === "scene"
+      ? renderBattleScenePresetPreviewMarkup(content, record?.battleScenePresetId)
+      : renderBattleBackgroundPreviewMarkup(getBattleBackgroundPreviewPath(record), { emptyLabel: "Using fallback background" });
     const fixedOptions = ['<option value="">Use random set or fallback</option>'].concat(
       imageOptions.map(function (imagePath) {
         const selected = record?.battleBackgroundImagePath === imagePath ? " selected" : "";
         return '<option value="' + escapeHtml(imagePath) + '"' + selected + ">" + escapeHtml(imagePath.replace(/^assets\//, "")) + "</option>";
       })
     ).join("");
+    const sceneOptions = ['<option value="">Use fallback scene</option>'].concat(
+      scenePresets.map(function (preset) {
+        const selected = record?.battleScenePresetId === preset.id ? " selected" : "";
+        return '<option value="' + escapeHtml(preset.id) + '"' + selected + ">" + escapeHtml(preset.name || preset.id) + "</option>";
+      })
+    ).join("");
     const addOptions = ['<option value="">Select background</option>'].concat(
       imageOptions
         .filter(function (imagePath) {
-          return !(record?.battleBackgroundImagePaths || []).includes(imagePath);
+          return !(record?.battleBackgroundImagePaths || []).includes(imagePath)
+            && !(record?.battleVisualPool || []).includes("image:" + imagePath);
         })
         .map(function (imagePath) {
           return '<option value="' + escapeHtml(imagePath) + '">' + escapeHtml(imagePath.replace(/^assets\//, "")) + "</option>";
+        })
+    ).join("");
+    const addScenePoolOptions = ['<option value="">Select animated scene</option>'].concat(
+      scenePresets
+        .filter(function (preset) {
+          return !(record?.battleVisualPool || []).includes("scene:" + preset.id);
+        })
+        .map(function (preset) {
+          return '<option value="' + escapeHtml(preset.id) + '">' + escapeHtml(preset.name || preset.id) + "</option>";
         })
     ).join("");
     const selectedRandomMarkup = record?.battleBackgroundImagePaths?.length
@@ -3009,19 +3513,35 @@
           return '<li><span>' + escapeHtml(imagePath.replace(/^assets\//, "")) + '</span><button class="secondary-button" type="button" data-action="remove-battle-background-path" data-battle-background-owner="' + escapeHtml(owner) + '" data-battle-background-value="' + escapeHtml(imagePath) + '">Remove</button></li>';
         }).join("") + "</ul>"
       : '<p class="dev-helper-text">No random battle backgrounds selected. If the fixed background is blank too, this record falls back.</p>';
+    const mixedPoolMarkup = record?.battleVisualPool?.length
+      ? '<ul class="compact-list">' + record.battleVisualPool.map(function (entry) {
+          if (String(entry).startsWith("scene:")) {
+            const presetId = String(entry).slice(6);
+            const preset = getBattleScenePreset(content, presetId);
+            return '<li><span>Animated Scene: ' + escapeHtml(preset?.name || presetId) + '</span><button class="secondary-button" type="button" data-action="remove-battle-visual-pool-entry" data-battle-background-owner="' + escapeHtml(owner) + '" data-battle-visual-pool-value="' + escapeHtml(entry) + '">Remove</button></li>';
+          }
+          const imagePath = String(entry).replace(/^image:/, "");
+          return '<li><span>Static Image: ' + escapeHtml(imagePath.replace(/^assets\//, "")) + '</span><button class="secondary-button" type="button" data-action="remove-battle-visual-pool-entry" data-battle-background-owner="' + escapeHtml(owner) + '" data-battle-visual-pool-value="' + escapeHtml(entry) + '">Remove</button></li>';
+        }).join("") + "</ul>"
+      : '<p class="dev-helper-text">No mixed random entries selected. If you add entries here, battle start will randomly choose from this combined static + animated pool.</p>';
     const assetNote = imageOptions.length
       ? 'Drop images into <code>assets/Battle Backgrounds/</code>, then reload the project folder to refresh this list.'
       : 'No battle background images discovered yet. Drop files into <code>assets/Battle Backgrounds/</code> and reload the project folder.';
+    const sceneNote = scenePresets.length
+      ? 'Animated scenes use reusable presets from the Battle Scenes editor.'
+      : 'No battle scene presets authored yet. Create one in the Battle Scenes editor.';
 
     return [
       '<section class="panel-block dev-editor-panel">',
       '<div class="section-heading"><h2>' + escapeHtml(pickerTitle) + "</h2></div>",
       '<div class="battle-background-picker-grid">',
-      renderBattleBackgroundPreviewMarkup(selectedPreviewPath, { emptyLabel: "Using fallback background" }),
+      selectedPreviewMarkup,
       '<div class="battle-background-picker-fields">',
-      '<label class="input-group"><span>' + escapeHtml(fixedLabel) + '</span><select data-dev-' + escapeHtml(owner) + '-field="battleBackgroundImagePath">' + fixedOptions + '</select></label>',
-      '<div class="dev-subcard"><div class="section-heading"><h3>' + escapeHtml(randomLabel) + '</h3></div>' + selectedRandomMarkup + '<div class="form-grid"><label class="input-group"><span>Add Random Choice</span><select id="' + escapeHtml(addSelectId) + '" data-dev-battle-background-select="' + escapeHtml(owner) + '">' + addOptions + '</select></label><div class="title-actions"><button class="secondary-button" type="button" data-action="add-battle-background-path" data-battle-background-owner="' + escapeHtml(owner) + '" data-battle-background-select-id="' + escapeHtml(addSelectId) + '">Add</button></div></div></div>',
-      '<p class="dev-helper-text">' + assetNote + '</p>',
+      '<label class="input-group"><span>' + escapeHtml(modeLabel) + '</span><select data-dev-' + escapeHtml(owner) + '-field="battleBackgroundMode"><option value="static"' + (mode === "static" ? " selected" : "") + '>Static Image</option><option value="scene"' + (mode === "scene" ? " selected" : "") + '>Animated Scene</option></select></label>',
+      '<div class="dev-subcard"><div class="section-heading"><h3>' + escapeHtml(mixedPoolLabel) + '</h3></div>' + mixedPoolMarkup + '<div class="form-grid"><label class="input-group"><span>Add Static Entry</span><select id="' + escapeHtml(addSelectId) + '" data-dev-battle-background-select="' + escapeHtml(owner) + '">' + addOptions + '</select></label><div class="title-actions"><button class="secondary-button" type="button" data-action="add-battle-visual-pool-image" data-battle-background-owner="' + escapeHtml(owner) + '" data-battle-background-select-id="' + escapeHtml(addSelectId) + '">Add</button></div><label class="input-group"><span>Add Animated Entry</span><select id="' + escapeHtml(addSceneSelectId) + '" data-dev-battle-scene-pool-select="' + escapeHtml(owner) + '">' + addScenePoolOptions + '</select></label><div class="title-actions"><button class="secondary-button" type="button" data-action="add-battle-visual-pool-scene" data-battle-background-owner="' + escapeHtml(owner) + '" data-battle-scene-pool-select-id="' + escapeHtml(addSceneSelectId) + '">Add</button></div></div></div>',
+      (mode === "scene"
+        ? '<label class="input-group"><span>' + escapeHtml(sceneLabel) + '</span><select data-dev-' + escapeHtml(owner) + '-field="battleScenePresetId">' + sceneOptions + '</select></label><p class="dev-helper-text">' + sceneNote + '</p>'
+        : '<label class="input-group"><span>' + escapeHtml(fixedLabel) + '</span><select data-dev-' + escapeHtml(owner) + '-field="battleBackgroundImagePath">' + fixedOptions + '</select></label><div class="dev-subcard"><div class="section-heading"><h3>' + escapeHtml(randomLabel) + '</h3></div>' + selectedRandomMarkup + '<div class="form-grid"><label class="input-group"><span>Add Random Choice</span><select id="' + escapeHtml(addStaticRandomSelectId) + '" data-dev-battle-background-select="' + escapeHtml(owner) + '">' + addOptions + '</select></label><div class="title-actions"><button class="secondary-button" type="button" data-action="add-battle-background-path" data-battle-background-owner="' + escapeHtml(owner) + '" data-battle-background-select-id="' + escapeHtml(addStaticRandomSelectId) + '">Add</button></div></div></div><p class="dev-helper-text">' + assetNote + '</p>'),
       '</div>',
       '</div>',
       '</section>',
@@ -4613,8 +5133,11 @@
       rewardText: "",
       description: "",
       mapId: "",
+      battleBackgroundMode: "static",
       battleBackgroundImagePath: "",
       battleBackgroundImagePaths: [],
+      battleScenePresetId: "",
+      battleVisualPool: [],
       team: [],
       pool: [],
     };
@@ -4648,7 +5171,7 @@
         arena.pool = [];
       }
       arena.trainerId = String(arena.trainerId || "");
-      ensureBattleBackgroundSelection(arena);
+      ensureBattleVisualSelection(arena);
     });
   }
 
@@ -4683,7 +5206,7 @@
       if (typeof trainer.victoryText !== "string") {
         trainer.victoryText = "";
       }
-      ensureBattleBackgroundSelection(trainer);
+      ensureBattleVisualSelection(trainer);
     });
 
     return content.trainers.trainers;
@@ -4740,8 +5263,11 @@
         money: 0,
         text: "",
       },
+      battleBackgroundMode: "static",
       battleBackgroundImagePath: "",
       battleBackgroundImagePaths: [],
+      battleScenePresetId: "",
+      battleVisualPool: [],
       trainerIds: [],
       bracketSize: 4,
       seedingMode: "authored",
@@ -4800,8 +5326,11 @@
         money: Math.max(0, Number(entry?.reward?.money || 0)),
         text: String(entry?.reward?.text || ""),
       },
+      battleBackgroundMode: normalizeBattleBackgroundMode(entry?.battleBackgroundMode),
       battleBackgroundImagePath: normalizeBattleBackgroundImagePath(entry?.battleBackgroundImagePath),
       battleBackgroundImagePaths: normalizeBattleBackgroundImagePaths(entry?.battleBackgroundImagePaths),
+      battleScenePresetId: normalizeBattleScenePresetId(entry?.battleScenePresetId),
+      battleVisualPool: normalizeBattleVisualPool(entry?.battleVisualPool),
       trainerIds: normalizeEventRuleArray(entry?.trainerIds),
       bracketSize: Math.max(2, Number(entry?.bracketSize || fallback.bracketSize)),
       seedingMode: String(entry?.seedingMode || fallback.seedingMode || "authored"),
@@ -5440,8 +5969,11 @@
       recommendedLevel: 5,
       partySize: 1,
       refightPartyMode: "fixed",
+      battleBackgroundMode: "static",
       battleBackgroundImagePath: "",
       battleBackgroundImagePaths: [],
+      battleScenePresetId: "",
+      battleVisualPool: [],
       team: [],
       pool: [],
     };
@@ -6481,21 +7013,20 @@
       primaryElement: wildMonster.primaryElementalAffinity,
     });
 
-    state.battle = {
+    state.battle = Object.assign({
       type: "wild",
       battleSource: "wild",
       enemy,
-      battleBackgroundImagePath: resolveBattleBackgroundImagePath(content, {
-        battleType: "wild",
-        mapMeta: content.mapMetadata?.[state.world.currentMapId] || null,
-      }),
       playerIndex: 0,
       participantMonsterIds: state.party[0]?.instanceId ? [state.party[0].instanceId] : [],
       pendingMonsterXpReward: 0,
       log: ["A wild " + species.name + " approached in " + mapLabel + "."],
       menu: "root",
       outcome: null,
-    };
+    }, buildResolvedBattleVisualState(content, {
+      battleType: "wild",
+      mapMeta: content.mapMetadata?.[state.world.currentMapId] || null,
+    }));
   }
 
   function markWildMonsterDefeated(state, wildMonsterId) {
@@ -6691,7 +7222,7 @@
     }
 
     state.interaction = null;
-    state.battle = {
+    state.battle = Object.assign({
       type: "trainer",
       battleSource: config?.battleSource || "trainer",
       opponentName: config?.opponentName || "Trainer",
@@ -6710,7 +7241,6 @@
       eventTrainerId: config?.eventTrainerId || "",
       eventRoundIndex: Number(config?.eventRoundIndex || 0),
       eventMatchIndex: Number(config?.eventMatchIndex || 0),
-      battleBackgroundImagePath: config?.battleBackgroundImagePath || "",
       enemyQueue: team,
       enemyIndex: 0,
       enemy: team[0],
@@ -6721,7 +7251,7 @@
       menu: "root",
       outcome: null,
       eventResolution: null,
-    };
+    }, config?.battleVisual || buildResolvedBattleVisualState(content, {}));
     if (state.battle.leaderSheetId || state.battle.trainerSheetId) {
       queueTrainerIntroAnimation(state);
     }
@@ -6744,7 +7274,7 @@
       crestName: arena.crestName || "Arena Crest",
       rewardMoney: Number(arena.rewardMoney || 0),
       rewardText: arena.rewardText || "",
-      battleBackgroundImagePath: resolveBattleBackgroundImagePath(content, {
+      battleVisual: buildResolvedBattleVisualState(content, {
         battleType: "arena",
         arena,
         trainer: linkedTrainer,
@@ -6767,7 +7297,7 @@
       rewardMoney: Math.max(0, Number(trainer.rewardMoney || 0)),
       rewardText: trainer.rewardText || "",
       victoryText: trainer.victoryText || "",
-      battleBackgroundImagePath: resolveBattleBackgroundImagePath(content, {
+      battleVisual: buildResolvedBattleVisualState(content, {
         battleType: "trainer",
         trainer,
       }),
@@ -6801,7 +7331,7 @@
       eventId: event.id,
       eventType: "championship",
       eventTrainerId: trainer.id,
-      battleBackgroundImagePath: resolveBattleBackgroundImagePath(content, {
+      battleVisual: buildResolvedBattleVisualState(content, {
         battleType: "event",
         event,
         trainer,
@@ -6847,7 +7377,7 @@
       eventTrainerId: trainer.id,
       eventRoundIndex: Number(run.currentRoundIndex || 0),
       eventMatchIndex: Number(run.currentMatchIndex || 0),
-      battleBackgroundImagePath: resolveBattleBackgroundImagePath(content, {
+      battleVisual: buildResolvedBattleVisualState(content, {
         battleType: "event",
         event,
         trainer,
@@ -9241,6 +9771,76 @@
     ].join("");
   }
 
+  function getBattleSceneCloudDurationSeconds(preset) {
+    const speed = normalizeBattleSceneCloudSpeed(preset?.cloudDriftSpeed);
+    return Math.max(14, Math.min(80, Math.round(180 / Math.max(2, speed))));
+  }
+
+  function renderBattleSceneParticles(particles, effect) {
+    const normalizedEffect = normalizeBattleSceneParticleEffect(effect);
+    if (!Array.isArray(particles) || !particles.length || normalizedEffect === "none") {
+      return "";
+    }
+    return '<div class="battle-scene-particles battle-scene-particles-' + escapeHtml(normalizedEffect) + '">' + particles.map(function (particle) {
+      const styles = [
+        "--particle-left:" + Number(particle.left || 0) + "%",
+        "--particle-delay:" + Number(particle.delay || 0) + "s",
+        "--particle-duration:" + Number(particle.duration || 8) + "s",
+        "--particle-drift:" + Number(particle.drift || 0) + "px",
+        "--particle-size:" + Number(particle.size || 1),
+        "--particle-opacity:" + Number(particle.opacity || 0.5),
+        "--particle-rotation:" + Number(particle.rotation || 0) + "deg",
+      ].join(";");
+      return '<span class="battle-scene-particle battle-scene-particle-' + escapeHtml(normalizedEffect) + '" style="' + styles + '"></span>';
+    }).join("") + "</div>";
+  }
+
+  function renderBattleSceneLayers(content, battle, innerMarkup) {
+    const mode = normalizeBattleBackgroundMode(battle?.battleBackgroundMode);
+    if (mode !== "scene") {
+      const battleBackgroundImagePath = normalizeBattleBackgroundImagePath(battle?.battleBackgroundImagePath);
+      return [
+        battleBackgroundImagePath
+          ? '<div class="battle-stage-background"><img class="battle-stage-background-image" src="' + escapeHtml(battleBackgroundImagePath) + '" alt="Battle background" /></div>'
+          : "",
+        '<div class="battle-field">' + innerMarkup + "</div>",
+      ].join("");
+    }
+
+    const preset = getBattleScenePreset(content, battle?.battleScenePresetId);
+    const backgroundImagePath = isKnownBattleSceneLayerPath(content, "backgrounds", preset?.backgroundImagePath)
+      ? preset?.backgroundImagePath
+      : "";
+    const midgroundImagePath = isKnownBattleSceneLayerPath(content, "midgrounds", preset?.midgroundImagePath)
+      ? preset?.midgroundImagePath
+      : "";
+    const foregroundImagePath = isKnownBattleSceneLayerPath(content, "foregrounds", preset?.foregroundImagePath)
+      ? preset?.foregroundImagePath
+      : "";
+    const cloudDirection = normalizeBattleSceneCloudDirection(preset?.cloudDriftDirection);
+    const cloudDuration = getBattleSceneCloudDurationSeconds(preset);
+    const cloudStyle = [
+      "--battle-cloud-duration:" + Number(cloudDuration) + "s",
+      "--battle-cloud-scale:" + Number(normalizeBattleSceneCloudScale(preset?.cloudScale)) + "%",
+      "--battle-cloud-offset-x:" + Number(normalizeBattleSceneCloudOffset(preset?.cloudOffsetX)) + "%",
+      "--battle-cloud-offset-y:" + Number(normalizeBattleSceneCloudOffset(preset?.cloudOffsetY)) + "%",
+    ].join(";");
+
+    return [
+      backgroundImagePath
+        ? '<div class="battle-stage-background battle-scene-layer battle-scene-layer-background"><img class="battle-stage-background-image" src="' + escapeHtml(backgroundImagePath) + '" alt="Battle scene background" /></div>'
+        : "",
+      midgroundImagePath
+        ? '<div class="battle-scene-layer battle-scene-layer-midground battle-scene-clouds battle-scene-clouds-' + escapeHtml(cloudDirection) + '" style="' + cloudStyle + '"><img class="battle-stage-background-image battle-scene-midground-image" src="' + escapeHtml(midgroundImagePath) + '" alt="Battle scene midground" /></div>'
+        : "",
+      foregroundImagePath
+        ? '<div class="battle-scene-layer battle-scene-layer-foreground"><img class="battle-stage-background-image battle-scene-foreground-image" src="' + escapeHtml(foregroundImagePath) + '" alt="Battle scene foreground" /></div>'
+        : "",
+      '<div class="battle-field battle-field-scene">' + innerMarkup + "</div>",
+      renderBattleSceneParticles(battle?.battleSceneParticles, preset?.particleEffect),
+    ].join("");
+  }
+
   function renderTitleScreen(root, content, saveSlots, selectedSlotId, onAction, notice) {
     const effectiveSelectedSlotId = selectedSlotId || saveSlots[0]?.slotId || "";
     const totalAvailableMonsters = content.monsters?.species?.length || 0;
@@ -9497,7 +10097,15 @@
     const trainerIntroAwaitingContinue = Boolean(animation?.trainerIntro?.awaitingContinue);
     const mustSelectReplacement = Boolean(state.battle.mustSelectReplacement);
     const leaderSheetId = getBattleLeaderSheetId(state.battle);
-    const battleBackgroundImagePath = normalizeBattleBackgroundImagePath(state.battle?.battleBackgroundImagePath);
+    const battleVisualMarkup = renderBattleSceneLayers(content, state.battle, (
+      showTrainerIntro
+        ? renderBattleTrainerIntro(content, state.battle, animation)
+        : renderBattleBattler(content, enemy, "battle-battler-enemy")
+    ) + (
+      showPlayerIntro
+        ? renderBattlePlayerIntro(content, activeMonster, animation)
+        : (!showTrainerIntro && !suppressDefaultPlayerBattler ? renderBattleBattler(content, activeMonster, "battle-battler-player") : "")
+    ));
     const showPlayerIntro = Boolean(animation?.playerIntro?.phase === "enter");
     const suppressDefaultPlayerBattler = Boolean(
       isTrainerBattle
@@ -9592,19 +10200,7 @@
         partyPips: playerPartyPips,
       }) +
       '</section>',
-      '<section class="battle-stage">' +
-        (battleBackgroundImagePath
-          ? '<div class="battle-stage-background"><img class="battle-stage-background-image" src="' + escapeHtml(battleBackgroundImagePath) + '" alt="Battle background" /></div>'
-          : "") +
-        '<div class="battle-field">' +
-          (showTrainerIntro
-            ? renderBattleTrainerIntro(content, state.battle, animation)
-            : renderBattleBattler(content, enemy, "battle-battler-enemy")) +
-          (showPlayerIntro
-            ? renderBattlePlayerIntro(content, activeMonster, animation)
-            : (!showTrainerIntro && !suppressDefaultPlayerBattler ? renderBattleBattler(content, activeMonster, "battle-battler-player") : "")) +
-        '</div>' +
-      '</section>',
+      '<section class="battle-stage">' + battleVisualMarkup + '</section>',
       '<section class="battle-command-shell">' +
         '<div class="battle-log battle-log-command" data-battle-log-feed>' + state.battle.log.slice(-8).map(function (entry) {
           return "<p>" + entry + "</p>";
@@ -12265,6 +12861,105 @@
     return { trainerOptionMarkup };
   }
 
+  function renderBattleSceneDevToolsScreen(root, content, devToolsState) {
+    const presets = ensureBattleScenePresetCatalog(content);
+    syncBattleScenePresetDevSelection(content, devToolsState);
+    const selectedPreset = presets.find(function (entry) {
+      return entry.id === devToolsState.selectedBattleScenePresetId;
+    }) || presets[0] || null;
+    const presetItems = presets.map(function (entry) {
+      const selected = entry.id === devToolsState.selectedBattleScenePresetId ? " compact-list-selected" : "";
+      return '<li class="' + selected.trim() + '"><button type="button" class="link-button" data-dev-select-battle-scene="' + escapeHtml(entry.id) + '"><strong>' + escapeHtml(entry.name || entry.id) + '</strong><span>' + escapeHtml(entry.id) + "</span></button></li>";
+    }).join("");
+    const backgroundOptions = ['<option value="">None</option>'].concat(
+      getBattleSceneLayerImageOptions(content, "backgrounds").map(function (imagePath) {
+        const selected = selectedPreset?.backgroundImagePath === imagePath ? " selected" : "";
+        return '<option value="' + escapeHtml(imagePath) + '"' + selected + ">" + escapeHtml(imagePath.replace(/^assets\//, "")) + "</option>";
+      })
+    ).join("");
+    const midgroundOptions = ['<option value="">None</option>'].concat(
+      getBattleSceneLayerImageOptions(content, "midgrounds").map(function (imagePath) {
+        const selected = selectedPreset?.midgroundImagePath === imagePath ? " selected" : "";
+        return '<option value="' + escapeHtml(imagePath) + '"' + selected + ">" + escapeHtml(imagePath.replace(/^assets\//, "")) + "</option>";
+      })
+    ).join("");
+    const foregroundOptions = ['<option value="">None</option>'].concat(
+      getBattleSceneLayerImageOptions(content, "foregrounds").map(function (imagePath) {
+        const selected = selectedPreset?.foregroundImagePath === imagePath ? " selected" : "";
+        return '<option value="' + escapeHtml(imagePath) + '"' + selected + ">" + escapeHtml(imagePath.replace(/^assets\//, "")) + "</option>";
+      })
+    ).join("");
+    const staticDefaultOptions = ['<option value="">Auto pick first image</option>'].concat(
+      getBattleBackgroundImageOptions(content).map(function (imagePath) {
+        const selected = normalizeBattleBackgroundImagePath(content.settings?.defaults?.defaultBattleBackgroundImagePath) === imagePath ? " selected" : "";
+        return '<option value="' + escapeHtml(imagePath) + '"' + selected + ">" + escapeHtml(imagePath.replace(/^assets\//, "")) + "</option>";
+      })
+    ).join("");
+    const sceneDefaultOptions = ['<option value="">Auto pick first preset</option>'].concat(
+      presets.map(function (preset) {
+        const selected = normalizeBattleScenePresetId(content.settings?.defaults?.defaultBattleScenePresetId) === preset.id ? " selected" : "";
+        return '<option value="' + escapeHtml(preset.id) + '"' + selected + ">" + escapeHtml(preset.name || preset.id) + "</option>";
+      })
+    ).join("");
+
+    const presetEditor = selectedPreset
+      ? [
+          '<section class="panel-block dev-editor-panel">',
+          '<div class="section-heading"><h2>Scene Preset</h2><div class="topbar-stats"><button class="secondary-button" type="button" data-action="duplicate-battle-scene-preset">Duplicate</button><button class="secondary-button" type="button" data-action="delete-battle-scene-preset">Delete</button></div></div>',
+          '<div class="form-grid">',
+          '<label class="input-group"><span>Preset ID</span><input data-dev-battle-scene-preset-field="id" value="' + escapeHtml(selectedPreset.id || "") + '" /></label>',
+          '<label class="input-group"><span>Name</span><input data-dev-battle-scene-preset-field="name" value="' + escapeHtml(selectedPreset.name || "") + '" /></label>',
+          '<label class="input-group"><span>Background Layer</span><select data-dev-battle-scene-preset-field="backgroundImagePath">' + backgroundOptions + '</select></label>',
+          '<label class="input-group"><span>Midground Layer</span><select data-dev-battle-scene-preset-field="midgroundImagePath">' + midgroundOptions + '</select></label>',
+          '<label class="input-group"><span>Foreground Layer</span><select data-dev-battle-scene-preset-field="foregroundImagePath">' + foregroundOptions + '</select></label>',
+          '<label class="input-group"><span>Particle Effect</span><select data-dev-battle-scene-preset-field="particleEffect"><option value="none"' + (selectedPreset.particleEffect === "none" ? " selected" : "") + '>None</option><option value="snow"' + (selectedPreset.particleEffect === "snow" ? " selected" : "") + '>Snow</option><option value="leaves"' + (selectedPreset.particleEffect === "leaves" ? " selected" : "") + '>Leaves</option></select></label>',
+          '<label class="input-group"><span>Cloud Direction</span><select data-dev-battle-scene-preset-field="cloudDriftDirection"><option value="none"' + (selectedPreset.cloudDriftDirection === "none" ? " selected" : "") + '>None</option><option value="left"' + (selectedPreset.cloudDriftDirection === "left" ? " selected" : "") + '>Left</option><option value="right"' + (selectedPreset.cloudDriftDirection === "right" ? " selected" : "") + '>Right</option></select></label>',
+          '<label class="input-group"><span>Cloud Speed</span><input type="number" min="2" max="80" step="1" data-dev-battle-scene-preset-field="cloudDriftSpeed" value="' + Number(selectedPreset.cloudDriftSpeed || 12) + '" /></label>',
+          '<label class="input-group"><span>Cloud Width %</span><input type="number" min="20" max="240" step="1" data-dev-battle-scene-preset-field="cloudScale" value="' + Number(selectedPreset.cloudScale || 118) + '" /></label>',
+          '<label class="input-group"><span>Cloud Offset X %</span><input type="number" min="-120" max="120" step="1" data-dev-battle-scene-preset-field="cloudOffsetX" value="' + Number(selectedPreset.cloudOffsetX || 0) + '" /></label>',
+          '<label class="input-group"><span>Cloud Offset Y %</span><input type="number" min="-120" max="120" step="1" data-dev-battle-scene-preset-field="cloudOffsetY" value="' + Number(selectedPreset.cloudOffsetY || 0) + '" /></label>',
+          '</div>',
+          '</section>',
+          '<section class="panel-block"><div class="section-heading"><h2>Preview</h2><label class="toggle-checkbox"><input type="checkbox" data-action="toggle-battle-scene-preview-battlers"' + (devToolsState.battleScenePreviewShowBattlers !== false ? " checked" : "") + ' /><span>Show Placeholder Battlers</span></label></div>' + renderBattleScenePresetPreviewMarkup(content, selectedPreset.id) + '<p class="dev-helper-text">Preview uses the battle stage proportions so framing reads closer to the in-game scene.</p></section>',
+        ].join("")
+      : '<section class="panel-block dev-editor-panel"><h2>No Scene Selected</h2><p>Add a battle scene preset to begin editing.</p></section>';
+
+    root.innerHTML = [
+      '<main class="dev-screen">',
+      renderDevToolsTopbar(devToolsState.section, "Battle Scenes", devToolsState),
+      '<section class="dev-screen-layout">',
+      '<aside class="dev-sidebar panel-block"><div class="section-heading"><h2>Scene Presets</h2><button class="secondary-button" type="button" data-action="add-battle-scene-preset">Add Scene</button></div><ul class="compact-list dev-map-list">' + (presetItems || "<li>No battle scenes yet.</li>") + '</ul></aside>',
+      '<section class="dev-main">' +
+        renderDevToolsGuideCard(
+          "Battle Scene Authoring",
+          "Scene presets own layered animated battle visuals that maps, trainers, arenas, and events can reuse by preset id.",
+          ["Author reusable layers", "Assign cloud and particle motion", "Set global defaults", "Export battle-scenes.json"],
+          [
+            { label: "Open Trainers", section: "trainers" },
+            { label: "Open Arenas", section: "arenas" },
+            { label: "Open Events", section: "events" },
+          ]
+        ) +
+        renderDevToolsExportPanel(
+          "Scene Data & Export",
+          "Battle scene presets are edited in memory here, then exported to <code>battle-scenes.json</code> when the scene library is ready.",
+          [{ action: "export-battle-scenes-json", label: "Export battle-scenes.json" }],
+          "Rebuild local content after export if you are using bundled browser-loaded data."
+        ) +
+        '<section class="panel-block dev-editor-panel"><div class="section-heading"><h2>Global Battle Visual Defaults</h2></div><div class="form-grid">' +
+          '<label class="input-group"><span>Default Mode</span><select data-dev-battle-scene-default-field="defaultBattleBackgroundMode"><option value="static"' + (normalizeBattleBackgroundMode(content.settings?.defaults?.defaultBattleBackgroundMode) === "static" ? " selected" : "") + '>Static Image</option><option value="scene"' + (normalizeBattleBackgroundMode(content.settings?.defaults?.defaultBattleBackgroundMode) === "scene" ? " selected" : "") + '>Animated Scene</option></select></label>' +
+          '<label class="input-group"><span>Default Static Background</span><select data-dev-battle-scene-default-field="defaultBattleBackgroundImagePath">' + staticDefaultOptions + '</select></label>' +
+          '<label class="input-group"><span>Default Animated Scene</span><select data-dev-battle-scene-default-field="defaultBattleScenePresetId">' + sceneDefaultOptions + '</select></label>' +
+        '</div><p class="dev-helper-text">If a battle source cannot resolve its configured visual, the runtime falls back to these defaults.</p></section>' +
+        presetEditor +
+      '</section>',
+      '</section>',
+      '</main>',
+    ].join("");
+
+    return null;
+  }
+
   function renderTrainerDevToolsScreen(root, content, devToolsState) {
     const trainers = ensureTrainerCatalog(content);
     syncTrainerDevSelection(content, devToolsState);
@@ -13134,6 +13829,7 @@
     { id: "spawn-index", label: "Spawn Index", workflow: "world-spawns" },
     { id: "towns", label: "Towns", workflow: "world-spawns" },
     { id: "arenas", label: "Arenas", workflow: "arena-setup" },
+    { id: "battle-scenes", label: "Battle Scenes", workflow: "trainer-events" },
     { id: "events", label: "Events", workflow: "trainer-events" },
     { id: "trainers", label: "Trainers", workflow: "trainer-events" },
     { id: "monsters", label: "Monsters", workflow: "monster-setup" },
@@ -13169,10 +13865,10 @@
     {
       id: "trainer-events",
       label: "Trainer & Events",
-      description: "Author trainer rosters and wire them into championships, tournaments, and map entry points.",
+      description: "Author trainer rosters, animated battle scenes, and event wiring in one workflow.",
       startSection: "trainers",
-      sections: ["trainers", "events", "maps"],
-      checklist: ["Trainer roster", "Event definition", "Entry interaction", "Rewards and unlocks"],
+      sections: ["trainers", "battle-scenes", "events", "maps"],
+      checklist: ["Trainer roster", "Battle scene preset", "Event definition", "Entry interaction", "Rewards and unlocks"],
     },
     {
       id: "progression-presentation",
@@ -13188,6 +13884,7 @@
     maps: "Map Metadata",
     towns: "Towns",
     arenas: "Arenas",
+    battleScenes: "Battle Scenes",
     events: "Events",
     trainers: "Trainers",
     monsters: "Monsters",
@@ -13450,6 +14147,10 @@
 
     if (devToolsState.section === "arenas") {
       return renderArenaDevToolsScreen(root, content, devToolsState);
+    }
+
+    if (devToolsState.section === "battle-scenes") {
+      return renderBattleSceneDevToolsScreen(root, content, devToolsState);
     }
 
     if (devToolsState.section === "events") {
@@ -13784,6 +14485,9 @@
     root.querySelector('[data-action="dev-section-events"]')?.addEventListener("click", function () {
       app.setDevSection("events");
     });
+    root.querySelector('[data-action="dev-section-battle-scenes"]')?.addEventListener("click", function () {
+      app.setDevSection("battle-scenes");
+    });
     root.querySelector('[data-action="dev-section-trainers"]')?.addEventListener("click", function () {
       app.setDevSection("trainers");
     });
@@ -13936,6 +14640,21 @@
     root.querySelector('[data-action="export-arenas-json"]')?.addEventListener("click", function () {
       app.exportArenasJson();
     });
+    root.querySelector('[data-action="add-battle-scene-preset"]')?.addEventListener("click", function () {
+      app.addBattleScenePreset();
+    });
+    root.querySelector('[data-action="duplicate-battle-scene-preset"]')?.addEventListener("click", function () {
+      app.duplicateBattleScenePreset();
+    });
+    root.querySelector('[data-action="delete-battle-scene-preset"]')?.addEventListener("click", function () {
+      app.deleteBattleScenePreset();
+    });
+    root.querySelector('[data-action="export-battle-scenes-json"]')?.addEventListener("click", function () {
+      app.exportBattleScenesJson();
+    });
+    root.querySelector('[data-action="toggle-battle-scene-preview-battlers"]')?.addEventListener("change", function (event) {
+      app.setBattleScenePreviewBattlers(event.target.checked);
+    });
     root.querySelector('[data-action="add-event"]')?.addEventListener("click", function () {
       app.addEvent();
     });
@@ -13980,11 +14699,35 @@
         app.addBattleBackgroundPath(button.getAttribute("data-battle-background-owner") || "", value);
       });
     });
+    root.querySelectorAll('[data-action="add-battle-visual-pool-image"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        const selectId = button.getAttribute("data-battle-background-select-id") || "";
+        const select = selectId ? root.querySelector("#" + CSS.escape(selectId)) : null;
+        const value = select instanceof HTMLSelectElement ? select.value : "";
+        app.addBattleVisualPoolImage(button.getAttribute("data-battle-background-owner") || "", value);
+      });
+    });
+    root.querySelectorAll('[data-action="add-battle-visual-pool-scene"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        const selectId = button.getAttribute("data-battle-scene-pool-select-id") || "";
+        const select = selectId ? root.querySelector("#" + CSS.escape(selectId)) : null;
+        const value = select instanceof HTMLSelectElement ? select.value : "";
+        app.addBattleVisualPoolScene(button.getAttribute("data-battle-background-owner") || "", value);
+      });
+    });
     root.querySelectorAll('[data-action="remove-battle-background-path"]').forEach(function (button) {
       button.addEventListener("click", function () {
         app.removeBattleBackgroundPath(
           button.getAttribute("data-battle-background-owner") || "",
           button.getAttribute("data-battle-background-value") || ""
+        );
+      });
+    });
+    root.querySelectorAll('[data-action="remove-battle-visual-pool-entry"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.removeBattleVisualPoolEntry(
+          button.getAttribute("data-battle-background-owner") || "",
+          button.getAttribute("data-battle-visual-pool-value") || ""
         );
       });
     });
@@ -14159,6 +14902,12 @@
     root.querySelectorAll("[data-dev-select-event]").forEach(function (button) {
       button.addEventListener("click", function () {
         app.selectEvent(button.getAttribute("data-dev-select-event"));
+      });
+    });
+    root.querySelectorAll("[data-dev-select-battle-scene]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.devTools.selectedBattleScenePresetId = button.getAttribute("data-dev-select-battle-scene") || "";
+        app.render();
       });
     });
     root.querySelectorAll("[data-dev-select-trainer]").forEach(function (button) {
@@ -14652,6 +15401,26 @@
         );
       });
     });
+    root.querySelectorAll("[data-dev-battle-scene-preset-field]").forEach(function (field) {
+      const useDeferredRender = isDeferredDevTextField(field);
+      const eventName = field.tagName === "SELECT" ? "change" : "input";
+      field.addEventListener(eventName, function () {
+        app.updateBattleScenePresetField(field.getAttribute("data-dev-battle-scene-preset-field"), field.value, !useDeferredRender);
+        if (useDeferredRender) {
+          app.clearDeferredRender();
+        }
+      });
+      if (useDeferredRender) {
+        field.addEventListener("change", function () {
+          app.updateBattleScenePresetField(field.getAttribute("data-dev-battle-scene-preset-field"), field.value);
+        });
+      }
+    });
+    root.querySelectorAll("[data-dev-battle-scene-default-field]").forEach(function (field) {
+      field.addEventListener("change", function () {
+        app.updateBattleSceneDefaultField(field.getAttribute("data-dev-battle-scene-default-field"), field.value);
+      });
+    });
     root.querySelectorAll("[data-dev-interaction-field]").forEach(function (field) {
       const useDeferredRender = isDeferredDevTextField(field);
       const eventName = field.tagName === "SELECT" ? "change" : "input";
@@ -15032,6 +15801,8 @@
         selectedArenaId: ensureArenaCatalog(content)[0]?.id || "",
         selectedEventId: ensureEventCatalog(content)[0]?.id || "",
         selectedTrainerId: ensureTrainerCatalog(content)[0]?.id || "",
+        selectedBattleScenePresetId: ensureBattleScenePresetCatalog(content)[0]?.id || "",
+        battleScenePreviewShowBattlers: true,
         selectedTransitionId: "",
         selectedSpawnId: "",
         selectedInteractionId: "",
@@ -16089,6 +16860,7 @@
           this.content.monsterAssets = discoveredCharacterSheets.monsterAssets || { images: [] };
           this.content.townAssets = discoveredCharacterSheets.townAssets || { images: [] };
           this.content.battleBackgroundAssets = discoveredCharacterSheets.battleBackgroundAssets || { images: [] };
+          this.content.battleSceneAssets = discoveredCharacterSheets.battleSceneAssets || { backgrounds: [], midgrounds: [], foregrounds: [] };
           const selectedStillExists = ensureCharacterSheetCatalog(this.content).some((entry) => entry.id === this.devTools.selectedCharacterSheetId);
           applyCharacterSheetToDevTools(this.content, this.devTools, selectedStillExists ? this.devTools.selectedCharacterSheetId : ensureCharacterSheetCatalog(this.content)[0]?.id || "");
           this.state.message = "Character sheets resynced from the project folder.";
@@ -17323,10 +18095,16 @@
           }
         } else if (path === "safezone") {
           mapMeta.safezone = rawValue === "true";
+        } else if (path === "battleBackgroundMode") {
+          mapMeta.battleBackgroundMode = normalizeBattleBackgroundMode(rawValue);
         } else if (path === "battleBackgroundImagePath") {
           mapMeta.battleBackgroundImagePath = normalizeBattleBackgroundImagePath(rawValue);
+        } else if (path === "battleScenePresetId") {
+          mapMeta.battleScenePresetId = normalizeBattleScenePresetId(rawValue);
+        } else if (path === "battleVisualPool") {
+          mapMeta.battleVisualPool = normalizeBattleVisualPool(rawValue);
         }
-        ensureBattleBackgroundSelection(mapMeta);
+        ensureBattleVisualSelection(mapMeta);
         this.markDevToolsDirty("maps");
 
         if (shouldRender !== false) {
@@ -17548,11 +18326,17 @@
         }
 
         const numericFields = new Set(["recommendedLevel", "partySize", "rewardMoney"]);
-        const value = path === "battleBackgroundImagePath"
-          ? normalizeBattleBackgroundImagePath(rawValue)
+        const value = path === "battleBackgroundMode"
+          ? normalizeBattleBackgroundMode(rawValue)
+          : path === "battleBackgroundImagePath"
+            ? normalizeBattleBackgroundImagePath(rawValue)
+            : path === "battleScenePresetId"
+              ? normalizeBattleScenePresetId(rawValue)
+              : path === "battleVisualPool"
+                ? normalizeBattleVisualPool(rawValue)
           : (numericFields.has(path) ? Number(rawValue || 0) : rawValue);
         arena[path] = value;
-        ensureBattleBackgroundSelection(arena);
+        ensureBattleVisualSelection(arena);
         if (path === "id") {
           this.devTools.selectedArenaId = rawValue;
         }
@@ -17570,13 +18354,19 @@
 
         const previousId = trainer.id;
         const numericFields = new Set(["recommendedLevel", "partySize", "rewardMoney"]);
-        const value = path === "refightPartyMode"
-          ? normalizeTrainerRefightPartyMode(rawValue)
-          : path === "battleBackgroundImagePath"
-            ? normalizeBattleBackgroundImagePath(rawValue)
+        const value = path === "battleBackgroundMode"
+          ? normalizeBattleBackgroundMode(rawValue)
+          : path === "refightPartyMode"
+            ? normalizeTrainerRefightPartyMode(rawValue)
+            : path === "battleBackgroundImagePath"
+              ? normalizeBattleBackgroundImagePath(rawValue)
+              : path === "battleScenePresetId"
+                ? normalizeBattleScenePresetId(rawValue)
+                : path === "battleVisualPool"
+                  ? normalizeBattleVisualPool(rawValue)
           : (numericFields.has(path) ? Number(rawValue || 0) : rawValue);
         trainer[path] = value;
-        ensureBattleBackgroundSelection(trainer);
+        ensureBattleVisualSelection(trainer);
         if (path === "id") {
           replaceTrainerReferences(this.content, previousId, rawValue);
           this.devTools.selectedTrainerId = rawValue;
@@ -17593,10 +18383,40 @@
         if (!target.record || !imagePath) {
           return;
         }
-        ensureBattleBackgroundSelection(target.record);
+        ensureBattleVisualSelection(target.record);
         if (!target.record.battleBackgroundImagePaths.includes(imagePath)) {
           target.record.battleBackgroundImagePaths.push(imagePath);
           target.record.battleBackgroundImagePaths = normalizeBattleBackgroundImagePaths(target.record.battleBackgroundImagePaths);
+          this.markDevToolsDirty(target.dirtyKey);
+          this.render();
+        }
+      },
+      addBattleVisualPoolImage: function (owner, rawValue) {
+        const target = getBattleBackgroundEditorTarget(this.content, this.devTools, owner);
+        const imagePath = normalizeBattleBackgroundImagePath(rawValue);
+        if (!target.record || !imagePath) {
+          return;
+        }
+        ensureBattleVisualSelection(target.record);
+        const entry = "image:" + imagePath;
+        if (!target.record.battleVisualPool.includes(entry)) {
+          target.record.battleVisualPool.push(entry);
+          target.record.battleVisualPool = normalizeBattleVisualPool(target.record.battleVisualPool);
+          this.markDevToolsDirty(target.dirtyKey);
+          this.render();
+        }
+      },
+      addBattleVisualPoolScene: function (owner, rawValue) {
+        const target = getBattleBackgroundEditorTarget(this.content, this.devTools, owner);
+        const presetId = normalizeBattleScenePresetId(rawValue);
+        if (!target.record || !presetId) {
+          return;
+        }
+        ensureBattleVisualSelection(target.record);
+        const entry = "scene:" + presetId;
+        if (!target.record.battleVisualPool.includes(entry)) {
+          target.record.battleVisualPool.push(entry);
+          target.record.battleVisualPool = normalizeBattleVisualPool(target.record.battleVisualPool);
           this.markDevToolsDirty(target.dirtyKey);
           this.render();
         }
@@ -17607,9 +18427,22 @@
         if (!target.record || !imagePath) {
           return;
         }
-        ensureBattleBackgroundSelection(target.record);
+        ensureBattleVisualSelection(target.record);
         target.record.battleBackgroundImagePaths = target.record.battleBackgroundImagePaths.filter(function (entry) {
           return entry !== imagePath;
+        });
+        this.markDevToolsDirty(target.dirtyKey);
+        this.render();
+      },
+      removeBattleVisualPoolEntry: function (owner, rawValue) {
+        const target = getBattleBackgroundEditorTarget(this.content, this.devTools, owner);
+        const entry = normalizeBattleVisualPoolEntry(rawValue);
+        if (!target.record || !entry) {
+          return;
+        }
+        ensureBattleVisualSelection(target.record);
+        target.record.battleVisualPool = target.record.battleVisualPool.filter(function (candidate) {
+          return candidate !== entry;
         });
         this.markDevToolsDirty(target.dirtyKey);
         this.render();
@@ -17633,7 +18466,7 @@
       exportCurrentMapMetadata: function () {
         const mapId = this.devTools.selectedMapId;
         const mapMeta = this.content.mapMetadata[mapId];
-        ensureBattleBackgroundSelection(mapMeta);
+        ensureBattleVisualSelection(mapMeta);
         const exportPayload = {
           mapId: mapMeta.mapId,
           displayName: mapMeta.displayName,
@@ -17646,8 +18479,11 @@
           trainers: mapMeta.trainers,
           npcs: mapMeta.npcs,
           mapMonstersPanel: mapMeta.mapMonstersPanel,
+          battleBackgroundMode: mapMeta.battleBackgroundMode,
           battleBackgroundImagePath: mapMeta.battleBackgroundImagePath,
           battleBackgroundImagePaths: mapMeta.battleBackgroundImagePaths,
+          battleScenePresetId: mapMeta.battleScenePresetId,
+          battleVisualPool: mapMeta.battleVisualPool,
         };
 
         const blob = new Blob([JSON.stringify(exportPayload, null, 2)], { type: "application/json" });
@@ -17719,9 +18555,113 @@
           this.render();
         }
       },
+      updateBattleSceneDefaultField: function (path, rawValue, shouldRender) {
+        if (!this.content.settings) {
+          this.content.settings = JSON.parse(JSON.stringify(fallbackContent.settings));
+        }
+        if (!this.content.settings.defaults) {
+          this.content.settings.defaults = Object.assign({}, fallbackContent.settings.defaults);
+        }
+        if (path === "defaultBattleBackgroundMode") {
+          this.content.settings.defaults.defaultBattleBackgroundMode = normalizeBattleBackgroundMode(rawValue);
+        } else if (path === "defaultBattleBackgroundImagePath") {
+          this.content.settings.defaults.defaultBattleBackgroundImagePath = normalizeBattleBackgroundImagePath(rawValue);
+        } else if (path === "defaultBattleScenePresetId") {
+          this.content.settings.defaults.defaultBattleScenePresetId = normalizeBattleScenePresetId(rawValue);
+        }
+        this.markDevToolsDirty("settings");
+        if (shouldRender !== false) {
+          this.render();
+        }
+      },
+      updateBattleScenePresetField: function (path, rawValue, shouldRender) {
+        const preset = ensureBattleScenePresetCatalog(this.content).find((entry) => entry.id === this.devTools.selectedBattleScenePresetId);
+        if (!preset) {
+          return;
+        }
+        const previousId = preset.id;
+        preset[path] = path === "cloudDriftSpeed"
+          ? normalizeBattleSceneCloudSpeed(rawValue)
+          : path === "cloudScale"
+            ? normalizeBattleSceneCloudScale(rawValue)
+            : path === "cloudOffsetX" || path === "cloudOffsetY"
+              ? normalizeBattleSceneCloudOffset(rawValue)
+          : path === "particleEffect"
+            ? normalizeBattleSceneParticleEffect(rawValue)
+            : path === "cloudDriftDirection"
+              ? normalizeBattleSceneCloudDirection(rawValue)
+              : path === "id" || path === "name"
+                ? String(rawValue || "")
+              : normalizeBattleBackgroundImagePath(rawValue);
+        Object.assign(preset, normalizeBattleScenePresetRecord(preset, 0));
+        if (path === "id") {
+          replaceBattleScenePresetReferences(this.content, previousId, preset.id);
+          this.devTools.selectedBattleScenePresetId = preset.id;
+        }
+        this.markDevToolsDirty("battleScenes", "maps", "trainers", "arenas", "events", "settings");
+        if (shouldRender !== false) {
+          this.render();
+        }
+      },
+      addBattleScenePreset: function () {
+        const presets = ensureBattleScenePresetCatalog(this.content);
+        const next = createEmptyBattleScenePreset(presets.length + 1);
+        presets.push(next);
+        this.devTools.selectedBattleScenePresetId = next.id;
+        this.devTools.section = "battle-scenes";
+        this.devTools.workflow = "trainer-events";
+        this.devTools.lastVisitedByWorkflow["trainer-events"] = "battle-scenes";
+        this.markDevToolsDirty("battleScenes");
+        this.render();
+      },
+      duplicateBattleScenePreset: function () {
+        const presets = ensureBattleScenePresetCatalog(this.content);
+        const current = presets.find((entry) => entry.id === this.devTools.selectedBattleScenePresetId);
+        if (!current) {
+          return;
+        }
+        const duplicate = JSON.parse(JSON.stringify(current));
+        duplicate.id = (current.id || "battle-scene") + "-copy";
+        duplicate.name = current.name ? current.name + " Copy" : "Copied Battle Scene";
+        presets.push(normalizeBattleScenePresetRecord(duplicate, presets.length));
+        this.devTools.selectedBattleScenePresetId = duplicate.id;
+        this.markDevToolsDirty("battleScenes");
+        this.render();
+      },
+      deleteBattleScenePreset: function () {
+        const targetId = this.devTools.selectedBattleScenePresetId;
+        replaceBattleScenePresetReferences(this.content, targetId, "");
+        this.content.battleScenePresets.presets = ensureBattleScenePresetCatalog(this.content).filter(function (entry) {
+          return entry.id !== targetId;
+        });
+        syncBattleScenePresetDevSelection(this.content, this.devTools);
+        this.markDevToolsDirty("battleScenes", "maps", "trainers", "arenas", "events", "settings");
+        this.render();
+      },
+      exportBattleScenesJson: function () {
+        const payload = {
+          presets: ensureBattleScenePresetCatalog(this.content),
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = "battle-scenes.json";
+        anchor.click();
+        URL.revokeObjectURL(url);
+        this.clearDevToolsDirty("battleScenes");
+        this.state.message = "Exported battle-scenes.json.";
+        if (this.state.screen === "world") {
+          this.render();
+        }
+      },
+      setBattleScenePreviewBattlers: function (checked) {
+        this.devTools.battleScenePreviewShowBattlers = !!checked;
+        this.render();
+      },
       exportTrainersJson: function () {
         ensureTrainerCatalog(this.content).forEach(function (trainer) {
-          ensureBattleBackgroundSelection(trainer);
+          ensureBattleVisualSelection(trainer);
         });
         const payload = {
           trainers: ensureTrainerCatalog(this.content),
@@ -17775,8 +18715,14 @@
         } else {
           event[path] = path === "type"
             ? normalizeEventType(rawValue)
+            : path === "battleBackgroundMode"
+              ? normalizeBattleBackgroundMode(rawValue)
             : path === "battleBackgroundImagePath"
               ? normalizeBattleBackgroundImagePath(rawValue)
+              : path === "battleScenePresetId"
+                ? normalizeBattleScenePresetId(rawValue)
+                : path === "battleVisualPool"
+                  ? normalizeBattleVisualPool(rawValue)
             : path === "bracketSize"
               ? Math.max(2, Number(rawValue || 2))
               : rawValue;
@@ -17921,7 +18867,7 @@
       },
       exportEventsJson: function () {
         ensureEventCatalog(this.content).forEach(function (event) {
-          ensureBattleBackgroundSelection(event);
+          ensureBattleVisualSelection(event);
         });
         const payload = {
           events: ensureEventCatalog(this.content),
@@ -18196,7 +19142,7 @@
       },
       exportArenasJson: function () {
         ensureArenaCatalog(this.content).forEach(function (arena) {
-          ensureBattleBackgroundSelection(arena);
+          ensureBattleVisualSelection(arena);
         });
         const payload = {
           arenas: ensureArenaCatalog(this.content),
