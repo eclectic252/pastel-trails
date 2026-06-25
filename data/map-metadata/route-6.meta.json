@@ -213,5 +213,9 @@
     "assets/Battle Backgrounds/Route6-1.png",
     "assets/Battle Backgrounds/route6-2.png"
   ],
-  "battleScenePresetId": "battle-scene-1"
+  "battleScenePresetId": "battle-scene-1",
+  "battleVisualPool": [
+    "scene:battle-scene-2",
+    "scene:battle-scene-1"
+  ]
 }

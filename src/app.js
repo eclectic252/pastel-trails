@@ -494,20 +494,58 @@
       : 100;
   }
 
+  function normalizeBattleSceneParticleRotationDirection(value) {
+    const normalized = String(value || "").trim().toLowerCase();
+    return ["clockwise", "counterclockwise"].includes(normalized)
+      ? normalized
+      : "mixed";
+  }
+
+  function normalizeBattleSceneParticleRotationDegrees(value) {
+    const numeric = Number(value);
+    return Number.isFinite(numeric)
+      ? Math.max(-360, Math.min(360, Number(numeric.toFixed(2))))
+      : 0;
+  }
+
+  function normalizeBattleSceneParticleSpinSpeed(value) {
+    const numeric = Number(value);
+    return Number.isFinite(numeric)
+      ? Math.max(0, Math.min(1080, Number(numeric.toFixed(2))))
+      : 120;
+  }
+
   function normalizeBattleSceneParticleImageEntry(entry, defaults) {
     const fallback = defaults && typeof defaults === "object"
       ? defaults
-      : { sizeMin: 0.65, sizeMax: 1.1 };
+      : {
+        sizeMin: 0.65,
+        sizeMax: 1.1,
+        rotationStartMin: -22,
+        rotationStartMax: 22,
+        rotationDirection: "mixed",
+        rotationSpeedMin: 30,
+        rotationSpeedMax: 140,
+      };
     const imagePath = normalizeBattleBackgroundImagePath(entry?.imagePath || entry);
     if (!imagePath) {
       return null;
     }
     const sizeMin = normalizeBattleSceneParticleScale(entry?.sizeMin ?? fallback.sizeMin);
     const sizeMax = normalizeBattleSceneParticleScale(entry?.sizeMax ?? entry?.sizeMin ?? fallback.sizeMax);
+    const rotationStartMin = normalizeBattleSceneParticleRotationDegrees(entry?.rotationStartMin ?? fallback.rotationStartMin);
+    const rotationStartMax = normalizeBattleSceneParticleRotationDegrees(entry?.rotationStartMax ?? entry?.rotationStartMin ?? fallback.rotationStartMax);
+    const rotationSpeedMin = normalizeBattleSceneParticleSpinSpeed(entry?.rotationSpeedMin ?? fallback.rotationSpeedMin);
+    const rotationSpeedMax = normalizeBattleSceneParticleSpinSpeed(entry?.rotationSpeedMax ?? entry?.rotationSpeedMin ?? fallback.rotationSpeedMax);
     return {
       imagePath,
       sizeMin,
       sizeMax: sizeMax < sizeMin ? sizeMin : sizeMax,
+      rotationStartMin,
+      rotationStartMax: rotationStartMax < rotationStartMin ? rotationStartMin : rotationStartMax,
+      rotationDirection: normalizeBattleSceneParticleRotationDirection(entry?.rotationDirection ?? fallback.rotationDirection),
+      rotationSpeedMin,
+      rotationSpeedMax: rotationSpeedMax < rotationSpeedMin ? rotationSpeedMin : rotationSpeedMax,
     };
   }
 
@@ -539,6 +577,11 @@
       opacityMin: 0.45,
       opacityMax: 0.75,
       spread: 100,
+      rotationStartMin: -22,
+      rotationStartMax: 22,
+      rotationDirection: "mixed",
+      rotationSpeedMin: 30,
+      rotationSpeedMax: 140,
       shapeEffect: "none",
     };
   }
@@ -560,6 +603,11 @@
         opacityMin: 0.4,
         opacityMax: 0.8,
         spread: 100,
+        rotationStartMin: -18,
+        rotationStartMax: 18,
+        rotationDirection: "mixed",
+        rotationSpeedMin: 20,
+        rotationSpeedMax: 90,
         shapeEffect: "snow",
       };
     }
@@ -578,6 +626,11 @@
         opacityMin: 0.45,
         opacityMax: 0.85,
         spread: 100,
+        rotationStartMin: -35,
+        rotationStartMax: 35,
+        rotationDirection: "counterclockwise",
+        rotationSpeedMin: 60,
+        rotationSpeedMax: 180,
         shapeEffect: "leaves",
       };
     }
@@ -604,6 +657,11 @@
       opacityMin: normalizeBattleSceneParticleOpacity(source.opacityMin ?? fallback.opacityMin),
       opacityMax: normalizeBattleSceneParticleOpacity(source.opacityMax ?? source.opacityMin ?? fallback.opacityMax),
       spread: normalizeBattleSceneParticleSpread(source.spread ?? fallback.spread),
+      rotationStartMin: normalizeBattleSceneParticleRotationDegrees(source.rotationStartMin ?? fallback.rotationStartMin),
+      rotationStartMax: normalizeBattleSceneParticleRotationDegrees(source.rotationStartMax ?? source.rotationStartMin ?? fallback.rotationStartMax),
+      rotationDirection: normalizeBattleSceneParticleRotationDirection(source.rotationDirection ?? fallback.rotationDirection),
+      rotationSpeedMin: normalizeBattleSceneParticleSpinSpeed(source.rotationSpeedMin ?? fallback.rotationSpeedMin),
+      rotationSpeedMax: normalizeBattleSceneParticleSpinSpeed(source.rotationSpeedMax ?? source.rotationSpeedMin ?? fallback.rotationSpeedMax),
       shapeEffect: normalizeBattleSceneParticleEffect(source.shapeEffect ?? legacyEffect),
     };
     if (normalized.speedMax < normalized.speedMin) {
@@ -615,11 +673,25 @@
     if (normalized.opacityMax < normalized.opacityMin) {
       normalized.opacityMax = normalized.opacityMin;
     }
+    if (normalized.rotationStartMax < normalized.rotationStartMin) {
+      normalized.rotationStartMax = normalized.rotationStartMin;
+    }
+    if (normalized.rotationSpeedMax < normalized.rotationSpeedMin) {
+      normalized.rotationSpeedMax = normalized.rotationSpeedMin;
+    }
     normalized.imageEntries = normalizeBattleSceneParticleImageEntries(
       Array.isArray(source.imageEntries) && source.imageEntries.length
         ? source.imageEntries
         : source.imagePaths,
-      { sizeMin: normalized.sizeMin, sizeMax: normalized.sizeMax }
+      {
+        sizeMin: normalized.sizeMin,
+        sizeMax: normalized.sizeMax,
+        rotationStartMin: normalized.rotationStartMin,
+        rotationStartMax: normalized.rotationStartMax,
+        rotationDirection: normalized.rotationDirection,
+        rotationSpeedMin: normalized.rotationSpeedMin,
+        rotationSpeedMax: normalized.rotationSpeedMax,
+      }
     );
     return normalized;
   }
@@ -3600,6 +3672,20 @@
       const size = imageEntry
         ? randomBetween(imageEntry.sizeMin, imageEntry.sizeMax)
         : randomBetween(settings.sizeMin, settings.sizeMax);
+      const startRotation = randomBetween(
+        imageEntry?.rotationStartMin ?? settings.rotationStartMin,
+        imageEntry?.rotationStartMax ?? settings.rotationStartMax
+      );
+      const spinMagnitude = randomBetween(
+        imageEntry?.rotationSpeedMin ?? settings.rotationSpeedMin,
+        imageEntry?.rotationSpeedMax ?? settings.rotationSpeedMax
+      );
+      const entryRotationDirection = imageEntry?.rotationDirection || settings.rotationDirection;
+      const spinDirection = entryRotationDirection === "clockwise"
+        ? 1
+        : entryRotationDirection === "counterclockwise"
+          ? -1
+          : (Math.random() < 0.5 ? -1 : 1);
       return {
         id: "particle-" + index + "-" + Math.round(Math.random() * 100000),
         effect: settings.shapeEffect,
@@ -3612,8 +3698,8 @@
         duration,
         size: Number(size.toFixed(2)),
         opacity: Number(randomBetween(settings.opacityMin, settings.opacityMax).toFixed(2)),
-        rotation: Math.round(randomBetween(-22, 22)),
-        spin: Math.round(randomBetween(-40, 40)),
+        rotation: Math.round(startRotation),
+        spin: Math.round(spinMagnitude * spinDirection),
       };
     });
   }
@@ -13194,7 +13280,12 @@
     ).join("");
     const selectedParticleImageMarkup = selectedParticleSettings.imageEntries.length
       ? '<ul class="compact-list">' + selectedParticleSettings.imageEntries.map(function (entry, index) {
-          return '<li><div class="form-grid"><label class="input-group dev-input-group-wide"><span>Particle Image</span><input value="' + escapeHtml(entry.imagePath.replace(/^assets\//, "")) + '" disabled /></label><label class="input-group"><span>Image Size Min</span><input type="number" min="0.35" max="8" step="0.05" data-dev-battle-scene-particle-entry-field="sizeMin" data-dev-battle-scene-particle-entry-index="' + index + '" value="' + Number(entry.sizeMin || 0.65) + '" /></label><label class="input-group"><span>Image Size Max</span><input type="number" min="0.35" max="8" step="0.05" data-dev-battle-scene-particle-entry-field="sizeMax" data-dev-battle-scene-particle-entry-index="' + index + '" value="' + Number(entry.sizeMax || entry.sizeMin || 1.1) + '" /></label><div class="title-actions"><button class="secondary-button" type="button" data-action="remove-battle-scene-particle-image" data-battle-scene-particle-image="' + escapeHtml(entry.imagePath) + '">Remove</button></div></div></li>';
+          const imageRotationOptions = [
+            '<option value="mixed"' + (entry.rotationDirection === "mixed" ? " selected" : "") + '>Mixed</option>',
+            '<option value="clockwise"' + (entry.rotationDirection === "clockwise" ? " selected" : "") + '>Clockwise</option>',
+            '<option value="counterclockwise"' + (entry.rotationDirection === "counterclockwise" ? " selected" : "") + '>Counterclockwise</option>',
+          ].join("");
+          return '<li><div class="battle-scene-particle-entry-grid"><div class="battle-scene-particle-entry-preview"><div class="battle-scene-particle-entry-preview-frame"><img class="battle-scene-particle-entry-preview-image" src="' + escapeHtml(entry.imagePath) + '" alt="' + escapeHtml(entry.imagePath.split("/").pop() || "Particle preview") + '" /></div></div><div class="form-grid"><label class="input-group dev-input-group-wide"><span>Particle Image</span><input value="' + escapeHtml(entry.imagePath.replace(/^assets\//, "")) + '" disabled /></label><label class="input-group"><span>Image Size Min</span><input type="number" min="0.35" max="8" step="0.05" data-dev-battle-scene-particle-entry-field="sizeMin" data-dev-battle-scene-particle-entry-index="' + index + '" value="' + Number(entry.sizeMin || 0.65) + '" /></label><label class="input-group"><span>Image Size Max</span><input type="number" min="0.35" max="8" step="0.05" data-dev-battle-scene-particle-entry-field="sizeMax" data-dev-battle-scene-particle-entry-index="' + index + '" value="' + Number(entry.sizeMax || entry.sizeMin || 1.1) + '" /></label><label class="input-group"><span>Rotation Direction</span><select data-dev-battle-scene-particle-entry-field="rotationDirection" data-dev-battle-scene-particle-entry-index="' + index + '">' + imageRotationOptions + '</select></label><label class="input-group"><span>Start Rotation Min</span><input type="number" min="-360" max="360" step="1" data-dev-battle-scene-particle-entry-field="rotationStartMin" data-dev-battle-scene-particle-entry-index="' + index + '" value="' + Number(entry.rotationStartMin ?? -22) + '" /></label><label class="input-group"><span>Start Rotation Max</span><input type="number" min="-360" max="360" step="1" data-dev-battle-scene-particle-entry-field="rotationStartMax" data-dev-battle-scene-particle-entry-index="' + index + '" value="' + Number(entry.rotationStartMax ?? 22) + '" /></label><label class="input-group"><span>Spin Speed Min</span><input type="number" min="0" max="1080" step="1" data-dev-battle-scene-particle-entry-field="rotationSpeedMin" data-dev-battle-scene-particle-entry-index="' + index + '" value="' + Number(entry.rotationSpeedMin ?? 30) + '" /></label><label class="input-group"><span>Spin Speed Max</span><input type="number" min="0" max="1080" step="1" data-dev-battle-scene-particle-entry-field="rotationSpeedMax" data-dev-battle-scene-particle-entry-index="' + index + '" value="' + Number(entry.rotationSpeedMax ?? 140) + '" /></label><div class="title-actions"><button class="secondary-button" type="button" data-action="remove-battle-scene-particle-image" data-battle-scene-particle-image="' + escapeHtml(entry.imagePath) + '">Remove</button></div></div></div></li>';
         }).join("") + "</ul>"
       : "<p>No particle images selected. Imported legacy snow/leaves scenes will still use shape particles until you author image assets here.</p>";
     const staticDefaultOptions = ['<option value="">Auto pick first image</option>'].concat(
@@ -18942,12 +19033,18 @@
               ? normalizeBattleSceneParticleLayer(rawValue)
               : particlePath === "direction"
                 ? normalizeBattleSceneParticleDirection(rawValue)
+                : particlePath === "rotationDirection"
+                  ? normalizeBattleSceneParticleRotationDirection(rawValue)
                 : particlePath === "count"
                   ? normalizeBattleSceneParticleCount(rawValue)
                   : particlePath === "frequency"
                     ? normalizeBattleSceneParticleFrequency(rawValue)
                     : particlePath === "speedMin" || particlePath === "speedMax"
                       ? normalizeBattleSceneParticleSpeed(rawValue)
+                      : particlePath === "rotationStartMin" || particlePath === "rotationStartMax"
+                        ? normalizeBattleSceneParticleRotationDegrees(rawValue)
+                        : particlePath === "rotationSpeedMin" || particlePath === "rotationSpeedMax"
+                          ? normalizeBattleSceneParticleSpinSpeed(rawValue)
                       : particlePath === "sizeMin" || particlePath === "sizeMax"
                         ? normalizeBattleSceneParticleScale(rawValue)
                         : particlePath === "opacityMin" || particlePath === "opacityMax"
@@ -19016,6 +19113,11 @@
             imagePath,
             sizeMin: particleSettings.sizeMin,
             sizeMax: particleSettings.sizeMax,
+            rotationStartMin: particleSettings.rotationStartMin,
+            rotationStartMax: particleSettings.rotationStartMax,
+            rotationDirection: particleSettings.rotationDirection,
+            rotationSpeedMin: particleSettings.rotationSpeedMin,
+            rotationSpeedMax: particleSettings.rotationSpeedMax,
           });
           particleSettings.enabled = true;
           preset.particleSettings = normalizeBattleSceneParticleSettings(particleSettings, "none");
@@ -19037,6 +19139,18 @@
           entry[field] = normalizeBattleSceneParticleScale(rawValue);
           if (Number(entry.sizeMax || 0) < Number(entry.sizeMin || 0)) {
             entry.sizeMax = entry.sizeMin;
+          }
+        } else if (field === "rotationDirection") {
+          entry.rotationDirection = normalizeBattleSceneParticleRotationDirection(rawValue);
+        } else if (field === "rotationStartMin" || field === "rotationStartMax") {
+          entry[field] = normalizeBattleSceneParticleRotationDegrees(rawValue);
+          if (Number(entry.rotationStartMax || 0) < Number(entry.rotationStartMin || 0)) {
+            entry.rotationStartMax = entry.rotationStartMin;
+          }
+        } else if (field === "rotationSpeedMin" || field === "rotationSpeedMax") {
+          entry[field] = normalizeBattleSceneParticleSpinSpeed(rawValue);
+          if (Number(entry.rotationSpeedMax || 0) < Number(entry.rotationSpeedMin || 0)) {
+            entry.rotationSpeedMax = entry.rotationSpeedMin;
           }
         }
         preset.particleSettings = normalizeBattleSceneParticleSettings(particleSettings, "none");

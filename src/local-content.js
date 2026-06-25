@@ -4561,6 +4561,60 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "cloudScale": 42,
         "cloudOffsetX": 0,
         "cloudOffsetY": -24
+      },
+      {
+        "id": "battle-scene-2",
+        "name": "Snow Tree Day Clouds 2",
+        "backgroundImagePath": "assets/Battle Scenes/Backgrounds/gradient2.png",
+        "midgroundImagePath": "assets/Battle Scenes/Midgrounds/cloud-medium-variant-bordered-v1.png",
+        "foregroundImagePath": "assets/Battle Scenes/Foregrounds/snow-fir-treeline-foreground.png",
+        "particleSettings": {
+          "enabled": true,
+          "layerPlacement": "inFrontOfBattlers",
+          "count": 11,
+          "frequency": 1,
+          "direction": "down",
+          "speedMin": 25,
+          "speedMax": 35,
+          "sizeMin": 0.65,
+          "sizeMax": 1.1,
+          "opacityMin": 0.9,
+          "opacityMax": 0.95,
+          "spread": 100,
+          "shapeEffect": "none",
+          "imageEntries": [
+            {
+              "imagePath": "assets/Battle Scenes/Particles/snowflake-01.png",
+              "sizeMin": 2.35,
+              "sizeMax": 4.9
+            },
+            {
+              "imagePath": "assets/Battle Scenes/Particles/snowflake-02.png",
+              "sizeMin": 2.3,
+              "sizeMax": 3.5
+            },
+            {
+              "imagePath": "assets/Battle Scenes/Particles/snowflake-04.png",
+              "sizeMin": 2.3,
+              "sizeMax": 3.4
+            },
+            {
+              "imagePath": "assets/Battle Scenes/Particles/snowflake-05.png",
+              "sizeMin": 2.3,
+              "sizeMax": 3.3
+            },
+            {
+              "imagePath": "assets/Battle Scenes/Particles/snowflake-06.png",
+              "sizeMin": 2.3,
+              "sizeMax": 5.4
+            }
+          ]
+        },
+        "cloudDriftDirection": "left",
+        "cloudDriftSpeed": 2,
+        "cloudScale": 100,
+        "cloudOffsetX": 0,
+        "cloudOffsetY": -60
       }
     ]
   },
@@ -8343,14 +8397,34 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       "assets/Battle Scenes/Midgrounds/cloud-small-bordered-v1.png"
     ],
     "foregrounds": [
+      "assets/Battle Scenes/Foregrounds/snow-fir-treeline-foreground copy.png",
+      "assets/Battle Scenes/Foregrounds/snow-fir-treeline-foreground.png",
       "assets/Battle Scenes/Foregrounds/snow-forest-backline-foreground.png",
       "assets/Battle Scenes/Foregrounds/snow-plaza-promenade-foreground.png"
     ],
     "particles": [
+      "assets/Battle Scenes/Particles/leaf-particle-01.png",
+      "assets/Battle Scenes/Particles/leaf-particle-02.png",
+      "assets/Battle Scenes/Particles/leaf-particle-03.png",
+      "assets/Battle Scenes/Particles/leaf-particle-04.png",
+      "assets/Battle Scenes/Particles/leaf-particle-05.png",
+      "assets/Battle Scenes/Particles/leaf-particle-06.png",
+      "assets/Battle Scenes/Particles/leaf-particle-07.png",
+      "assets/Battle Scenes/Particles/leaf-particle-08.png",
+      "assets/Battle Scenes/Particles/petal-blue.png",
+      "assets/Battle Scenes/Particles/petal-pink.png",
+      "assets/Battle Scenes/Particles/petal-red.png",
+      "assets/Battle Scenes/Particles/petal-white.png",
       "assets/Battle Scenes/Particles/snowflake-01.png",
       "assets/Battle Scenes/Particles/snowflake-02.png",
       "assets/Battle Scenes/Particles/snowflake-03.png",
-      "assets/Battle Scenes/Particles/snowflake-04.png"
+      "assets/Battle Scenes/Particles/snowflake-04.png",
+      "assets/Battle Scenes/Particles/snowflake-05.png",
+      "assets/Battle Scenes/Particles/snowflake-06.png",
+      "assets/Battle Scenes/Particles/snowflake-09.png",
+      "assets/Battle Scenes/Particles/snowflake-10.png",
+      "assets/Battle Scenes/Particles/snowflake-11.png",
+      "assets/Battle Scenes/Particles/snowflake-12.png"
     ]
   },
   "maps": {
@@ -78848,7 +78922,10 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "assets/Battle Backgrounds/route6-2.png"
       ],
       "battleScenePresetId": "battle-scene-1",
-      "battleVisualPool": []
+      "battleVisualPool": [
+        "scene:battle-scene-2",
+        "scene:battle-scene-1"
+      ]
     },
     "snowdrop-town": {
       "mapId": "snowdrop-town",
