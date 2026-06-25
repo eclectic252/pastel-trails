@@ -193,6 +193,7 @@ async function loadBattleSceneAssets() {
     backgrounds: await loadLayer("Backgrounds"),
     midgrounds: await loadLayer("Midgrounds"),
     foregrounds: await loadLayer("Foregrounds"),
+    particles: await loadLayer("Particles"),
   };
 }
 

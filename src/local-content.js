@@ -4529,9 +4529,35 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "backgroundImagePath": "assets/Battle Scenes/Backgrounds/Gradient1.png",
         "midgroundImagePath": "assets/Battle Scenes/Midgrounds/cloud-small-bordered-v1.png",
         "foregroundImagePath": "assets/Battle Scenes/Foregrounds/snow-forest-backline-foreground.png",
-        "particleEffect": "none",
+        "particleSettings": {
+          "enabled": true,
+          "layerPlacement": "inFrontOfBattlers",
+          "count": 12,
+          "frequency": 1,
+          "direction": "down-left",
+          "speedMin": 16,
+          "speedMax": 23.5,
+          "sizeMin": 0.65,
+          "sizeMax": 1.1,
+          "opacityMin": 0.85,
+          "opacityMax": 0.95,
+          "spread": 100,
+          "shapeEffect": "none",
+          "imageEntries": [
+            {
+              "imagePath": "assets/Battle Scenes/Particles/snowflake-01.png",
+              "sizeMin": 3,
+              "sizeMax": 4.25
+            },
+            {
+              "imagePath": "assets/Battle Scenes/Particles/snowflake-02.png",
+              "sizeMin": 3.6,
+              "sizeMax": 3.6
+            }
+          ]
+        },
         "cloudDriftDirection": "right",
-        "cloudDriftSpeed": 8,
+        "cloudDriftSpeed": 5,
         "cloudScale": 42,
         "cloudOffsetX": 0,
         "cloudOffsetY": -24
@@ -8308,7 +8334,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
     "backgrounds": [
       "assets/Battle Scenes/Backgrounds/Gradient1.png",
       "assets/Battle Scenes/Backgrounds/gradient2.png",
-      "assets/Battle Scenes/Backgrounds/gradient3.png"
+      "assets/Battle Scenes/Backgrounds/gradient3.png",
+      "assets/Battle Scenes/Backgrounds/snow-plaza-edge-sky.png"
     ],
     "midgrounds": [
       "assets/Battle Scenes/Midgrounds/cloud-medium-bordered-v1.png",
@@ -8316,7 +8343,14 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       "assets/Battle Scenes/Midgrounds/cloud-small-bordered-v1.png"
     ],
     "foregrounds": [
-      "assets/Battle Scenes/Foregrounds/snow-forest-backline-foreground.png"
+      "assets/Battle Scenes/Foregrounds/snow-forest-backline-foreground.png",
+      "assets/Battle Scenes/Foregrounds/snow-plaza-promenade-foreground.png"
+    ],
+    "particles": [
+      "assets/Battle Scenes/Particles/snowflake-01.png",
+      "assets/Battle Scenes/Particles/snowflake-02.png",
+      "assets/Battle Scenes/Particles/snowflake-03.png",
+      "assets/Battle Scenes/Particles/snowflake-04.png"
     ]
   },
   "maps": {

@@ -290,6 +290,7 @@
       backgrounds: [],
       midgrounds: [],
       foregrounds: [],
+      particles: [],
     },
     battleScenePresets: {
       presets: [],
@@ -436,6 +437,191 @@
     return ["snow", "leaves"].includes(normalized)
       ? normalized
       : "none";
+  }
+
+  function normalizeBattleSceneParticleDirection(value) {
+    const normalized = String(value || "").trim().toLowerCase();
+    return ["down", "down-left", "down-right"].includes(normalized)
+      ? normalized
+      : "down";
+  }
+
+  function normalizeBattleSceneParticleLayer(value) {
+    return String(value || "").trim() === "behindBattlers"
+      ? "behindBattlers"
+      : "inFrontOfBattlers";
+  }
+
+  function normalizeBattleSceneParticleCount(value) {
+    const numeric = Number(value);
+    return Number.isFinite(numeric)
+      ? Math.max(0, Math.min(40, Math.round(numeric)))
+      : 12;
+  }
+
+  function normalizeBattleSceneParticleFrequency(value) {
+    const numeric = Number(value);
+    return Number.isFinite(numeric)
+      ? Math.max(0.25, Math.min(3, Number(numeric.toFixed(2))))
+      : 1;
+  }
+
+  function normalizeBattleSceneParticleSpeed(value) {
+    const numeric = Number(value);
+    return Number.isFinite(numeric)
+      ? Math.max(2, Math.min(120, Number(numeric.toFixed(2))))
+      : 12;
+  }
+
+  function normalizeBattleSceneParticleScale(value) {
+    const numeric = Number(value);
+    return Number.isFinite(numeric)
+      ? Math.max(0.35, Math.min(8, Number(numeric.toFixed(2))))
+      : 1;
+  }
+
+  function normalizeBattleSceneParticleOpacity(value) {
+    const numeric = Number(value);
+    return Number.isFinite(numeric)
+      ? Math.max(0.1, Math.min(1, Number(numeric.toFixed(2))))
+      : 0.65;
+  }
+
+  function normalizeBattleSceneParticleSpread(value) {
+    const numeric = Number(value);
+    return Number.isFinite(numeric)
+      ? Math.max(10, Math.min(100, Math.round(numeric)))
+      : 100;
+  }
+
+  function normalizeBattleSceneParticleImageEntry(entry, defaults) {
+    const fallback = defaults && typeof defaults === "object"
+      ? defaults
+      : { sizeMin: 0.65, sizeMax: 1.1 };
+    const imagePath = normalizeBattleBackgroundImagePath(entry?.imagePath || entry);
+    if (!imagePath) {
+      return null;
+    }
+    const sizeMin = normalizeBattleSceneParticleScale(entry?.sizeMin ?? fallback.sizeMin);
+    const sizeMax = normalizeBattleSceneParticleScale(entry?.sizeMax ?? entry?.sizeMin ?? fallback.sizeMax);
+    return {
+      imagePath,
+      sizeMin,
+      sizeMax: sizeMax < sizeMin ? sizeMin : sizeMax,
+    };
+  }
+
+  function normalizeBattleSceneParticleImageEntries(values, defaults) {
+    const seen = new Set();
+    return (Array.isArray(values) ? values : []).map(function (entry) {
+      return normalizeBattleSceneParticleImageEntry(entry, defaults);
+    }).filter(function (entry) {
+      if (!entry?.imagePath || seen.has(entry.imagePath)) {
+        return false;
+      }
+      seen.add(entry.imagePath);
+      return true;
+    });
+  }
+
+  function createEmptyBattleSceneParticleSettings() {
+    return {
+      enabled: false,
+      imageEntries: [],
+      layerPlacement: "inFrontOfBattlers",
+      count: 12,
+      frequency: 1,
+      direction: "down",
+      speedMin: 10,
+      speedMax: 16,
+      sizeMin: 0.65,
+      sizeMax: 1.1,
+      opacityMin: 0.45,
+      opacityMax: 0.75,
+      spread: 100,
+      shapeEffect: "none",
+    };
+  }
+
+  function createLegacyBattleSceneParticleSettings(effect) {
+    const normalizedEffect = normalizeBattleSceneParticleEffect(effect);
+    if (normalizedEffect === "snow") {
+      return {
+        enabled: true,
+        imageEntries: [],
+        layerPlacement: "inFrontOfBattlers",
+        count: 16,
+        frequency: 1,
+        direction: "down",
+        speedMin: 8,
+        speedMax: 14,
+        sizeMin: 0.45,
+        sizeMax: 0.95,
+        opacityMin: 0.4,
+        opacityMax: 0.8,
+        spread: 100,
+        shapeEffect: "snow",
+      };
+    }
+    if (normalizedEffect === "leaves") {
+      return {
+        enabled: true,
+        imageEntries: [],
+        layerPlacement: "inFrontOfBattlers",
+        count: 12,
+        frequency: 1,
+        direction: "down-left",
+        speedMin: 7,
+        speedMax: 12,
+        sizeMin: 0.8,
+        sizeMax: 1.4,
+        opacityMin: 0.45,
+        opacityMax: 0.85,
+        spread: 100,
+        shapeEffect: "leaves",
+      };
+    }
+    return createEmptyBattleSceneParticleSettings();
+  }
+
+  function normalizeBattleSceneParticleSettings(settings, legacyEffect) {
+    const source = settings && typeof settings === "object"
+      ? settings
+      : createLegacyBattleSceneParticleSettings(legacyEffect);
+    const fallback = createEmptyBattleSceneParticleSettings();
+    const normalized = {
+      enabled: typeof source.enabled === "string"
+        ? source.enabled === "true"
+        : Boolean(source.enabled ?? (normalizeBattleSceneParticleEffect(legacyEffect) !== "none")),
+      layerPlacement: normalizeBattleSceneParticleLayer(source.layerPlacement),
+      count: normalizeBattleSceneParticleCount(source.count ?? fallback.count),
+      frequency: normalizeBattleSceneParticleFrequency(source.frequency ?? fallback.frequency),
+      direction: normalizeBattleSceneParticleDirection(source.direction ?? fallback.direction),
+      speedMin: normalizeBattleSceneParticleSpeed(source.speedMin ?? fallback.speedMin),
+      speedMax: normalizeBattleSceneParticleSpeed(source.speedMax ?? source.speedMin ?? fallback.speedMax),
+      sizeMin: normalizeBattleSceneParticleScale(source.sizeMin ?? fallback.sizeMin),
+      sizeMax: normalizeBattleSceneParticleScale(source.sizeMax ?? source.sizeMin ?? fallback.sizeMax),
+      opacityMin: normalizeBattleSceneParticleOpacity(source.opacityMin ?? fallback.opacityMin),
+      opacityMax: normalizeBattleSceneParticleOpacity(source.opacityMax ?? source.opacityMin ?? fallback.opacityMax),
+      spread: normalizeBattleSceneParticleSpread(source.spread ?? fallback.spread),
+      shapeEffect: normalizeBattleSceneParticleEffect(source.shapeEffect ?? legacyEffect),
+    };
+    if (normalized.speedMax < normalized.speedMin) {
+      normalized.speedMax = normalized.speedMin;
+    }
+    if (normalized.sizeMax < normalized.sizeMin) {
+      normalized.sizeMax = normalized.sizeMin;
+    }
+    if (normalized.opacityMax < normalized.opacityMin) {
+      normalized.opacityMax = normalized.opacityMin;
+    }
+    normalized.imageEntries = normalizeBattleSceneParticleImageEntries(
+      Array.isArray(source.imageEntries) && source.imageEntries.length
+        ? source.imageEntries
+        : source.imagePaths,
+      { sizeMin: normalized.sizeMin, sizeMax: normalized.sizeMax }
+    );
+    return normalized;
   }
 
   function normalizeBattleSceneCloudDirection(value) {
@@ -677,6 +863,9 @@
       foregrounds: Array.isArray(rawContent.battleSceneAssets?.foregrounds)
         ? rawContent.battleSceneAssets.foregrounds.slice().sort()
         : [],
+      particles: Array.isArray(rawContent.battleSceneAssets?.particles)
+        ? rawContent.battleSceneAssets.particles.slice().sort()
+        : [],
     };
 
     return {
@@ -868,6 +1057,9 @@
       foregrounds: files.foregrounds.map(function (file) {
         return file.pathParts.join("/");
       }).sort(),
+      particles: files.particles.map(function (file) {
+        return file.pathParts.join("/");
+      }).sort(),
     };
   }
 
@@ -877,7 +1069,7 @@
     let townAssets = { images: [] };
     let crestAssets = { images: [] };
     let battleBackgroundAssets = { images: [] };
-    let battleSceneAssets = { backgrounds: [], midgrounds: [], foregrounds: [] };
+    let battleSceneAssets = { backgrounds: [], midgrounds: [], foregrounds: [], particles: [] };
 
     try {
       const assetsHandle = await rootHandle.getDirectoryHandle("assets");
@@ -929,6 +1121,7 @@
           backgrounds: [],
           midgrounds: [],
           foregrounds: [],
+          particles: [],
         };
         try {
           const backgroundsHandle = await battleScenesHandle.getDirectoryHandle("Backgrounds");
@@ -942,6 +1135,10 @@
           const foregroundsHandle = await battleScenesHandle.getDirectoryHandle("Foregrounds");
           layerFiles.foregrounds = await collectImageFilesRecursive(foregroundsHandle, ["assets", "Battle Scenes", "Foregrounds"]);
         } catch {}
+        try {
+          const particlesHandle = await battleScenesHandle.getDirectoryHandle("Particles");
+          layerFiles.particles = await collectImageFilesRecursive(particlesHandle, ["assets", "Battle Scenes", "Particles"]);
+        } catch {}
         battleSceneAssets = buildBattleSceneAssetCatalog(layerFiles);
       } catch {}
     } catch {
@@ -951,7 +1148,7 @@
         townAssets: JSON.parse(JSON.stringify(fallbackContent.townAssets || { images: [] })),
         crestAssets: JSON.parse(JSON.stringify(fallbackContent.crestAssets || { images: [] })),
         battleBackgroundAssets: JSON.parse(JSON.stringify(fallbackContent.battleBackgroundAssets || { images: [] })),
-        battleSceneAssets: JSON.parse(JSON.stringify(fallbackContent.battleSceneAssets || { backgrounds: [], midgrounds: [], foregrounds: [] })),
+        battleSceneAssets: JSON.parse(JSON.stringify(fallbackContent.battleSceneAssets || { backgrounds: [], midgrounds: [], foregrounds: [], particles: [] })),
       };
     }
 
@@ -1026,7 +1223,7 @@
     const townAssets = discoveredCharacterSheets.townAssets || { images: [] };
     const crestAssets = discoveredCharacterSheets.crestAssets || { images: [] };
     const battleBackgroundAssets = discoveredCharacterSheets.battleBackgroundAssets || { images: [] };
-    const battleSceneAssets = discoveredCharacterSheets.battleSceneAssets || { backgrounds: [], midgrounds: [], foregrounds: [] };
+    const battleSceneAssets = discoveredCharacterSheets.battleSceneAssets || { backgrounds: [], midgrounds: [], foregrounds: [], particles: [] };
 
     const maps = await loadAuthoredMapsFromAssets(rootHandle);
     const mapMetadata = {};
@@ -3008,9 +3205,15 @@
       ? "midgrounds"
       : layerType === "foreground" || layerType === "foregrounds"
         ? "foregrounds"
-        : "backgrounds";
+        : layerType === "particle" || layerType === "particles"
+          ? "particles"
+          : "backgrounds";
     const images = Array.isArray(catalog[key]) ? catalog[key].slice() : [];
     return images.sort();
+  }
+
+  function getBattleSceneParticleImageOptions(content) {
+    return getBattleSceneLayerImageOptions(content, "particles");
   }
 
   function ensureBattleBackgroundSelection(record) {
@@ -3040,7 +3243,7 @@
       backgroundImagePath: "",
       midgroundImagePath: "",
       foregroundImagePath: "",
-      particleEffect: "none",
+      particleSettings: createEmptyBattleSceneParticleSettings(),
       cloudDriftDirection: "none",
       cloudDriftSpeed: 12,
       cloudScale: 118,
@@ -3057,7 +3260,7 @@
       backgroundImagePath: normalizeBattleBackgroundImagePath(entry?.backgroundImagePath),
       midgroundImagePath: normalizeBattleBackgroundImagePath(entry?.midgroundImagePath),
       foregroundImagePath: normalizeBattleBackgroundImagePath(entry?.foregroundImagePath),
-      particleEffect: normalizeBattleSceneParticleEffect(entry?.particleEffect),
+      particleSettings: normalizeBattleSceneParticleSettings(entry?.particleSettings, entry?.particleEffect),
       cloudDriftDirection: normalizeBattleSceneCloudDirection(entry?.cloudDriftDirection),
       cloudDriftSpeed: normalizeBattleSceneCloudSpeed(entry?.cloudDriftSpeed),
       cloudScale: normalizeBattleSceneCloudScale(entry?.cloudScale),
@@ -3341,22 +3544,76 @@
     return getDefaultBattleVisual(content);
   }
 
-  function createBattleSceneParticleConfigs(effect) {
-    const normalizedEffect = normalizeBattleSceneParticleEffect(effect);
-    if (normalizedEffect === "none") {
+  function getResolvedBattleSceneParticleSettings(content, preset) {
+    const normalized = normalizeBattleSceneParticleSettings(preset?.particleSettings, preset?.particleEffect);
+    const validImageEntries = normalized.imageEntries.filter(function (entry) {
+      return isKnownBattleSceneLayerPath(content, "particles", entry.imagePath);
+    });
+    return Object.assign({}, normalized, {
+      imageEntries: validImageEntries,
+      shapeEffect: validImageEntries.length ? "none" : normalizeBattleSceneParticleEffect(normalized.shapeEffect),
+    });
+  }
+
+  function getBattleSceneParticleDurationSeconds(speed) {
+    return Math.max(1.5, Math.min(28, Number((150 / Math.max(2, normalizeBattleSceneParticleSpeed(speed))).toFixed(2))));
+  }
+
+  function getBattleSceneParticleInstanceCount(settings) {
+    const baseCount = normalizeBattleSceneParticleCount(settings?.count);
+    const frequency = normalizeBattleSceneParticleFrequency(settings?.frequency);
+    return Math.max(0, Math.min(60, Math.round(baseCount * frequency)));
+  }
+
+  function createBattleSceneParticleConfigs(content, preset, options) {
+    const settings = getResolvedBattleSceneParticleSettings(content, preset);
+    if (!settings.enabled) {
       return [];
     }
-    const count = normalizedEffect === "snow" ? 16 : 12;
+    const count = getBattleSceneParticleInstanceCount(settings);
+    if (!count) {
+      return [];
+    }
+    const direction = normalizeBattleSceneParticleDirection(settings.direction);
+    const spread = normalizeBattleSceneParticleSpread(settings.spread);
+    const startMinX = Math.max(0, Math.round((100 - spread) / 2));
+    const startMaxX = Math.min(100, 100 - startMinX);
+    const randomBetween = function (min, max) {
+      const low = Number(min);
+      const high = Number(max);
+      const start = Math.min(low, high);
+      const end = Math.max(low, high);
+      return start + (Math.random() * (end - start));
+    };
     return Array.from({ length: count }, function (_, index) {
+      const startX = Number(randomBetween(startMinX, startMaxX).toFixed(2));
+      const duration = getBattleSceneParticleDurationSeconds(randomBetween(settings.speedMin, settings.speedMax));
+      const driftX = direction === "down-left"
+        ? randomBetween(-34, -18)
+        : direction === "down-right"
+          ? randomBetween(18, 34)
+          : randomBetween(-6, 6);
+      const imageEntry = settings.imageEntries.length
+        ? (settings.imageEntries[Math.floor(Math.random() * settings.imageEntries.length)] || null)
+        : null;
+      const imagePath = imageEntry?.imagePath || "";
+      const size = imageEntry
+        ? randomBetween(imageEntry.sizeMin, imageEntry.sizeMax)
+        : randomBetween(settings.sizeMin, settings.sizeMax);
       return {
-        id: normalizedEffect + "-" + index + "-" + Math.round(Math.random() * 100000),
-        left: Math.round(Math.random() * 100),
-        delay: Number((Math.random() * 7).toFixed(2)),
-        duration: Number((normalizedEffect === "snow" ? 7 + Math.random() * 7 : 9 + Math.random() * 8).toFixed(2)),
-        drift: Math.round((Math.random() * 14) - 7),
-        size: Number((normalizedEffect === "snow" ? 0.45 + Math.random() * 0.8 : 0.8 + Math.random() * 0.9).toFixed(2)),
-        opacity: Number((0.35 + Math.random() * 0.45).toFixed(2)),
-        rotation: Math.round(Math.random() * 360),
+        id: "particle-" + index + "-" + Math.round(Math.random() * 100000),
+        effect: settings.shapeEffect,
+        imagePath,
+        startX,
+        startY: -18,
+        endX: Number((startX + driftX).toFixed(2)),
+        endY: 112,
+        delay: Number((Math.random() * duration).toFixed(2)),
+        duration,
+        size: Number(size.toFixed(2)),
+        opacity: Number(randomBetween(settings.opacityMin, settings.opacityMax).toFixed(2)),
+        rotation: Math.round(randomBetween(-22, 22)),
+        spin: Math.round(randomBetween(-40, 40)),
       };
     });
   }
@@ -3366,11 +3623,13 @@
     const preset = resolved.battleBackgroundMode === "scene"
       ? getBattleScenePreset(content, resolved.battleScenePresetId)
       : null;
+    const particleSettings = getResolvedBattleSceneParticleSettings(content, preset);
     return {
       battleBackgroundMode: normalizeBattleBackgroundMode(resolved.battleBackgroundMode),
       battleBackgroundImagePath: normalizeBattleBackgroundImagePath(resolved.battleBackgroundImagePath),
       battleScenePresetId: normalizeBattleScenePresetId(resolved.battleScenePresetId),
-      battleSceneParticles: createBattleSceneParticleConfigs(preset?.particleEffect),
+      battleSceneParticleLayer: normalizeBattleSceneParticleLayer(particleSettings.layerPlacement),
+      battleSceneParticles: createBattleSceneParticleConfigs(content, preset),
     };
   }
 
@@ -3436,6 +3695,12 @@
       "--battle-cloud-offset-x:" + Number(normalizeBattleSceneCloudOffset(preset.cloudOffsetX)) + "%",
       "--battle-cloud-offset-y:" + Number(normalizeBattleSceneCloudOffset(preset.cloudOffsetY)) + "%",
     ].join(";");
+    const particleSettings = getResolvedBattleSceneParticleSettings(content, preset);
+    const particleLayer = normalizeBattleSceneParticleLayer(particleSettings.layerPlacement);
+    const particleMarkup = renderBattleSceneParticles(
+      createBattleSceneParticleConfigs(content, preset, { preview: true }).slice(0, 18),
+      { layerPlacement: particleLayer }
+    );
     return [
       '<div class="battle-scene-preview-shell">',
       '<div class="battle-stage battle-scene-preview-stage">',
@@ -3445,15 +3710,14 @@
       (preset.midgroundImagePath
         ? '<div class="battle-scene-preview-layer battle-scene-preview-layer-midground battle-scene-clouds battle-scene-clouds-' + escapeHtml(cloudDirection) + '" style="' + cloudStyle + '"><img class="battle-scene-preview-image battle-scene-midground-image" src="' + escapeHtml(preset.midgroundImagePath) + '" alt="' + escapeHtml(preset.name || preset.id) + ' midground" /></div>'
         : ""),
+      (particleLayer === "behindBattlers" ? particleMarkup : ""),
       (preset.foregroundImagePath
         ? '<img class="battle-scene-preview-layer battle-scene-preview-layer-foreground battle-stage-background-image battle-scene-foreground-image" src="' + escapeHtml(preset.foregroundImagePath) + '" alt="' + escapeHtml(preset.name || preset.id) + ' foreground" />'
         : ""),
       (showPlaceholders
         ? '<div class="battle-field battle-field-scene battle-scene-preview-field"><div class="battle-scene-preview-battler battle-scene-preview-battler-enemy"><div class="battle-battler-shadow"></div><div class="battle-scene-preview-battler-body"><span>Enemy</span></div></div><div class="battle-scene-preview-battler battle-scene-preview-battler-player"><div class="battle-battler-shadow"></div><div class="battle-scene-preview-battler-body"><span>Player</span></div></div></div>'
         : '<div class="battle-field battle-field-scene battle-scene-preview-field"></div>'),
-      (preset.particleEffect !== "none"
-        ? renderBattleSceneParticles(createBattleSceneParticleConfigs(preset.particleEffect).slice(0, 8), preset.particleEffect)
-        : ""),
+      (particleLayer !== "behindBattlers" ? particleMarkup : ""),
       '</div>',
       '</div>',
     ].join("");
@@ -9776,21 +10040,34 @@
     return Math.max(14, Math.min(80, Math.round(180 / Math.max(2, speed))));
   }
 
-  function renderBattleSceneParticles(particles, effect) {
-    const normalizedEffect = normalizeBattleSceneParticleEffect(effect);
-    if (!Array.isArray(particles) || !particles.length || normalizedEffect === "none") {
+  function renderBattleSceneParticles(particles, options) {
+    if (!Array.isArray(particles) || !particles.length) {
       return "";
     }
-    return '<div class="battle-scene-particles battle-scene-particles-' + escapeHtml(normalizedEffect) + '">' + particles.map(function (particle) {
+    const layerClass = normalizeBattleSceneParticleLayer(options?.layerPlacement) === "behindBattlers"
+      ? " battle-scene-particles-behind"
+      : " battle-scene-particles-front";
+    return '<div class="battle-scene-particles' + layerClass + '">' + particles.map(function (particle) {
       const styles = [
-        "--particle-left:" + Number(particle.left || 0) + "%",
+        "--particle-start-x:" + Number(particle.startX || 0) + "%",
+        "--particle-start-y:" + Number(particle.startY ?? -16) + "%",
+        "--particle-end-x:" + Number(particle.endX || 0) + "%",
+        "--particle-end-y:" + Number(particle.endY ?? 126) + "%",
         "--particle-delay:" + Number(particle.delay || 0) + "s",
         "--particle-duration:" + Number(particle.duration || 8) + "s",
-        "--particle-drift:" + Number(particle.drift || 0) + "px",
         "--particle-size:" + Number(particle.size || 1),
         "--particle-opacity:" + Number(particle.opacity || 0.5),
         "--particle-rotation:" + Number(particle.rotation || 0) + "deg",
+        "--particle-spin:" + Number(particle.spin || 0) + "deg",
       ].join(";");
+      if (particle.imagePath) {
+        const label = particle.imagePath.split("/").pop() || "Particle";
+        return '<span class="battle-scene-particle battle-scene-particle-image" style="' + styles + '"><img class="battle-scene-particle-image-asset" src="' + escapeHtml(particle.imagePath) + '" alt="' + escapeHtml(label) + '" /></span>';
+      }
+      const normalizedEffect = normalizeBattleSceneParticleEffect(particle.effect);
+      if (normalizedEffect === "none") {
+        return "";
+      }
       return '<span class="battle-scene-particle battle-scene-particle-' + escapeHtml(normalizedEffect) + '" style="' + styles + '"></span>';
     }).join("") + "</div>";
   }
@@ -9825,6 +10102,10 @@
       "--battle-cloud-offset-x:" + Number(normalizeBattleSceneCloudOffset(preset?.cloudOffsetX)) + "%",
       "--battle-cloud-offset-y:" + Number(normalizeBattleSceneCloudOffset(preset?.cloudOffsetY)) + "%",
     ].join(";");
+    const particleLayer = normalizeBattleSceneParticleLayer(battle?.battleSceneParticleLayer);
+    const particleMarkup = renderBattleSceneParticles(battle?.battleSceneParticles, {
+      layerPlacement: particleLayer,
+    });
 
     return [
       backgroundImagePath
@@ -9833,11 +10114,12 @@
       midgroundImagePath
         ? '<div class="battle-scene-layer battle-scene-layer-midground battle-scene-clouds battle-scene-clouds-' + escapeHtml(cloudDirection) + '" style="' + cloudStyle + '"><img class="battle-stage-background-image battle-scene-midground-image" src="' + escapeHtml(midgroundImagePath) + '" alt="Battle scene midground" /></div>'
         : "",
+      particleLayer === "behindBattlers" ? particleMarkup : "",
       foregroundImagePath
         ? '<div class="battle-scene-layer battle-scene-layer-foreground"><img class="battle-stage-background-image battle-scene-foreground-image" src="' + escapeHtml(foregroundImagePath) + '" alt="Battle scene foreground" /></div>'
         : "",
       '<div class="battle-field battle-field-scene">' + innerMarkup + "</div>",
-      renderBattleSceneParticles(battle?.battleSceneParticles, preset?.particleEffect),
+      particleLayer !== "behindBattlers" ? particleMarkup : "",
     ].join("");
   }
 
@@ -10097,15 +10379,6 @@
     const trainerIntroAwaitingContinue = Boolean(animation?.trainerIntro?.awaitingContinue);
     const mustSelectReplacement = Boolean(state.battle.mustSelectReplacement);
     const leaderSheetId = getBattleLeaderSheetId(state.battle);
-    const battleVisualMarkup = renderBattleSceneLayers(content, state.battle, (
-      showTrainerIntro
-        ? renderBattleTrainerIntro(content, state.battle, animation)
-        : renderBattleBattler(content, enemy, "battle-battler-enemy")
-    ) + (
-      showPlayerIntro
-        ? renderBattlePlayerIntro(content, activeMonster, animation)
-        : (!showTrainerIntro && !suppressDefaultPlayerBattler ? renderBattleBattler(content, activeMonster, "battle-battler-player") : "")
-    ));
     const showPlayerIntro = Boolean(animation?.playerIntro?.phase === "enter");
     const suppressDefaultPlayerBattler = Boolean(
       isTrainerBattle
@@ -10117,6 +10390,15 @@
       && leaderSheetId
       && ["enter", "awaiting", "shown", "exit"].includes(String(animation?.trainerIntro?.phase || ""))
     );
+    const battleVisualMarkup = renderBattleSceneLayers(content, state.battle, (
+      showTrainerIntro
+        ? renderBattleTrainerIntro(content, state.battle, animation)
+        : renderBattleBattler(content, enemy, "battle-battler-enemy")
+    ) + (
+      showPlayerIntro
+        ? renderBattlePlayerIntro(content, activeMonster, animation)
+        : (!showTrainerIntro && !suppressDefaultPlayerBattler ? renderBattleBattler(content, activeMonster, "battle-battler-player") : "")
+    ));
     const partyRoster = state.party.map(function (monster, index) {
       const species = getSpecies(content, monster.speciesId);
       const variant = getSpeciesVariant(species, monster.variantId || "default");
@@ -12889,6 +13171,32 @@
         return '<option value="' + escapeHtml(imagePath) + '"' + selected + ">" + escapeHtml(imagePath.replace(/^assets\//, "")) + "</option>";
       })
     ).join("");
+    const particleImageOptions = getBattleSceneParticleImageOptions(content);
+    const selectedParticleSettings = normalizeBattleSceneParticleSettings(selectedPreset?.particleSettings, selectedPreset?.particleEffect);
+    const particleLayerOptions = [
+      '<option value="inFrontOfBattlers"' + (selectedParticleSettings.layerPlacement === "inFrontOfBattlers" ? " selected" : "") + '>In Front Of Battlers</option>',
+      '<option value="behindBattlers"' + (selectedParticleSettings.layerPlacement === "behindBattlers" ? " selected" : "") + '>Behind Battlers</option>',
+    ].join("");
+    const particleDirectionOptions = [
+      '<option value="down"' + (selectedParticleSettings.direction === "down" ? " selected" : "") + '>Down</option>',
+      '<option value="down-left"' + (selectedParticleSettings.direction === "down-left" ? " selected" : "") + '>Down Left</option>',
+      '<option value="down-right"' + (selectedParticleSettings.direction === "down-right" ? " selected" : "") + '>Down Right</option>',
+    ].join("");
+    const addParticleImageSelectId = "battle-scene-particle-image-add";
+    const addParticleImageOptions = ['<option value="">Select Particle Image</option>'].concat(
+      particleImageOptions.filter(function (imagePath) {
+        return !selectedParticleSettings.imageEntries.some(function (entry) {
+          return entry.imagePath === imagePath;
+        });
+      }).map(function (imagePath) {
+        return '<option value="' + escapeHtml(imagePath) + '">' + escapeHtml(imagePath.replace(/^assets\//, "")) + "</option>";
+      })
+    ).join("");
+    const selectedParticleImageMarkup = selectedParticleSettings.imageEntries.length
+      ? '<ul class="compact-list">' + selectedParticleSettings.imageEntries.map(function (entry, index) {
+          return '<li><div class="form-grid"><label class="input-group dev-input-group-wide"><span>Particle Image</span><input value="' + escapeHtml(entry.imagePath.replace(/^assets\//, "")) + '" disabled /></label><label class="input-group"><span>Image Size Min</span><input type="number" min="0.35" max="8" step="0.05" data-dev-battle-scene-particle-entry-field="sizeMin" data-dev-battle-scene-particle-entry-index="' + index + '" value="' + Number(entry.sizeMin || 0.65) + '" /></label><label class="input-group"><span>Image Size Max</span><input type="number" min="0.35" max="8" step="0.05" data-dev-battle-scene-particle-entry-field="sizeMax" data-dev-battle-scene-particle-entry-index="' + index + '" value="' + Number(entry.sizeMax || entry.sizeMin || 1.1) + '" /></label><div class="title-actions"><button class="secondary-button" type="button" data-action="remove-battle-scene-particle-image" data-battle-scene-particle-image="' + escapeHtml(entry.imagePath) + '">Remove</button></div></div></li>';
+        }).join("") + "</ul>"
+      : "<p>No particle images selected. Imported legacy snow/leaves scenes will still use shape particles until you author image assets here.</p>";
     const staticDefaultOptions = ['<option value="">Auto pick first image</option>'].concat(
       getBattleBackgroundImageOptions(content).map(function (imagePath) {
         const selected = normalizeBattleBackgroundImagePath(content.settings?.defaults?.defaultBattleBackgroundImagePath) === imagePath ? " selected" : "";
@@ -12912,7 +13220,6 @@
           '<label class="input-group"><span>Background Layer</span><select data-dev-battle-scene-preset-field="backgroundImagePath">' + backgroundOptions + '</select></label>',
           '<label class="input-group"><span>Midground Layer</span><select data-dev-battle-scene-preset-field="midgroundImagePath">' + midgroundOptions + '</select></label>',
           '<label class="input-group"><span>Foreground Layer</span><select data-dev-battle-scene-preset-field="foregroundImagePath">' + foregroundOptions + '</select></label>',
-          '<label class="input-group"><span>Particle Effect</span><select data-dev-battle-scene-preset-field="particleEffect"><option value="none"' + (selectedPreset.particleEffect === "none" ? " selected" : "") + '>None</option><option value="snow"' + (selectedPreset.particleEffect === "snow" ? " selected" : "") + '>Snow</option><option value="leaves"' + (selectedPreset.particleEffect === "leaves" ? " selected" : "") + '>Leaves</option></select></label>',
           '<label class="input-group"><span>Cloud Direction</span><select data-dev-battle-scene-preset-field="cloudDriftDirection"><option value="none"' + (selectedPreset.cloudDriftDirection === "none" ? " selected" : "") + '>None</option><option value="left"' + (selectedPreset.cloudDriftDirection === "left" ? " selected" : "") + '>Left</option><option value="right"' + (selectedPreset.cloudDriftDirection === "right" ? " selected" : "") + '>Right</option></select></label>',
           '<label class="input-group"><span>Cloud Speed</span><input type="number" min="2" max="80" step="1" data-dev-battle-scene-preset-field="cloudDriftSpeed" value="' + Number(selectedPreset.cloudDriftSpeed || 12) + '" /></label>',
           '<label class="input-group"><span>Cloud Width %</span><input type="number" min="20" max="240" step="1" data-dev-battle-scene-preset-field="cloudScale" value="' + Number(selectedPreset.cloudScale || 118) + '" /></label>',
@@ -12920,6 +13227,18 @@
           '<label class="input-group"><span>Cloud Offset Y %</span><input type="number" min="-120" max="120" step="1" data-dev-battle-scene-preset-field="cloudOffsetY" value="' + Number(selectedPreset.cloudOffsetY || 0) + '" /></label>',
           '</div>',
           '</section>',
+          '<section class="panel-block dev-editor-panel"><div class="section-heading"><h2>Particles</h2></div><div class="form-grid">' +
+            '<label class="input-group"><span>Enabled</span><select data-dev-battle-scene-preset-field="particleSettings.enabled"><option value="true"' + (selectedParticleSettings.enabled ? " selected" : "") + '>Enabled</option><option value="false"' + (!selectedParticleSettings.enabled ? " selected" : "") + '>Disabled</option></select></label>' +
+            '<label class="input-group"><span>Layer Placement</span><select data-dev-battle-scene-preset-field="particleSettings.layerPlacement">' + particleLayerOptions + '</select></label>' +
+            '<label class="input-group"><span>Direction</span><select data-dev-battle-scene-preset-field="particleSettings.direction">' + particleDirectionOptions + '</select></label>' +
+            '<label class="input-group"><span>Particle Count</span><input type="number" min="0" max="40" step="1" data-dev-battle-scene-preset-field="particleSettings.count" value="' + Number(selectedParticleSettings.count || 0) + '" /></label>' +
+            '<label class="input-group"><span>Spawn Rate</span><input type="number" min="0.25" max="3" step="0.05" data-dev-battle-scene-preset-field="particleSettings.frequency" value="' + Number(selectedParticleSettings.frequency || 1) + '" /></label>' +
+            '<label class="input-group"><span>Spread %</span><input type="number" min="10" max="100" step="1" data-dev-battle-scene-preset-field="particleSettings.spread" value="' + Number(selectedParticleSettings.spread || 100) + '" /></label>' +
+            '<label class="input-group"><span>Speed Min</span><input type="number" min="2" max="120" step="0.5" data-dev-battle-scene-preset-field="particleSettings.speedMin" value="' + Number(selectedParticleSettings.speedMin || 10) + '" /></label>' +
+            '<label class="input-group"><span>Speed Max</span><input type="number" min="2" max="120" step="0.5" data-dev-battle-scene-preset-field="particleSettings.speedMax" value="' + Number(selectedParticleSettings.speedMax || 16) + '" /></label>' +
+            '<label class="input-group"><span>Opacity Min</span><input type="number" min="0.1" max="1" step="0.05" data-dev-battle-scene-preset-field="particleSettings.opacityMin" value="' + Number(selectedParticleSettings.opacityMin || 0.45) + '" /></label>' +
+            '<label class="input-group"><span>Opacity Max</span><input type="number" min="0.1" max="1" step="0.05" data-dev-battle-scene-preset-field="particleSettings.opacityMax" value="' + Number(selectedParticleSettings.opacityMax || 0.75) + '" /></label>' +
+          '</div><div class="dev-subcard"><div class="section-heading"><h3>Particle Image Pool</h3></div>' + selectedParticleImageMarkup + '<div class="form-grid"><label class="input-group"><span>Add Particle Image</span><select id="' + escapeHtml(addParticleImageSelectId) + '">' + addParticleImageOptions + '</select></label><div class="title-actions"><button class="secondary-button" type="button" data-action="add-battle-scene-particle-image" data-battle-scene-particle-select-id="' + escapeHtml(addParticleImageSelectId) + '">Add</button></div></div><p class="dev-helper-text">Each particle image has its own size range. Shared motion settings above still control direction, speed, spread, and opacity.</p></div></section>',
           '<section class="panel-block"><div class="section-heading"><h2>Preview</h2><label class="toggle-checkbox"><input type="checkbox" data-action="toggle-battle-scene-preview-battlers"' + (devToolsState.battleScenePreviewShowBattlers !== false ? " checked" : "") + ' /><span>Show Placeholder Battlers</span></label></div>' + renderBattleScenePresetPreviewMarkup(content, selectedPreset.id) + '<p class="dev-helper-text">Preview uses the battle stage proportions so framing reads closer to the in-game scene.</p></section>',
         ].join("")
       : '<section class="panel-block dev-editor-panel"><h2>No Scene Selected</h2><p>Add a battle scene preset to begin editing.</p></section>';
@@ -14730,6 +15049,40 @@
           button.getAttribute("data-battle-visual-pool-value") || ""
         );
       });
+    });
+    root.querySelectorAll('[data-action="add-battle-scene-particle-image"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        const selectId = button.getAttribute("data-battle-scene-particle-select-id") || "";
+        const select = selectId ? root.querySelector("#" + CSS.escape(selectId)) : null;
+        const value = select instanceof HTMLSelectElement ? select.value : "";
+        app.addBattleSceneParticleImage(value);
+      });
+    });
+    root.querySelectorAll('[data-action="remove-battle-scene-particle-image"]').forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.removeBattleSceneParticleImage(button.getAttribute("data-battle-scene-particle-image") || "");
+      });
+    });
+    root.querySelectorAll("[data-dev-battle-scene-particle-entry-field]").forEach(function (field) {
+      const useDeferredRender = isDeferredDevTextField(field);
+      const eventName = field.tagName === "SELECT" ? "change" : "input";
+      field.addEventListener(eventName, function () {
+        app.updateBattleSceneParticleImageField(
+          Number(field.getAttribute("data-dev-battle-scene-particle-entry-index") || 0),
+          field.getAttribute("data-dev-battle-scene-particle-entry-field") || "",
+          field.value,
+          !useDeferredRender
+        );
+      });
+      if (useDeferredRender) {
+        field.addEventListener("change", function () {
+          app.updateBattleSceneParticleImageField(
+            Number(field.getAttribute("data-dev-battle-scene-particle-entry-index") || 0),
+            field.getAttribute("data-dev-battle-scene-particle-entry-field") || "",
+            field.value
+          );
+        });
+      }
     });
     root.querySelector('[data-action="add-trainer"]')?.addEventListener("click", function () {
       app.addTrainer();
@@ -16860,7 +17213,7 @@
           this.content.monsterAssets = discoveredCharacterSheets.monsterAssets || { images: [] };
           this.content.townAssets = discoveredCharacterSheets.townAssets || { images: [] };
           this.content.battleBackgroundAssets = discoveredCharacterSheets.battleBackgroundAssets || { images: [] };
-          this.content.battleSceneAssets = discoveredCharacterSheets.battleSceneAssets || { backgrounds: [], midgrounds: [], foregrounds: [] };
+          this.content.battleSceneAssets = discoveredCharacterSheets.battleSceneAssets || { backgrounds: [], midgrounds: [], foregrounds: [], particles: [] };
           const selectedStillExists = ensureCharacterSheetCatalog(this.content).some((entry) => entry.id === this.devTools.selectedCharacterSheetId);
           applyCharacterSheetToDevTools(this.content, this.devTools, selectedStillExists ? this.devTools.selectedCharacterSheetId : ensureCharacterSheetCatalog(this.content)[0]?.id || "");
           this.state.message = "Character sheets resynced from the project folder.";
@@ -18580,19 +18933,42 @@
           return;
         }
         const previousId = preset.id;
-        preset[path] = path === "cloudDriftSpeed"
-          ? normalizeBattleSceneCloudSpeed(rawValue)
-          : path === "cloudScale"
-            ? normalizeBattleSceneCloudScale(rawValue)
-            : path === "cloudOffsetX" || path === "cloudOffsetY"
-              ? normalizeBattleSceneCloudOffset(rawValue)
-          : path === "particleEffect"
-            ? normalizeBattleSceneParticleEffect(rawValue)
-            : path === "cloudDriftDirection"
-              ? normalizeBattleSceneCloudDirection(rawValue)
-              : path === "id" || path === "name"
-                ? String(rawValue || "")
-              : normalizeBattleBackgroundImagePath(rawValue);
+        if (String(path || "").startsWith("particleSettings.")) {
+          const particleSettings = normalizeBattleSceneParticleSettings(preset.particleSettings, preset.particleEffect);
+          const particlePath = String(path).slice("particleSettings.".length);
+          particleSettings[particlePath] = particlePath === "enabled"
+            ? String(rawValue) === "true"
+            : particlePath === "layerPlacement"
+              ? normalizeBattleSceneParticleLayer(rawValue)
+              : particlePath === "direction"
+                ? normalizeBattleSceneParticleDirection(rawValue)
+                : particlePath === "count"
+                  ? normalizeBattleSceneParticleCount(rawValue)
+                  : particlePath === "frequency"
+                    ? normalizeBattleSceneParticleFrequency(rawValue)
+                    : particlePath === "speedMin" || particlePath === "speedMax"
+                      ? normalizeBattleSceneParticleSpeed(rawValue)
+                      : particlePath === "sizeMin" || particlePath === "sizeMax"
+                        ? normalizeBattleSceneParticleScale(rawValue)
+                        : particlePath === "opacityMin" || particlePath === "opacityMax"
+                          ? normalizeBattleSceneParticleOpacity(rawValue)
+                          : particlePath === "spread"
+                            ? normalizeBattleSceneParticleSpread(rawValue)
+                            : particleSettings[particlePath];
+          preset.particleSettings = normalizeBattleSceneParticleSettings(particleSettings, "none");
+        } else {
+          preset[path] = path === "cloudDriftSpeed"
+            ? normalizeBattleSceneCloudSpeed(rawValue)
+            : path === "cloudScale"
+              ? normalizeBattleSceneCloudScale(rawValue)
+              : path === "cloudOffsetX" || path === "cloudOffsetY"
+                ? normalizeBattleSceneCloudOffset(rawValue)
+                : path === "cloudDriftDirection"
+                  ? normalizeBattleSceneCloudDirection(rawValue)
+                  : path === "id" || path === "name"
+                    ? String(rawValue || "")
+                    : normalizeBattleBackgroundImagePath(rawValue);
+        }
         Object.assign(preset, normalizeBattleScenePresetRecord(preset, 0));
         if (path === "id") {
           replaceBattleScenePresetReferences(this.content, previousId, preset.id);
@@ -18625,6 +19001,61 @@
         duplicate.name = current.name ? current.name + " Copy" : "Copied Battle Scene";
         presets.push(normalizeBattleScenePresetRecord(duplicate, presets.length));
         this.devTools.selectedBattleScenePresetId = duplicate.id;
+        this.markDevToolsDirty("battleScenes");
+        this.render();
+      },
+      addBattleSceneParticleImage: function (rawValue) {
+        const preset = ensureBattleScenePresetCatalog(this.content).find((entry) => entry.id === this.devTools.selectedBattleScenePresetId);
+        const imagePath = normalizeBattleBackgroundImagePath(rawValue);
+        if (!preset || !imagePath) {
+          return;
+        }
+        const particleSettings = normalizeBattleSceneParticleSettings(preset.particleSettings, preset.particleEffect);
+        if (!particleSettings.imageEntries.some(function (entry) { return entry.imagePath === imagePath; })) {
+          particleSettings.imageEntries.push({
+            imagePath,
+            sizeMin: particleSettings.sizeMin,
+            sizeMax: particleSettings.sizeMax,
+          });
+          particleSettings.enabled = true;
+          preset.particleSettings = normalizeBattleSceneParticleSettings(particleSettings, "none");
+          this.markDevToolsDirty("battleScenes");
+          this.render();
+        }
+      },
+      updateBattleSceneParticleImageField: function (index, field, rawValue, shouldRender) {
+        const preset = ensureBattleScenePresetCatalog(this.content).find((entry) => entry.id === this.devTools.selectedBattleScenePresetId);
+        if (!preset) {
+          return;
+        }
+        const particleSettings = normalizeBattleSceneParticleSettings(preset.particleSettings, preset.particleEffect);
+        const entry = particleSettings.imageEntries?.[Math.max(0, Number(index || 0))];
+        if (!entry) {
+          return;
+        }
+        if (field === "sizeMin" || field === "sizeMax") {
+          entry[field] = normalizeBattleSceneParticleScale(rawValue);
+          if (Number(entry.sizeMax || 0) < Number(entry.sizeMin || 0)) {
+            entry.sizeMax = entry.sizeMin;
+          }
+        }
+        preset.particleSettings = normalizeBattleSceneParticleSettings(particleSettings, "none");
+        this.markDevToolsDirty("battleScenes");
+        if (shouldRender !== false) {
+          this.render();
+        }
+      },
+      removeBattleSceneParticleImage: function (rawValue) {
+        const preset = ensureBattleScenePresetCatalog(this.content).find((entry) => entry.id === this.devTools.selectedBattleScenePresetId);
+        const imagePath = normalizeBattleBackgroundImagePath(rawValue);
+        if (!preset || !imagePath) {
+          return;
+        }
+        const particleSettings = normalizeBattleSceneParticleSettings(preset.particleSettings, preset.particleEffect);
+        particleSettings.imageEntries = particleSettings.imageEntries.filter(function (entry) {
+          return entry.imagePath !== imagePath;
+        });
+        preset.particleSettings = normalizeBattleSceneParticleSettings(particleSettings, "none");
         this.markDevToolsDirty("battleScenes");
         this.render();
       },

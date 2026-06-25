@@ -6,9 +6,35 @@
       "backgroundImagePath": "assets/Battle Scenes/Backgrounds/Gradient1.png",
       "midgroundImagePath": "assets/Battle Scenes/Midgrounds/cloud-small-bordered-v1.png",
       "foregroundImagePath": "assets/Battle Scenes/Foregrounds/snow-forest-backline-foreground.png",
-      "particleEffect": "none",
+      "particleSettings": {
+        "enabled": true,
+        "layerPlacement": "inFrontOfBattlers",
+        "count": 12,
+        "frequency": 1,
+        "direction": "down-left",
+        "speedMin": 16,
+        "speedMax": 23.5,
+        "sizeMin": 0.65,
+        "sizeMax": 1.1,
+        "opacityMin": 0.85,
+        "opacityMax": 0.95,
+        "spread": 100,
+        "shapeEffect": "none",
+        "imageEntries": [
+          {
+            "imagePath": "assets/Battle Scenes/Particles/snowflake-01.png",
+            "sizeMin": 3,
+            "sizeMax": 4.25
+          },
+          {
+            "imagePath": "assets/Battle Scenes/Particles/snowflake-02.png",
+            "sizeMin": 3.6,
+            "sizeMax": 3.6
+          }
+        ]
+      },
       "cloudDriftDirection": "right",
-      "cloudDriftSpeed": 8,
+      "cloudDriftSpeed": 5,
       "cloudScale": 42,
       "cloudOffsetX": 0,
       "cloudOffsetY": -24

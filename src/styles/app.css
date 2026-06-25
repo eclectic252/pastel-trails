@@ -2269,10 +2269,14 @@ button {
 
 .battle-scene-clouds-right .battle-scene-midground-image {
   animation: battle-scene-clouds-right var(--battle-cloud-duration, 18s) linear infinite;
+  animation-delay: calc(var(--battle-cloud-duration, 18s) * -0.35);
+  will-change: transform;
 }
 
 .battle-scene-clouds-left .battle-scene-midground-image {
   animation: battle-scene-clouds-left var(--battle-cloud-duration, 18s) linear infinite;
+  animation-delay: calc(var(--battle-cloud-duration, 18s) * -0.35);
+  will-change: transform;
 }
 
 .battle-scene-foreground-image {
@@ -2282,18 +2286,39 @@ button {
 .battle-scene-particles {
   position: absolute;
   inset: 0;
-  z-index: 4;
   pointer-events: none;
   overflow: hidden;
 }
 
+.battle-scene-particles-behind {
+  z-index: 1;
+}
+
+.battle-scene-particles-front {
+  z-index: 4;
+}
+
 .battle-scene-particle {
   position: absolute;
-  top: -12%;
-  left: var(--particle-left, 50%);
+  display: block;
+  top: var(--particle-start-y, -16%);
+  left: var(--particle-start-x, 50%);
   opacity: var(--particle-opacity, 0.5);
-  animation: battle-scene-particle-fall var(--particle-duration, 8s) linear infinite;
+  animation: battle-scene-particle-travel var(--particle-duration, 8s) linear infinite;
   animation-delay: calc(var(--particle-delay, 0s) * -1);
+  transform: rotate(var(--particle-rotation, 0deg));
+  will-change: transform;
+}
+
+.battle-scene-particle-image {
+  width: calc(26px * var(--particle-size, 1));
+}
+
+.battle-scene-particle-image-asset {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
 }
 
 .battle-scene-particle-snow {
@@ -2315,7 +2340,7 @@ button {
 .battle-field {
   position: relative;
   min-height: 300px;
-  z-index: 1;
+  z-index: 3;
 }
 
 .battle-battler {
@@ -2956,21 +2981,25 @@ button {
 }
 
 @keyframes battle-scene-clouds-right {
-  0% { transform: translateX(-130%); }
-  100% { transform: translateX(130%); }
+  0% { transform: translateX(-180%); }
+  100% { transform: translateX(180%); }
 }
 
 @keyframes battle-scene-clouds-left {
-  0% { transform: translateX(130%); }
-  100% { transform: translateX(-130%); }
+  0% { transform: translateX(180%); }
+  100% { transform: translateX(-180%); }
 }
 
-@keyframes battle-scene-particle-fall {
+@keyframes battle-scene-particle-travel {
   0% {
-    transform: translate3d(0, -8%, 0) rotate(var(--particle-rotation, 0deg));
+    top: var(--particle-start-y, -16%);
+    left: var(--particle-start-x, 50%);
+    transform: rotate(var(--particle-rotation, 0deg));
   }
   100% {
-    transform: translate3d(var(--particle-drift, 0px), 122%, 0) rotate(calc(var(--particle-rotation, 0deg) + 120deg));
+    top: var(--particle-end-y, 112%);
+    left: var(--particle-end-x, 50%);
+    transform: rotate(calc(var(--particle-rotation, 0deg) + var(--particle-spin, 0deg)));
   }
 }
 
