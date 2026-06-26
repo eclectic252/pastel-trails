@@ -30,24 +30,7 @@
       }
     }
   ],
-  "interactions": [
-    {
-      "id": "route6-winter-classic",
-      "type": "event",
-      "label": "Winter Classic Registration",
-      "text": "A tournament registrar is taking entries for the Winter Classic.",
-      "x": 2496,
-      "y": 576,
-      "width": 128,
-      "height": 128,
-      "data": {
-        "shopId": "",
-        "arenaId": "",
-        "crestId": "",
-        "eventId": "winter-classic"
-      }
-    }
-  ],
+  "interactions": [],
   "spawnZones": [
     {
       "id": "default-zone",

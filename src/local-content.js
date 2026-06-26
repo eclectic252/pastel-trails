@@ -4542,17 +4542,32 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "opacityMin": 0.85,
           "opacityMax": 0.95,
           "spread": 100,
+          "rotationStartMin": -22,
+          "rotationStartMax": 22,
+          "rotationDirection": "mixed",
+          "rotationSpeedMin": 30,
+          "rotationSpeedMax": 140,
           "shapeEffect": "none",
           "imageEntries": [
             {
               "imagePath": "assets/Battle Scenes/Particles/snowflake-01.png",
               "sizeMin": 3,
-              "sizeMax": 4.25
+              "sizeMax": 4.25,
+              "rotationStartMin": -22,
+              "rotationStartMax": 22,
+              "rotationDirection": "mixed",
+              "rotationSpeedMin": 30,
+              "rotationSpeedMax": 140
             },
             {
               "imagePath": "assets/Battle Scenes/Particles/snowflake-02.png",
               "sizeMin": 3.6,
-              "sizeMax": 3.6
+              "sizeMax": 3.6,
+              "rotationStartMin": -22,
+              "rotationStartMax": 22,
+              "rotationDirection": "mixed",
+              "rotationSpeedMin": 30,
+              "rotationSpeedMax": 140
             }
           ]
         },
@@ -4581,32 +4596,72 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           "opacityMin": 0.9,
           "opacityMax": 0.95,
           "spread": 100,
+          "rotationStartMin": -22,
+          "rotationStartMax": 22,
+          "rotationDirection": "mixed",
+          "rotationSpeedMin": 30,
+          "rotationSpeedMax": 140,
           "shapeEffect": "none",
           "imageEntries": [
             {
               "imagePath": "assets/Battle Scenes/Particles/snowflake-01.png",
-              "sizeMin": 2.35,
-              "sizeMax": 4.9
+              "sizeMin": 5,
+              "sizeMax": 5.3,
+              "rotationStartMin": -22,
+              "rotationStartMax": 22,
+              "rotationDirection": "mixed",
+              "rotationSpeedMin": 50,
+              "rotationSpeedMax": 155
             },
             {
               "imagePath": "assets/Battle Scenes/Particles/snowflake-02.png",
-              "sizeMin": 2.3,
-              "sizeMax": 3.5
-            },
-            {
-              "imagePath": "assets/Battle Scenes/Particles/snowflake-04.png",
-              "sizeMin": 2.3,
-              "sizeMax": 3.4
-            },
-            {
-              "imagePath": "assets/Battle Scenes/Particles/snowflake-05.png",
-              "sizeMin": 2.3,
-              "sizeMax": 3.3
+              "sizeMin": 4.9,
+              "sizeMax": 5.5,
+              "rotationStartMin": -22,
+              "rotationStartMax": 22,
+              "rotationDirection": "mixed",
+              "rotationSpeedMin": 50,
+              "rotationSpeedMax": 155
             },
             {
               "imagePath": "assets/Battle Scenes/Particles/snowflake-06.png",
-              "sizeMin": 2.3,
-              "sizeMax": 5.4
+              "sizeMin": 4.6,
+              "sizeMax": 8,
+              "rotationStartMin": -22,
+              "rotationStartMax": 22,
+              "rotationDirection": "mixed",
+              "rotationSpeedMin": 50,
+              "rotationSpeedMax": 155
+            },
+            {
+              "imagePath": "assets/Battle Scenes/Particles/snowflake-09.png",
+              "sizeMin": 4,
+              "sizeMax": 5.3,
+              "rotationStartMin": -22,
+              "rotationStartMax": 22,
+              "rotationDirection": "mixed",
+              "rotationSpeedMin": 50,
+              "rotationSpeedMax": 155
+            },
+            {
+              "imagePath": "assets/Battle Scenes/Particles/snowflake-12.png",
+              "sizeMin": 4,
+              "sizeMax": 5.3,
+              "rotationStartMin": -22,
+              "rotationStartMax": 22,
+              "rotationDirection": "mixed",
+              "rotationSpeedMin": 50,
+              "rotationSpeedMax": 155
+            },
+            {
+              "imagePath": "assets/Battle Scenes/Particles/snowflake-10.png",
+              "sizeMin": 4,
+              "sizeMax": 6,
+              "rotationStartMin": -22,
+              "rotationStartMax": 22,
+              "rotationDirection": "mixed",
+              "rotationSpeedMin": 50,
+              "rotationSpeedMax": 155
             }
           ]
         },
@@ -4615,6 +4670,174 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "cloudScale": 100,
         "cloudOffsetX": 0,
         "cloudOffsetY": -60
+      },
+      {
+        "id": "battle-scene-3",
+        "name": "Field Sky Leaves",
+        "backgroundImagePath": "assets/Battle Scenes/Backgrounds/Brighty-day-smudgy.png",
+        "midgroundImagePath": "assets/Battle Scenes/Midgrounds/cloud-medium-bordered-v1.png",
+        "foregroundImagePath": "assets/Battle Scenes/Foregrounds/field-forest-treeline-foreground.png",
+        "particleSettings": {
+          "enabled": true,
+          "layerPlacement": "inFrontOfBattlers",
+          "count": 4,
+          "frequency": 1,
+          "direction": "down-left",
+          "speedMin": 12.5,
+          "speedMax": 20,
+          "sizeMin": 0.65,
+          "sizeMax": 1.1,
+          "opacityMin": 1,
+          "opacityMax": 1,
+          "spread": 100,
+          "rotationStartMin": -22,
+          "rotationStartMax": 22,
+          "rotationDirection": "mixed",
+          "rotationSpeedMin": 30,
+          "rotationSpeedMax": 140,
+          "shapeEffect": "none",
+          "imageEntries": [
+            {
+              "imagePath": "assets/Battle Scenes/Particles/leaf-particle-05.png",
+              "sizeMin": 3.9,
+              "sizeMax": 5.4,
+              "rotationStartMin": -22,
+              "rotationStartMax": 22,
+              "rotationDirection": "mixed",
+              "rotationSpeedMin": 60,
+              "rotationSpeedMax": 155
+            },
+            {
+              "imagePath": "assets/Battle Scenes/Particles/leaf-particle-06.png",
+              "sizeMin": 3.9,
+              "sizeMax": 5.4,
+              "rotationStartMin": -22,
+              "rotationStartMax": 22,
+              "rotationDirection": "mixed",
+              "rotationSpeedMin": 60,
+              "rotationSpeedMax": 155
+            },
+            {
+              "imagePath": "assets/Battle Scenes/Particles/petal-pink.png",
+              "sizeMin": 3.65,
+              "sizeMax": 4.5,
+              "rotationStartMin": -22,
+              "rotationStartMax": 22,
+              "rotationDirection": "mixed",
+              "rotationSpeedMin": 60,
+              "rotationSpeedMax": 155
+            },
+            {
+              "imagePath": "assets/Battle Scenes/Particles/leaf-particle-07.png",
+              "sizeMin": 3.85,
+              "sizeMax": 5.3,
+              "rotationStartMin": -22,
+              "rotationStartMax": 22,
+              "rotationDirection": "mixed",
+              "rotationSpeedMin": 60,
+              "rotationSpeedMax": 155
+            },
+            {
+              "imagePath": "assets/Battle Scenes/Particles/petal-white.png",
+              "sizeMin": 3.45,
+              "sizeMax": 4.35,
+              "rotationStartMin": -22,
+              "rotationStartMax": 22,
+              "rotationDirection": "mixed",
+              "rotationSpeedMin": 60,
+              "rotationSpeedMax": 155
+            }
+          ]
+        },
+        "cloudDriftDirection": "right",
+        "cloudDriftSpeed": 2,
+        "cloudScale": 58,
+        "cloudOffsetX": 0,
+        "cloudOffsetY": -55
+      },
+      {
+        "id": "battle-scene-4",
+        "name": "Harbor Lily Fence Meadow",
+        "backgroundImagePath": "assets/Battle Scenes/Backgrounds/Brighty-day-smudgy.png",
+        "midgroundImagePath": "assets/Battle Scenes/Midgrounds/cloud-small-bordered-v1.png",
+        "foregroundImagePath": "assets/Battle Scenes/Foregrounds/field-forest-treeline-foreground-v2.png",
+        "particleSettings": {
+          "enabled": true,
+          "layerPlacement": "inFrontOfBattlers",
+          "count": 4,
+          "frequency": 1,
+          "direction": "down-left",
+          "speedMin": 14,
+          "speedMax": 20,
+          "sizeMin": 0.65,
+          "sizeMax": 1.1,
+          "opacityMin": 1,
+          "opacityMax": 1,
+          "spread": 100,
+          "rotationStartMin": -22,
+          "rotationStartMax": 22,
+          "rotationDirection": "mixed",
+          "rotationSpeedMin": 30,
+          "rotationSpeedMax": 140,
+          "shapeEffect": "none",
+          "imageEntries": [
+            {
+              "imagePath": "assets/Battle Scenes/Particles/leaf-particle-01.png",
+              "sizeMin": 4,
+              "sizeMax": 4.95,
+              "rotationStartMin": -22,
+              "rotationStartMax": 22,
+              "rotationDirection": "mixed",
+              "rotationSpeedMin": 55,
+              "rotationSpeedMax": 156
+            },
+            {
+              "imagePath": "assets/Battle Scenes/Particles/leaf-particle-03.png",
+              "sizeMin": 4,
+              "sizeMax": 4.95,
+              "rotationStartMin": -22,
+              "rotationStartMax": 22,
+              "rotationDirection": "mixed",
+              "rotationSpeedMin": 55,
+              "rotationSpeedMax": 156
+            },
+            {
+              "imagePath": "assets/Battle Scenes/Particles/leaf-particle-07.png",
+              "sizeMin": 4,
+              "sizeMax": 4.95,
+              "rotationStartMin": -22,
+              "rotationStartMax": 22,
+              "rotationDirection": "mixed",
+              "rotationSpeedMin": 55,
+              "rotationSpeedMax": 156
+            },
+            {
+              "imagePath": "assets/Battle Scenes/Particles/leaf-particle-08.png",
+              "sizeMin": 4,
+              "sizeMax": 4.95,
+              "rotationStartMin": -22,
+              "rotationStartMax": 22,
+              "rotationDirection": "mixed",
+              "rotationSpeedMin": 55,
+              "rotationSpeedMax": 156
+            },
+            {
+              "imagePath": "assets/Battle Scenes/Particles/petal-pink.png",
+              "sizeMin": 3.1,
+              "sizeMax": 4,
+              "rotationStartMin": -22,
+              "rotationStartMax": 22,
+              "rotationDirection": "mixed",
+              "rotationSpeedMin": 55,
+              "rotationSpeedMax": 156
+            }
+          ]
+        },
+        "cloudDriftDirection": "left",
+        "cloudDriftSpeed": 2,
+        "cloudScale": 35,
+        "cloudOffsetX": 0,
+        "cloudOffsetY": -18
       }
     ]
   },
@@ -8386,6 +8609,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
   },
   "battleSceneAssets": {
     "backgrounds": [
+      "assets/Battle Scenes/Backgrounds/Brighty-day-smudgy.png",
       "assets/Battle Scenes/Backgrounds/Gradient1.png",
       "assets/Battle Scenes/Backgrounds/gradient2.png",
       "assets/Battle Scenes/Backgrounds/gradient3.png",
@@ -8397,6 +8621,10 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       "assets/Battle Scenes/Midgrounds/cloud-small-bordered-v1.png"
     ],
     "foregrounds": [
+      "assets/Battle Scenes/Foregrounds/field-forest-treeline-foreground-v2 copy.png",
+      "assets/Battle Scenes/Foregrounds/field-forest-treeline-foreground-v2.png",
+      "assets/Battle Scenes/Foregrounds/field-forest-treeline-foreground.png",
+      "assets/Battle Scenes/Foregrounds/plaza-edge-promenade-foreground.png",
       "assets/Battle Scenes/Foregrounds/snow-fir-treeline-foreground copy.png",
       "assets/Battle Scenes/Foregrounds/snow-fir-treeline-foreground.png",
       "assets/Battle Scenes/Foregrounds/snow-forest-backline-foreground.png",
@@ -78695,16 +78923,38 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         }
       ],
       "trainers": [],
-      "npcs": [],
+      "npcs": [
+        {
+          "id": "npc-1",
+          "type": "trainer",
+          "x": 1088,
+          "y": 5312,
+          "label": "Trainer Elena",
+          "text": "Hello there!",
+          "sheetId": "silver-sash-wanderer-walksheet-v1-fullsize-transparent",
+          "facing": "down",
+          "interactionRadius": 88,
+          "movementMode": "wander",
+          "moveRadius": 400,
+          "lookSpeed": 1,
+          "moveSpeed": 72,
+          "data": {
+            "trainerId": ""
+          }
+        }
+      ],
       "mapMonstersPanel": [],
-      "battleBackgroundMode": "static",
+      "battleBackgroundMode": "scene",
       "battleBackgroundImagePath": "",
       "battleBackgroundImagePaths": [
         "assets/Battle Backgrounds/Route5-1.png",
         "assets/Battle Backgrounds/Route5-2.png"
       ],
-      "battleScenePresetId": "",
-      "battleVisualPool": []
+      "battleScenePresetId": "battle-scene-3",
+      "battleVisualPool": [
+        "scene:battle-scene-3",
+        "scene:battle-scene-4"
+      ]
     },
     "route-6": {
       "mapId": "route-6",
@@ -78738,24 +78988,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           }
         }
       ],
-      "interactions": [
-        {
-          "id": "route6-winter-classic",
-          "type": "event",
-          "label": "Winter Classic Registration",
-          "text": "A tournament registrar is taking entries for the Winter Classic.",
-          "x": 2496,
-          "y": 576,
-          "width": 128,
-          "height": 128,
-          "data": {
-            "shopId": "",
-            "arenaId": "",
-            "crestId": "",
-            "eventId": "winter-classic"
-          }
-        }
-      ],
+      "interactions": [],
       "spawnZones": [
         {
           "id": "default-zone",

@@ -177,11 +177,36 @@
     }
   ],
   "trainers": [],
-  "npcs": [],
+  "npcs": [
+    {
+      "id": "npc-1",
+      "type": "trainer",
+      "x": 1088,
+      "y": 5312,
+      "label": "Trainer Elena",
+      "text": "Hello there!",
+      "sheetId": "silver-sash-wanderer-walksheet-v1-fullsize-transparent",
+      "facing": "down",
+      "interactionRadius": 88,
+      "movementMode": "wander",
+      "moveRadius": 400,
+      "lookSpeed": 1,
+      "moveSpeed": 72,
+      "data": {
+        "trainerId": ""
+      }
+    }
+  ],
   "mapMonstersPanel": [],
+  "battleBackgroundMode": "scene",
   "battleBackgroundImagePath": "",
   "battleBackgroundImagePaths": [
     "assets/Battle Backgrounds/Route5-1.png",
     "assets/Battle Backgrounds/Route5-2.png"
+  ],
+  "battleScenePresetId": "battle-scene-3",
+  "battleVisualPool": [
+    "scene:battle-scene-3",
+    "scene:battle-scene-4"
   ]
 }

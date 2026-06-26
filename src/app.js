@@ -3657,6 +3657,11 @@
       const end = Math.max(low, high);
       return start + (Math.random() * (end - start));
     };
+    const shuffledImageEntries = settings.imageEntries.length
+      ? settings.imageEntries.slice().sort(function () {
+        return Math.random() - 0.5;
+      })
+      : [];
     return Array.from({ length: count }, function (_, index) {
       const startX = Number(randomBetween(startMinX, startMaxX).toFixed(2));
       const duration = getBattleSceneParticleDurationSeconds(randomBetween(settings.speedMin, settings.speedMax));
@@ -3665,8 +3670,8 @@
         : direction === "down-right"
           ? randomBetween(18, 34)
           : randomBetween(-6, 6);
-      const imageEntry = settings.imageEntries.length
-        ? (settings.imageEntries[Math.floor(Math.random() * settings.imageEntries.length)] || null)
+      const imageEntry = shuffledImageEntries.length
+        ? (shuffledImageEntries[index % shuffledImageEntries.length] || null)
         : null;
       const imagePath = imageEntry?.imagePath || "";
       const size = imageEntry
@@ -9975,9 +9980,16 @@
     const badgeSideClass = options.badgeSide === "right"
       ? " battle-hud-level-badge-right"
       : " battle-hud-level-badge-left";
+    const backdropMarkup = options.backdropMarkup || "";
+    const cardClasses = [
+      "battle-hud",
+      options.side === "right" ? "battle-hud-side-right" : "battle-hud-side-left",
+      backdropMarkup ? "battle-hud-has-backdrop" : "",
+    ].join(" ");
 
     return [
-      '<article class="battle-hud">',
+      '<article class="' + cardClasses + '">',
+      backdropMarkup,
       '<div class="battle-hud-icon">' + visual + '<span class="battle-hud-level-badge' + badgeSideClass + '">Lv ' + Number(monster.level || 1) + "</span></div>",
       '<div class="battle-hud-body">',
       '<h3 class="battle-hud-name">' + escapeHtml(species?.name || monster.speciesId) + " (" + escapeHtml(variantLabel) + ")" + "</h3>",
@@ -9992,6 +10004,26 @@
       (options.partyPips || ""),
       "</div>",
       "</article>",
+    ].join("");
+  }
+
+  function renderBattleHudBackdropMarkup(content, sheetId, side) {
+    const normalizedSheetId = String(sheetId || "").trim();
+    if (!normalizedSheetId) {
+      return "";
+    }
+    const sheet = getAvailableCharacterSheets(content).find(function (entry) {
+      return entry.id === normalizedSheetId;
+    }) || null;
+    if (!sheet?.path) {
+      return "";
+    }
+
+    const normalizedSide = side === "right" ? "right" : "left";
+    return [
+      '<div class="battle-hud-backdrop battle-hud-backdrop-' + normalizedSide + '" aria-hidden="true">',
+      renderAvatarPreviewMarkup(sheet, "battle-hud-backdrop-sprite", { transparent: true }),
+      "</div>",
     ].join("");
   }
 
@@ -10465,6 +10497,8 @@
     const trainerIntroAwaitingContinue = Boolean(animation?.trainerIntro?.awaitingContinue);
     const mustSelectReplacement = Boolean(state.battle.mustSelectReplacement);
     const leaderSheetId = getBattleLeaderSheetId(state.battle);
+    const opponentHudBackdrop = renderBattleHudBackdropMarkup(content, leaderSheetId, "left");
+    const playerHudBackdrop = renderBattleHudBackdropMarkup(content, state.player?.avatarId || "", "right");
     const showPlayerIntro = Boolean(animation?.playerIntro?.phase === "enter");
     const suppressDefaultPlayerBattler = Boolean(
       isTrainerBattle
@@ -10559,6 +10593,8 @@
         maxHp: getBattleMaxHp(enemy),
         badgeSide: "left",
         partyPips: enemyPartyPips,
+        side: "left",
+        backdropMarkup: opponentHudBackdrop,
       }) +
       '<div class="battle-fight-pill"><strong>' + escapeHtml(fightType) + '</strong><span>' + escapeHtml(locationLabel) + '</span></div>' +
       renderBattleMonsterHud(content, activeMonster, {
@@ -10566,6 +10602,8 @@
         maxHp: getBattleMaxHp(activeMonster),
         badgeSide: "right",
         partyPips: playerPartyPips,
+        side: "right",
+        backdropMarkup: playerHudBackdrop,
       }) +
       '</section>',
       '<section class="battle-stage">' + battleVisualMarkup + '</section>',

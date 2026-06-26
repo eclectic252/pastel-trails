@@ -2038,6 +2038,53 @@ button {
   grid-template-columns: 74px minmax(0, 1fr);
   gap: 0.6rem;
   align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.battle-hud-side-right {
+  grid-template-columns: minmax(0, 1fr) 74px;
+}
+
+.battle-hud-backdrop {
+  position: absolute;
+  top: 0px;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  justify-items: center;
+  align-items: start;
+  opacity: 1;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+  transform: translateX(-50%);
+}
+
+.battle-hud-backdrop-left {
+  mask-image: radial-gradient(circle at center top, #000 0%, rgba(0, 0, 0, 0.94) 52%, transparent 92%);
+  -webkit-mask-image: radial-gradient(circle at center top, #000 0%, rgba(0, 0, 0, 0.94) 52%, transparent 92%);
+}
+
+.battle-hud-backdrop-right {
+  mask-image: radial-gradient(circle at center top, #000 0%, rgba(0, 0, 0, 0.94) 52%, transparent 92%);
+  -webkit-mask-image: radial-gradient(circle at center top, #000 0%, rgba(0, 0, 0, 0.94) 52%, transparent 92%);
+}
+
+.battle-hud-backdrop-sprite {
+  width: 300px;
+  height: 300px;
+  display: block;
+  filter: saturate(0.9) contrast(1.04);
+  transform: translateY(-38px) scale(1.15);
+  transform-origin: top center;
+}
+
+.battle-hud-icon,
+.battle-hud-body {
+  position: relative;
+  z-index: 1;
 }
 
 .battle-hud-icon {
@@ -2071,6 +2118,14 @@ button {
   display: grid;
   gap: 0.22rem;
   min-width: 0;
+}
+
+.battle-hud-side-right .battle-hud-icon {
+  order: 2;
+}
+
+.battle-hud-side-right .battle-hud-body {
+  order: 1;
 }
 
 .battle-hud-affinity {
@@ -2351,8 +2406,8 @@ button {
 }
 
 .battle-battler-enemy {
-  top: 14%;
   left: 8%;
+  bottom: 10%;
 }
 
 .battle-battler-player {
@@ -3016,13 +3071,13 @@ button {
 }
 
 @keyframes battle-scene-clouds-right {
-  0% { transform: translateX(-180%); }
-  100% { transform: translateX(180%); }
+  0% { transform: translateX(-240%); }
+  100% { transform: translateX(240%); }
 }
 
 @keyframes battle-scene-clouds-left {
-  0% { transform: translateX(180%); }
-  100% { transform: translateX(-180%); }
+  0% { transform: translateX(240%); }
+  100% { transform: translateX(-240%); }
 }
 
 @keyframes battle-scene-particle-travel {
@@ -3715,6 +3770,17 @@ button {
 
   .world-topbar-actions {
     width: 100%;
+  }
+
+  .battle-hud-backdrop {
+    width: 100%;
+    height: 100%;
+    opacity: 0.1;
+  }
+
+  .battle-hud-backdrop-sprite {
+    width: 156px;
+    height: 156px;
   }
 
   .status-panel {
