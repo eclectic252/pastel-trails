@@ -25,6 +25,7 @@
   const CHARACTER_SHEET_FRAME_HEIGHT = 313;
   const PLAYER_RENDER_WIDTH = 168;
   const MONSTER_RENDER_WIDTH = 128;
+  const BATTLE_MONSTER_RENDER_WIDTH = 144;
   const MIN_PLAYER_RENDER_WIDTH = 64;
   const MIN_MONSTER_RENDER_WIDTH = 16;
   const PLAYER_SPRITE_FOOT_ANCHOR = 0.9;
@@ -3637,15 +3638,7 @@
     return Math.max(0, Math.min(60, Math.round(baseCount * frequency)));
   }
 
-  function createBattleSceneParticleConfigs(content, preset, options) {
-    const settings = getResolvedBattleSceneParticleSettings(content, preset);
-    if (!settings.enabled) {
-      return [];
-    }
-    const count = getBattleSceneParticleInstanceCount(settings);
-    if (!count) {
-      return [];
-    }
+  function createBattleSceneParticleConfig(settings, index, options) {
     const direction = normalizeBattleSceneParticleDirection(settings.direction);
     const spread = normalizeBattleSceneParticleSpread(settings.spread);
     const startMinX = Math.max(0, Math.round((100 - spread) / 2));
@@ -3657,56 +3650,109 @@
       const end = Math.max(low, high);
       return start + (Math.random() * (end - start));
     };
-    const shuffledImageEntries = settings.imageEntries.length
-      ? settings.imageEntries.slice().sort(function () {
-        return Math.random() - 0.5;
-      })
-      : [];
+    const startX = Number(randomBetween(startMinX, startMaxX).toFixed(2));
+    const duration = getBattleSceneParticleDurationSeconds(randomBetween(settings.speedMin, settings.speedMax));
+    const driftX = direction === "down-left"
+      ? randomBetween(-34, -18)
+      : direction === "down-right"
+        ? randomBetween(18, 34)
+        : randomBetween(-6, 6);
+    const imageEntry = settings.imageEntries.length
+      ? (settings.imageEntries[Math.floor(Math.random() * settings.imageEntries.length)] || null)
+      : null;
+    const imagePath = imageEntry?.imagePath || "";
+    const size = imageEntry
+      ? randomBetween(imageEntry.sizeMin, imageEntry.sizeMax)
+      : randomBetween(settings.sizeMin, settings.sizeMax);
+    const startRotation = randomBetween(
+      imageEntry?.rotationStartMin ?? settings.rotationStartMin,
+      imageEntry?.rotationStartMax ?? settings.rotationStartMax
+    );
+    const spinMagnitude = randomBetween(
+      imageEntry?.rotationSpeedMin ?? settings.rotationSpeedMin,
+      imageEntry?.rotationSpeedMax ?? settings.rotationSpeedMax
+    );
+    const entryRotationDirection = imageEntry?.rotationDirection || settings.rotationDirection;
+    const spinDirection = entryRotationDirection === "clockwise"
+      ? 1
+      : entryRotationDirection === "counterclockwise"
+        ? -1
+        : (Math.random() < 0.5 ? -1 : 1);
+    const allowInitialOffset = options?.allowInitialOffset !== false;
+    const delay = allowInitialOffset
+      ? Number((Math.random() * duration).toFixed(2))
+      : 0;
+    const cycleMs = Math.max(250, Math.round(duration * 1000));
+    const remainingMs = allowInitialOffset
+      ? Math.max(60, cycleMs - Math.round(delay * 1000))
+      : cycleMs;
+    return {
+      id: "particle-" + index + "-" + Math.round(Math.random() * 100000),
+      slot: Number(options?.slot ?? index),
+      effect: settings.shapeEffect,
+      imagePath,
+      startX,
+      startY: -18,
+      endX: Number((startX + driftX).toFixed(2)),
+      endY: 112,
+      delay,
+      duration,
+      size: Number(size.toFixed(2)),
+      opacity: Number(randomBetween(settings.opacityMin, settings.opacityMax).toFixed(2)),
+      rotation: Math.round(startRotation),
+      spin: Math.round(spinMagnitude * spinDirection),
+      cycleMs,
+      remainingMs,
+    };
+  }
+
+  function createBattleSceneParticleConfigs(content, preset, options) {
+    const settings = getResolvedBattleSceneParticleSettings(content, preset);
+    if (!settings.enabled) {
+      return [];
+    }
+    const count = getBattleSceneParticleInstanceCount(settings);
+    if (!count) {
+      return [];
+    }
     return Array.from({ length: count }, function (_, index) {
-      const startX = Number(randomBetween(startMinX, startMaxX).toFixed(2));
-      const duration = getBattleSceneParticleDurationSeconds(randomBetween(settings.speedMin, settings.speedMax));
-      const driftX = direction === "down-left"
-        ? randomBetween(-34, -18)
-        : direction === "down-right"
-          ? randomBetween(18, 34)
-          : randomBetween(-6, 6);
-      const imageEntry = shuffledImageEntries.length
-        ? (shuffledImageEntries[index % shuffledImageEntries.length] || null)
-        : null;
-      const imagePath = imageEntry?.imagePath || "";
-      const size = imageEntry
-        ? randomBetween(imageEntry.sizeMin, imageEntry.sizeMax)
-        : randomBetween(settings.sizeMin, settings.sizeMax);
-      const startRotation = randomBetween(
-        imageEntry?.rotationStartMin ?? settings.rotationStartMin,
-        imageEntry?.rotationStartMax ?? settings.rotationStartMax
-      );
-      const spinMagnitude = randomBetween(
-        imageEntry?.rotationSpeedMin ?? settings.rotationSpeedMin,
-        imageEntry?.rotationSpeedMax ?? settings.rotationSpeedMax
-      );
-      const entryRotationDirection = imageEntry?.rotationDirection || settings.rotationDirection;
-      const spinDirection = entryRotationDirection === "clockwise"
-        ? 1
-        : entryRotationDirection === "counterclockwise"
-          ? -1
-          : (Math.random() < 0.5 ? -1 : 1);
-      return {
-        id: "particle-" + index + "-" + Math.round(Math.random() * 100000),
-        effect: settings.shapeEffect,
-        imagePath,
-        startX,
-        startY: -18,
-        endX: Number((startX + driftX).toFixed(2)),
-        endY: 112,
-        delay: Number((Math.random() * duration).toFixed(2)),
-        duration,
-        size: Number(size.toFixed(2)),
-        opacity: Number(randomBetween(settings.opacityMin, settings.opacityMax).toFixed(2)),
-        rotation: Math.round(startRotation),
-        spin: Math.round(spinMagnitude * spinDirection),
-      };
+      return createBattleSceneParticleConfig(settings, index, {
+        allowInitialOffset: options?.allowInitialOffset !== false,
+        slot: index,
+      });
     });
+  }
+
+  function updateBattleSceneParticles(state, content, deltaMs) {
+    const battle = state?.battle;
+    if (!battle || normalizeBattleBackgroundMode(battle.battleBackgroundMode) !== "scene") {
+      return [];
+    }
+    const particles = Array.isArray(battle.battleSceneParticles) ? battle.battleSceneParticles : [];
+    if (!particles.length) {
+      return [];
+    }
+    const preset = getBattleScenePreset(content, battle.battleScenePresetId);
+    if (!preset) {
+      battle.battleSceneParticles = [];
+      return [];
+    }
+    const settings = getResolvedBattleSceneParticleSettings(content, preset);
+    const elapsedMs = Math.max(0, Number(deltaMs || 0));
+    const updatedSlots = [];
+    battle.battleSceneParticles = particles.map(function (particle, index) {
+      const nextRemainingMs = Math.max(0, Number(particle?.remainingMs ?? particle?.cycleMs ?? 0) - elapsedMs);
+      if (nextRemainingMs > 0) {
+        particle.remainingMs = nextRemainingMs;
+        return particle;
+      }
+      updatedSlots.push(index);
+      return createBattleSceneParticleConfig(settings, index, {
+        allowInitialOffset: false,
+        slot: Number(particle?.slot ?? index),
+      });
+    });
+    return updatedSlots;
   }
 
   function buildResolvedBattleVisualState(content, options) {
@@ -3715,12 +3761,13 @@
       ? getBattleScenePreset(content, resolved.battleScenePresetId)
       : null;
     const particleSettings = getResolvedBattleSceneParticleSettings(content, preset);
+    const particles = createBattleSceneParticleConfigs(content, preset);
     return {
       battleBackgroundMode: normalizeBattleBackgroundMode(resolved.battleBackgroundMode),
       battleBackgroundImagePath: normalizeBattleBackgroundImagePath(resolved.battleBackgroundImagePath),
       battleScenePresetId: normalizeBattleScenePresetId(resolved.battleScenePresetId),
       battleSceneParticleLayer: normalizeBattleSceneParticleLayer(particleSettings.layerPlacement),
-      battleSceneParticles: createBattleSceneParticleConfigs(content, preset),
+      battleSceneParticles: particles,
     };
   }
 
@@ -4298,6 +4345,27 @@
     };
   }
 
+  function getVariantBattleConfig(variant) {
+    const config = variant?.battle || {};
+    return {
+      renderWidth: config.renderWidth === null || config.renderWidth === undefined || config.renderWidth === ""
+        ? null
+        : clampRenderWidth(config.renderWidth, "monster", BATTLE_MONSTER_RENDER_WIDTH),
+    };
+  }
+
+  function getSpeciesBattleSpriteRenderWidth(species, variant) {
+    const variantBattleConfig = getVariantBattleConfig(variant);
+    if (variantBattleConfig.renderWidth !== null) {
+      return variantBattleConfig.renderWidth;
+    }
+    const speciesBattleWidth = species?.battleSpriteRenderWidth;
+    if (speciesBattleWidth === null || speciesBattleWidth === undefined || speciesBattleWidth === "") {
+      return BATTLE_MONSTER_RENDER_WIDTH;
+    }
+    return clampRenderWidth(speciesBattleWidth, "monster", BATTLE_MONSTER_RENDER_WIDTH);
+  }
+
   function getVariantOverworldSheet(content, variant) {
     const config = getVariantOverworldConfig(variant);
     if (!config.sheetId) {
@@ -4314,8 +4382,9 @@
     return overworldConfig?.rows?.[resolvedFacing] ?? overworldConfig?.row ?? 0;
   }
 
-  function renderMonsterVariantVisualMarkup(speciesId, variantId, className, mode) {
-    return '<canvas class="' + escapeHtml(className) + '" data-monster-visual-species="' + escapeHtml(speciesId || "") + '" data-monster-visual-variant="' + escapeHtml(variantId || "default") + '" data-monster-visual-mode="' + escapeHtml(mode || "default") + '"></canvas>';
+  function renderMonsterVariantVisualMarkup(speciesId, variantId, className, mode, inlineStyle) {
+    const styleAttr = inlineStyle ? ' style="' + escapeHtml(inlineStyle) + '"' : "";
+    return '<canvas class="' + escapeHtml(className) + '" data-monster-visual-species="' + escapeHtml(speciesId || "") + '" data-monster-visual-variant="' + escapeHtml(variantId || "default") + '" data-monster-visual-mode="' + escapeHtml(mode || "default") + '"' + styleAttr + '></canvas>';
   }
 
   function formatMonsterVariantLabel(variantOrId, fallbackVariantId) {
@@ -10075,7 +10144,8 @@
   function renderBattleBattler(content, monster, className) {
     const species = getSpecies(content, monster.speciesId);
     const variant = getSpeciesVariant(species, monster.variantId || "default");
-    const visual = renderMonsterVariantVisualMarkup(monster.speciesId, variant?.id || monster.variantId || "default", "battle-battler-sprite", "default");
+    const battleSpriteSize = getSpeciesBattleSpriteRenderWidth(species, variant);
+    const visual = renderMonsterVariantVisualMarkup(monster.speciesId, variant?.id || monster.variantId || "default", "battle-battler-sprite", "default", "width:" + battleSpriteSize + "px;height:" + battleSpriteSize + "px;");
     const poseClass = className && className.includes("player")
       ? (monster._battlePose === "lunge" ? " battle-battler-lunge-player" : "")
       : (monster._battlePose === "lunge" ? " battle-battler-lunge-enemy" : "");
@@ -10101,6 +10171,7 @@
     let monsterTranslateY = 0;
     let monsterScale = 1;
     let monsterOpacity = 0;
+    const battleSpriteSize = getSpeciesBattleSpriteRenderWidth(species, variant);
 
     if (introPhase === "enter") {
       trainerTranslateX = Math.round(-220 + (220 * progress));
@@ -10126,7 +10197,7 @@
       "</div>",
       '<div class="battle-battler battle-battler-enemy battle-battler-enemy-intro" style="transform: translate(' + monsterTranslateX + 'px, ' + monsterTranslateY + 'px) scale(' + monsterScale.toFixed(3) + '); opacity:' + monsterOpacity.toFixed(3) + ';">',
       '<div class="battle-battler-shadow"></div>',
-      renderMonsterVariantVisualMarkup(battle.enemy.speciesId, variant?.id || battle.enemy.variantId || "default", "battle-battler-sprite", "default"),
+      renderMonsterVariantVisualMarkup(battle.enemy.speciesId, variant?.id || battle.enemy.variantId || "default", "battle-battler-sprite", "default", "width:" + battleSpriteSize + "px;height:" + battleSpriteSize + "px;"),
       "</div>",
       "</div>",
     ].join("");
@@ -10144,11 +10215,12 @@
     const playerTranslateY = Math.round(22 * (1 - progress));
     const playerScale = 0.78 + (0.22 * progress);
     const playerOpacity = Math.max(0, Math.min(1, progress * 1.2));
+    const battleSpriteSize = getSpeciesBattleSpriteRenderWidth(species, variant);
 
     return [
       '<div class="battle-battler battle-battler-player battle-battler-player-intro" style="transform: translate(' + playerTranslateX + 'px, ' + playerTranslateY + 'px) scale(' + playerScale.toFixed(3) + '); opacity:' + playerOpacity.toFixed(3) + ';">',
       '<div class="battle-battler-shadow"></div>',
-      renderMonsterVariantVisualMarkup(monster.speciesId, variant?.id || monster.variantId || "default", "battle-battler-sprite", "default"),
+      renderMonsterVariantVisualMarkup(monster.speciesId, variant?.id || monster.variantId || "default", "battle-battler-sprite", "default", "width:" + battleSpriteSize + "px;height:" + battleSpriteSize + "px;"),
       "</div>",
     ].join("");
   }
@@ -10156,6 +10228,34 @@
   function getBattleSceneCloudDurationSeconds(preset) {
     const speed = normalizeBattleSceneCloudSpeed(preset?.cloudDriftSpeed);
     return Math.max(14, Math.min(80, Math.round(180 / Math.max(2, speed))));
+  }
+
+  function renderBattleSceneParticleMarkup(particle) {
+    if (!particle) {
+      return "";
+    }
+    const styles = [
+      "--particle-start-x:" + Number(particle.startX || 0) + "%",
+      "--particle-start-y:" + Number(particle.startY ?? -16) + "%",
+      "--particle-end-x:" + Number(particle.endX || 0) + "%",
+      "--particle-end-y:" + Number(particle.endY ?? 126) + "%",
+      "--particle-delay:" + Number(particle.delay || 0) + "s",
+      "--particle-duration:" + Number(particle.duration || 8) + "s",
+      "--particle-size:" + Number(particle.size || 1),
+      "--particle-opacity:" + Number(particle.opacity || 0.5),
+      "--particle-rotation:" + Number(particle.rotation || 0) + "deg",
+      "--particle-spin:" + Number(particle.spin || 0) + "deg",
+    ].join(";");
+    const slot = Number(particle.slot || 0);
+    if (particle.imagePath) {
+      const label = particle.imagePath.split("/").pop() || "Particle";
+      return '<span class="battle-scene-particle battle-scene-particle-image" data-particle-slot="' + slot + '" style="' + styles + '"><img class="battle-scene-particle-image-asset" src="' + escapeHtml(particle.imagePath) + '" alt="' + escapeHtml(label) + '" /></span>';
+    }
+    const normalizedEffect = normalizeBattleSceneParticleEffect(particle.effect);
+    if (normalizedEffect === "none") {
+      return "";
+    }
+    return '<span class="battle-scene-particle battle-scene-particle-' + escapeHtml(normalizedEffect) + '" data-particle-slot="' + slot + '" style="' + styles + '"></span>';
   }
 
   function renderBattleSceneParticles(particles, options) {
@@ -10166,27 +10266,7 @@
       ? " battle-scene-particles-behind"
       : " battle-scene-particles-front";
     return '<div class="battle-scene-particles' + layerClass + '">' + particles.map(function (particle) {
-      const styles = [
-        "--particle-start-x:" + Number(particle.startX || 0) + "%",
-        "--particle-start-y:" + Number(particle.startY ?? -16) + "%",
-        "--particle-end-x:" + Number(particle.endX || 0) + "%",
-        "--particle-end-y:" + Number(particle.endY ?? 126) + "%",
-        "--particle-delay:" + Number(particle.delay || 0) + "s",
-        "--particle-duration:" + Number(particle.duration || 8) + "s",
-        "--particle-size:" + Number(particle.size || 1),
-        "--particle-opacity:" + Number(particle.opacity || 0.5),
-        "--particle-rotation:" + Number(particle.rotation || 0) + "deg",
-        "--particle-spin:" + Number(particle.spin || 0) + "deg",
-      ].join(";");
-      if (particle.imagePath) {
-        const label = particle.imagePath.split("/").pop() || "Particle";
-        return '<span class="battle-scene-particle battle-scene-particle-image" style="' + styles + '"><img class="battle-scene-particle-image-asset" src="' + escapeHtml(particle.imagePath) + '" alt="' + escapeHtml(label) + '" /></span>';
-      }
-      const normalizedEffect = normalizeBattleSceneParticleEffect(particle.effect);
-      if (normalizedEffect === "none") {
-        return "";
-      }
-      return '<span class="battle-scene-particle battle-scene-particle-' + escapeHtml(normalizedEffect) + '" style="' + styles + '"></span>';
+      return renderBattleSceneParticleMarkup(particle);
     }).join("") + "</div>";
   }
 
@@ -10239,6 +10319,59 @@
       '<div class="battle-field battle-field-scene">' + innerMarkup + "</div>",
       particleLayer !== "behindBattlers" ? particleMarkup : "",
     ].join("");
+  }
+
+  function syncBattleSceneParticleDom(root, battle, updatedSlots) {
+    if (!root || !battle) {
+      return;
+    }
+    const battleStage = root.querySelector(".battle-stage");
+    if (!battleStage) {
+      return;
+    }
+    const particleLayer = normalizeBattleSceneParticleLayer(battle?.battleSceneParticleLayer);
+    const particleLayerElement = battleStage.querySelector(
+      particleLayer === "behindBattlers"
+        ? ".battle-scene-particles-behind"
+        : ".battle-scene-particles-front"
+    );
+    if (Array.isArray(updatedSlots) && updatedSlots.length && particleLayerElement) {
+      updatedSlots.forEach(function (slotIndex) {
+        const particle = (battle.battleSceneParticles || [])[slotIndex] || null;
+        const existing = particleLayerElement.querySelector('[data-particle-slot="' + Number(slotIndex) + '"]');
+        const markup = renderBattleSceneParticleMarkup(particle);
+        if (existing && markup) {
+          existing.outerHTML = markup;
+        } else if (existing && !markup) {
+          existing.remove();
+        } else if (!existing && markup) {
+          particleLayerElement.insertAdjacentHTML("beforeend", markup);
+        }
+      });
+      return;
+    }
+    battleStage.querySelectorAll(".battle-scene-particles").forEach(function (node) {
+      node.remove();
+    });
+    const particleMarkup = renderBattleSceneParticles(battle?.battleSceneParticles, {
+      layerPlacement: particleLayer,
+    });
+    if (!particleMarkup) {
+      return;
+    }
+    if (particleLayer === "behindBattlers") {
+      const anchor = battleStage.querySelector(".battle-scene-layer-foreground") || battleStage.querySelector(".battle-field");
+      if (anchor) {
+        anchor.insertAdjacentHTML("beforebegin", particleMarkup);
+        return;
+      }
+    }
+    const battleField = battleStage.querySelector(".battle-field");
+    if (battleField) {
+      battleField.insertAdjacentHTML("afterend", particleMarkup);
+      return;
+    }
+    battleStage.insertAdjacentHTML("beforeend", particleMarkup);
   }
 
   function renderTitleScreen(root, content, saveSlots, selectedSlotId, onAction, notice) {
@@ -12462,6 +12595,8 @@
             return '<option value="' + escapeHtml(sheet.id) + '"' + selected + '>' + escapeHtml(sheet.label) + "</option>";
           })
         ).join("");
+        const battleConfig = getVariantBattleConfig(variant);
+        const effectiveBattleWidth = getSpeciesBattleSpriteRenderWidth(selectedSpecies, variant);
         const showsWalkSettings = displayMode === "walk";
         const showsPortraitWidth = displayMode === "portrait";
         const variantPreview = renderMonsterVariantVisualMarkup(selectedSpecies.id, variant.id || "default", "monster-variant-preview-image", "default");
@@ -12476,6 +12611,7 @@
           '<label class="input-group"><span>Portrait Sheet</span><select data-dev-variant-field="portrait.sheetId" data-variant-index="' + index + '">' + monsterSheetOptions + '</select></label>',
           '<label class="input-group"><span>Portrait Row (0-based)</span><input type="number" min="0" step="1" data-dev-variant-field="portrait.row" data-variant-index="' + index + '" value="' + Number(portraitConfig.row || 0) + '" /></label>',
           '<label class="input-group"><span>Portrait Frame (0-based)</span><input type="number" min="0" step="1" data-dev-variant-field="portrait.frame" data-variant-index="' + index + '" value="' + Number(portraitConfig.frame || 0) + '" /></label>',
+          '<label class="input-group"><span>Battle Sprite Width</span><input type="number" min="' + MIN_MONSTER_RENDER_WIDTH + '" max="384" step="1" data-dev-variant-field="battle.renderWidth" data-variant-index="' + index + '" value="' + escapeHtml(battleConfig.renderWidth ?? "") + '" placeholder="' + effectiveBattleWidth + '" /></label>',
           '<label class="input-group"><span>Overworld Mode Override</span><select data-dev-variant-field="overworld.displayMode" data-variant-index="' + index + '"><option value=""' + (!overworldConfig.displayMode ? " selected" : "") + '>Use Species Default</option><option value="walk"' + (overworldConfig.displayMode === "walk" ? " selected" : "") + '>Walk Animation</option><option value="portrait"' + (overworldConfig.displayMode === "portrait" ? " selected" : "") + '>Default Sprite</option></select></label>',
           (showsPortraitWidth
             ? '<label class="input-group"><span>Default Sprite Width</span><input type="number" min="' + MIN_MONSTER_RENDER_WIDTH + '" max="384" step="1" data-dev-variant-field="overworld.renderWidth" data-variant-index="' + index + '" value="' + escapeHtml(overworldConfig.renderWidth ?? "") + '" placeholder="' + MONSTER_RENDER_WIDTH + '" /></label>'
@@ -12491,7 +12627,7 @@
               + '<label class="input-group"><span>Frame Duration Ms</span><input type="number" min="60" step="10" data-dev-variant-field="overworld.frameDurationMs" data-variant-index="' + index + '" value="' + Number(overworldConfig.frameDurationMs || 180) + '" /></label>'
             : ""),
           '</div>',
-          '<p class="dev-helper-text">Portrait controls the static UI image used in saves, registry, party, bank, and battle. This variant currently resolves to <strong>' + escapeHtml(displayMode) + '</strong> on the overworld. Leave the override blank to inherit the species default.</p>',
+          '<p class="dev-helper-text">Portrait controls the static UI image used in saves, registry, party, bank, and battle. Battle Sprite Width changes this variant in battle only. This variant currently resolves to <strong>' + escapeHtml(displayMode) + '</strong> on the overworld. Leave the battle width blank to inherit the species battle default.</p>',
           '</div>',
         ].join("");
       }).join("");
@@ -12516,6 +12652,7 @@
       const previewPortraitSheet = getVariantPortraitSheet(content, previewVariant);
       const previewOverworldConfig = getVariantOverworldConfig(previewVariant);
       const previewOverworldSheet = getVariantOverworldSheet(content, previewVariant);
+      const previewBattleWidth = getSpeciesBattleSpriteRenderWidth(selectedSpecies, previewVariant);
       const previewDisplayMode = getMonsterOverworldDisplayMode(selectedSpecies, previewVariant);
       const previewPortraitSummary = previewPortraitConfig.imagePath
         || ((previewPortraitSheet?.label || "Unassigned") + " · row " + Number(previewPortraitConfig.row || 0) + " · frame " + Number(previewPortraitConfig.frame || 0));
@@ -12539,6 +12676,7 @@
         '<label class="input-group"><span>Name</span><input data-dev-species-field="name" value="' + escapeHtml(selectedSpecies.name || "") + '" /></label>',
         '<label class="input-group"><span>Growth</span><input data-dev-species-field="growth" value="' + escapeHtml(selectedSpecies.growth || "") + '" /></label>',
         '<label class="input-group"><span>Default Overworld Mode</span><select data-dev-species-field="overworldDisplayMode"><option value="walk"' + ((selectedSpecies.overworldDisplayMode || "walk") === "walk" ? " selected" : "") + '>Walk Animation</option><option value="portrait"' + (selectedSpecies.overworldDisplayMode === "portrait" ? " selected" : "") + '>Default Sprite</option></select></label>',
+        '<label class="input-group"><span>Default Battle Sprite Width</span><input type="number" min="' + MIN_MONSTER_RENDER_WIDTH + '" max="384" step="1" data-dev-species-field="battleSpriteRenderWidth" value="' + escapeHtml(selectedSpecies.battleSpriteRenderWidth ?? "") + '" placeholder="' + BATTLE_MONSTER_RENDER_WIDTH + '" /></label>',
         '<label class="input-group"><span>HP</span><input type="number" step="1" data-dev-species-field="baseStats.hp" value="' + Number(selectedSpecies.baseStats?.hp || 0) + '" /></label>',
         '<label class="input-group"><span>Attack</span><input type="number" step="1" data-dev-species-field="baseStats.attack" value="' + Number(selectedSpecies.baseStats?.attack || 0) + '" /></label>',
         '<label class="input-group"><span>Defense</span><input type="number" step="1" data-dev-species-field="baseStats.defense" value="' + Number(selectedSpecies.baseStats?.defense || 0) + '" /></label>',
@@ -12547,7 +12685,7 @@
         '</section>',
         '<section class="dev-tools-layout">',
         '<section class="panel-block"><div class="section-heading"><h3>Assigned Skills</h3></div><div class="dev-checklist">' + skillAssignment + '</div></section>',
-        '<section class="panel-block"><div class="section-heading"><h3>Species Preview</h3></div><div class="monster-preview-card">' + previewImage + '<div><p><strong>' + escapeHtml(selectedSpecies.name) + '</strong></p><p>ID: ' + escapeHtml(selectedSpecies.id) + '</p><p>Growth: ' + escapeHtml(selectedSpecies.growth || "medium") + '</p><label class="input-group"><span>Preview Variant</span><select data-action="select-preview-variant">' + previewVariantOptions + '</select></label><p>Portrait: ' + escapeHtml(previewPortraitSummary) + '</p><p>Overworld: ' + escapeHtml(previewOverworldSummary) + '</p></div></div></section>',
+        '<section class="panel-block"><div class="section-heading"><h3>Species Preview</h3></div><div class="monster-preview-card">' + previewImage + '<div><p><strong>' + escapeHtml(selectedSpecies.name) + '</strong></p><p>ID: ' + escapeHtml(selectedSpecies.id) + '</p><p>Growth: ' + escapeHtml(selectedSpecies.growth || "medium") + '</p><label class="input-group"><span>Preview Variant</span><select data-action="select-preview-variant">' + previewVariantOptions + '</select></label><p>Portrait: ' + escapeHtml(previewPortraitSummary) + '</p><p>Overworld: ' + escapeHtml(previewOverworldSummary) + '</p><p>Battle Width: ' + escapeHtml(String(previewBattleWidth)) + 'px</p></div></div></section>',
         '</section>',
         '<section class="panel-block"><div class="section-heading"><h3>Variants</h3><button class="secondary-button" type="button" data-action="add-variant">Add Variant</button></div>' + variantRows + '</section>',
       ].join("");
@@ -18643,7 +18781,9 @@
         }
 
         const numericFields = new Set(["baseStats.hp", "baseStats.attack", "baseStats.defense", "baseStats.speed"]);
-        const value = numericFields.has(path) ? Number(rawValue || 0) : rawValue;
+        const value = path === "battleSpriteRenderWidth"
+          ? (rawValue === "" ? null : clampRenderWidth(rawValue, "monster", BATTLE_MONSTER_RENDER_WIDTH))
+          : (numericFields.has(path) ? Number(rawValue || 0) : rawValue);
 
         if (path.includes(".")) {
           const parts = path.split(".");
@@ -19989,8 +20129,12 @@
         }
 
         if (this.state.battle) {
-          if (updateBattleAnimation(this.state, deltaMs)) {
+          const battleAnimationChanged = updateBattleAnimation(this.state, deltaMs);
+          const updatedParticleSlots = updateBattleSceneParticles(this.state, this.content, deltaMs);
+          if (battleAnimationChanged) {
             this.render();
+          } else if (updatedParticleSlots.length) {
+            syncBattleSceneParticleDom(root, this.state.battle, updatedParticleSlots);
           }
           return;
         }

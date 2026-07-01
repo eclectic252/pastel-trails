@@ -1279,7 +1279,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             },
             "label": "Lavender"
           }
-        ]
+        ],
+        "battleSpriteRenderWidth": 160
       },
       {
         "id": "Ruffin",
@@ -1338,7 +1339,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
                 3
               ],
               "frameDurationMs": 180,
-              "renderWidth": 90
+              "renderWidth": 95
             },
             "label": "Default"
           },
@@ -1362,7 +1363,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
                 3
               ],
               "frameDurationMs": 180,
-              "renderWidth": 90
+              "renderWidth": 95
             },
             "label": "Snow"
           },
@@ -1386,7 +1387,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
                 3
               ],
               "frameDurationMs": 180,
-              "renderWidth": 90
+              "renderWidth": 95
             },
             "label": "Grass"
           },
@@ -1410,7 +1411,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
                 3
               ],
               "frameDurationMs": 180,
-              "renderWidth": 90
+              "renderWidth": 95
             },
             "label": "Electric"
           },
@@ -1434,7 +1435,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
                 3
               ],
               "frameDurationMs": 180,
-              "renderWidth": 90
+              "renderWidth": 95
             },
             "label": "Water"
           },
@@ -1458,7 +1459,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
                 3
               ],
               "frameDurationMs": 180,
-              "renderWidth": 90
+              "renderWidth": 95
             },
             "label": "Fire"
           },
@@ -1482,7 +1483,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
                 3
               ],
               "frameDurationMs": 180,
-              "renderWidth": 90
+              "renderWidth": 95
             },
             "label": "Pink"
           },
@@ -1506,7 +1507,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
                 3
               ],
               "frameDurationMs": 180,
-              "renderWidth": 90
+              "renderWidth": 95
             },
             "label": "Dark"
           },
@@ -1530,7 +1531,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
                 3
               ],
               "frameDurationMs": 180,
-              "renderWidth": 90
+              "renderWidth": 95
             },
             "label": "Galaxy"
           },
@@ -1554,11 +1555,12 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
                 3
               ],
               "frameDurationMs": 180,
-              "renderWidth": 90
+              "renderWidth": 95
             },
             "label": "Lavender"
           }
-        ]
+        ],
+        "battleSpriteRenderWidth": 110
       },
       {
         "id": "Fluffram",
@@ -1836,7 +1838,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             },
             "label": "Lavender"
           }
-        ]
+        ],
+        "battleSpriteRenderWidth": 160
       },
       {
         "id": "pawlit",
@@ -3328,7 +3331,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
                 2,
                 3
               ],
-              "frameDurationMs": 180
+              "frameDurationMs": 180,
+              "renderWidth": 100
             },
             "label": "Snow"
           },
@@ -3352,7 +3356,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
                 2,
                 3
               ],
-              "frameDurationMs": 180
+              "frameDurationMs": 180,
+              "renderWidth": 100
             },
             "label": "Grass"
           },
@@ -3376,7 +3381,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
                 2,
                 3
               ],
-              "frameDurationMs": 180
+              "frameDurationMs": 180,
+              "renderWidth": 100
             },
             "label": "Electric"
           },
@@ -3400,7 +3406,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
                 2,
                 3
               ],
-              "frameDurationMs": 180
+              "frameDurationMs": 180,
+              "renderWidth": 100
             },
             "label": "Water"
           },
@@ -3424,7 +3431,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
                 2,
                 3
               ],
-              "frameDurationMs": 180
+              "frameDurationMs": 180,
+              "renderWidth": 100
             },
             "label": "Fire"
           },
@@ -3448,7 +3456,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
                 2,
                 3
               ],
-              "frameDurationMs": 180
+              "frameDurationMs": 180,
+              "renderWidth": 100
             },
             "label": "Pink"
           },
@@ -3472,7 +3481,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
                 2,
                 3
               ],
-              "frameDurationMs": 180
+              "frameDurationMs": 180,
+              "renderWidth": 100
             },
             "label": "Dark"
           },
@@ -3496,7 +3506,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
                 2,
                 3
               ],
-              "frameDurationMs": 180
+              "frameDurationMs": 180,
+              "renderWidth": 100
             },
             "label": "Galaxy"
           },
@@ -3520,7 +3531,8 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
                 2,
                 3
               ],
-              "frameDurationMs": 180
+              "frameDurationMs": 180,
+              "renderWidth": 100
             },
             "label": "Lavender"
           }
@@ -3974,7 +3986,12 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           }
         ],
         "crestImagePath": "assets/Crests/crest1.png",
-        "leaderSheetId": "heather-walk"
+        "leaderSheetId": "heather-walk",
+        "battleBackgroundImagePath": "",
+        "battleBackgroundImagePaths": [],
+        "battleBackgroundMode": "static",
+        "battleScenePresetId": "",
+        "battleVisualPool": []
       },
       {
         "id": "Camelia-Ranch-Arena",
@@ -4008,7 +4025,12 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
           }
         ],
         "crestImagePath": "assets/Crests/crest2.png",
-        "leaderSheetId": "pastel-pink-cowgirl"
+        "leaderSheetId": "pastel-pink-cowgirl",
+        "battleBackgroundImagePath": "",
+        "battleBackgroundImagePaths": [],
+        "battleBackgroundMode": "static",
+        "battleScenePresetId": "",
+        "battleVisualPool": []
       },
       {
         "id": "Plumeria-Arena",
@@ -4037,7 +4059,12 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "variantId": "Caniri-grass"
           }
         ],
-        "leaderSheetId": "whitesundress"
+        "leaderSheetId": "whitesundress",
+        "battleBackgroundImagePath": "",
+        "battleBackgroundImagePaths": [],
+        "battleBackgroundMode": "static",
+        "battleScenePresetId": "",
+        "battleVisualPool": []
       },
       {
         "id": "arena-4",
@@ -4080,7 +4107,12 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "variantId": "default-galaxy"
           }
         ],
-        "leaderSheetId": "assets-characters-boardwalk-girl-sprite-navy-pants-white-top-walksheet-v1"
+        "leaderSheetId": "assets-characters-boardwalk-girl-sprite-navy-pants-white-top-walksheet-v1",
+        "battleBackgroundImagePath": "",
+        "battleBackgroundImagePaths": [],
+        "battleBackgroundMode": "static",
+        "battleScenePresetId": "",
+        "battleVisualPool": []
       },
       {
         "id": "arena-5",
@@ -4118,7 +4150,12 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "variantId": "default-grass"
           }
         ],
-        "leaderSheetId": "assets-characters-boardwalk-girl-sprite-gray-pants-walksheet"
+        "leaderSheetId": "assets-characters-boardwalk-girl-sprite-gray-pants-walksheet",
+        "battleBackgroundImagePath": "",
+        "battleBackgroundImagePaths": [],
+        "battleBackgroundMode": "static",
+        "battleScenePresetId": "",
+        "battleVisualPool": []
       },
       {
         "id": "arena-6",
@@ -4151,7 +4188,12 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "speciesId": "equira",
             "variantId": "Equira-Fire"
           }
-        ]
+        ],
+        "battleBackgroundImagePath": "",
+        "battleBackgroundImagePaths": [],
+        "battleBackgroundMode": "static",
+        "battleScenePresetId": "",
+        "battleVisualPool": []
       },
       {
         "id": "arena-7",
@@ -4194,7 +4236,15 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "variantId": "owlet-snow"
           }
         ],
-        "leaderSheetId": "frostbite"
+        "leaderSheetId": "frostbite",
+        "battleBackgroundImagePath": "",
+        "battleBackgroundImagePaths": [],
+        "battleBackgroundMode": "scene",
+        "battleScenePresetId": "battle-scene-1",
+        "battleVisualPool": [
+          "scene:battle-scene-1",
+          "scene:battle-scene-2"
+        ]
       },
       {
         "id": "arena-8",
@@ -4232,7 +4282,12 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "variantId": "default-lavvender"
           }
         ],
-        "leaderSheetId": "blonde-braided-adventurer-walksheet-v3-fullsize-transparent"
+        "leaderSheetId": "blonde-braided-adventurer-walksheet-v3-fullsize-transparent",
+        "battleBackgroundImagePath": "",
+        "battleBackgroundImagePaths": [],
+        "battleBackgroundMode": "static",
+        "battleScenePresetId": "",
+        "battleVisualPool": []
       },
       {
         "id": "arena-9",
@@ -4271,7 +4326,12 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
             "variantId": "default-electric"
           }
         ],
-        "leaderSheetId": "assets-characters-boardwalk-girl-sprite-tony"
+        "leaderSheetId": "assets-characters-boardwalk-girl-sprite-tony",
+        "battleBackgroundImagePath": "",
+        "battleBackgroundImagePaths": [],
+        "battleBackgroundMode": "static",
+        "battleScenePresetId": "",
+        "battleVisualPool": []
       }
     ]
   },
@@ -4838,6 +4898,80 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "cloudScale": 35,
         "cloudOffsetX": 0,
         "cloudOffsetY": -18
+      },
+      {
+        "id": "battle-scene-5",
+        "name": "Plain Field",
+        "backgroundImagePath": "assets/Battle Scenes/Backgrounds/Gradient1.png",
+        "midgroundImagePath": "assets/Battle Scenes/Midgrounds/cloud-medium-bordered-v1.png",
+        "foregroundImagePath": "assets/Battle Scenes/Foregrounds/field-forest-treeline-foreground-v2 copy.png",
+        "particleSettings": {
+          "enabled": true,
+          "layerPlacement": "inFrontOfBattlers",
+          "count": 4,
+          "frequency": 1,
+          "direction": "down",
+          "speedMin": 16,
+          "speedMax": 25,
+          "sizeMin": 0.65,
+          "sizeMax": 1.1,
+          "opacityMin": 1,
+          "opacityMax": 1,
+          "spread": 100,
+          "rotationStartMin": -22,
+          "rotationStartMax": 22,
+          "rotationDirection": "mixed",
+          "rotationSpeedMin": 30,
+          "rotationSpeedMax": 140,
+          "shapeEffect": "none",
+          "imageEntries": [
+            {
+              "imagePath": "assets/Battle Scenes/Particles/leaf-particle-04.png",
+              "sizeMin": 3.9,
+              "sizeMax": 5.1,
+              "rotationStartMin": -22,
+              "rotationStartMax": 22,
+              "rotationDirection": "mixed",
+              "rotationSpeedMin": 30,
+              "rotationSpeedMax": 140
+            },
+            {
+              "imagePath": "assets/Battle Scenes/Particles/petal-blue.png",
+              "sizeMin": 3.85,
+              "sizeMax": 4.35,
+              "rotationStartMin": -22,
+              "rotationStartMax": 22,
+              "rotationDirection": "mixed",
+              "rotationSpeedMin": 30,
+              "rotationSpeedMax": 140
+            },
+            {
+              "imagePath": "assets/Battle Scenes/Particles/leaf-particle-07.png",
+              "sizeMin": 3.95,
+              "sizeMax": 5.05,
+              "rotationStartMin": -22,
+              "rotationStartMax": 22,
+              "rotationDirection": "mixed",
+              "rotationSpeedMin": 30,
+              "rotationSpeedMax": 140
+            },
+            {
+              "imagePath": "assets/Battle Scenes/Particles/leaf-particle-02.png",
+              "sizeMin": 3.95,
+              "sizeMax": 5.05,
+              "rotationStartMin": -22,
+              "rotationStartMax": 22,
+              "rotationDirection": "mixed",
+              "rotationSpeedMin": 30,
+              "rotationSpeedMax": 140
+            }
+          ]
+        },
+        "cloudDriftDirection": "left",
+        "cloudDriftSpeed": 3,
+        "cloudScale": 35,
+        "cloudOffsetX": 0,
+        "cloudOffsetY": -19
       }
     ]
   },

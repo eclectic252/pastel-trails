@@ -32,7 +32,12 @@
         }
       ],
       "crestImagePath": "assets/Crests/crest1.png",
-      "leaderSheetId": "heather-walk"
+      "leaderSheetId": "heather-walk",
+      "battleBackgroundImagePath": "",
+      "battleBackgroundImagePaths": [],
+      "battleBackgroundMode": "static",
+      "battleScenePresetId": "",
+      "battleVisualPool": []
     },
     {
       "id": "Camelia-Ranch-Arena",
@@ -66,7 +71,12 @@
         }
       ],
       "crestImagePath": "assets/Crests/crest2.png",
-      "leaderSheetId": "pastel-pink-cowgirl"
+      "leaderSheetId": "pastel-pink-cowgirl",
+      "battleBackgroundImagePath": "",
+      "battleBackgroundImagePaths": [],
+      "battleBackgroundMode": "static",
+      "battleScenePresetId": "",
+      "battleVisualPool": []
     },
     {
       "id": "Plumeria-Arena",
@@ -95,7 +105,12 @@
           "variantId": "Caniri-grass"
         }
       ],
-      "leaderSheetId": "whitesundress"
+      "leaderSheetId": "whitesundress",
+      "battleBackgroundImagePath": "",
+      "battleBackgroundImagePaths": [],
+      "battleBackgroundMode": "static",
+      "battleScenePresetId": "",
+      "battleVisualPool": []
     },
     {
       "id": "arena-4",
@@ -138,7 +153,12 @@
           "variantId": "default-galaxy"
         }
       ],
-      "leaderSheetId": "assets-characters-boardwalk-girl-sprite-navy-pants-white-top-walksheet-v1"
+      "leaderSheetId": "assets-characters-boardwalk-girl-sprite-navy-pants-white-top-walksheet-v1",
+      "battleBackgroundImagePath": "",
+      "battleBackgroundImagePaths": [],
+      "battleBackgroundMode": "static",
+      "battleScenePresetId": "",
+      "battleVisualPool": []
     },
     {
       "id": "arena-5",
@@ -176,7 +196,12 @@
           "variantId": "default-grass"
         }
       ],
-      "leaderSheetId": "assets-characters-boardwalk-girl-sprite-gray-pants-walksheet"
+      "leaderSheetId": "assets-characters-boardwalk-girl-sprite-gray-pants-walksheet",
+      "battleBackgroundImagePath": "",
+      "battleBackgroundImagePaths": [],
+      "battleBackgroundMode": "static",
+      "battleScenePresetId": "",
+      "battleVisualPool": []
     },
     {
       "id": "arena-6",
@@ -209,7 +234,12 @@
           "speciesId": "equira",
           "variantId": "Equira-Fire"
         }
-      ]
+      ],
+      "battleBackgroundImagePath": "",
+      "battleBackgroundImagePaths": [],
+      "battleBackgroundMode": "static",
+      "battleScenePresetId": "",
+      "battleVisualPool": []
     },
     {
       "id": "arena-7",
@@ -252,7 +282,15 @@
           "variantId": "owlet-snow"
         }
       ],
-      "leaderSheetId": "frostbite"
+      "leaderSheetId": "frostbite",
+      "battleBackgroundImagePath": "",
+      "battleBackgroundImagePaths": [],
+      "battleBackgroundMode": "scene",
+      "battleScenePresetId": "battle-scene-1",
+      "battleVisualPool": [
+        "scene:battle-scene-1",
+        "scene:battle-scene-2"
+      ]
     },
     {
       "id": "arena-8",
@@ -290,7 +328,12 @@
           "variantId": "default-lavvender"
         }
       ],
-      "leaderSheetId": "blonde-braided-adventurer-walksheet-v3-fullsize-transparent"
+      "leaderSheetId": "blonde-braided-adventurer-walksheet-v3-fullsize-transparent",
+      "battleBackgroundImagePath": "",
+      "battleBackgroundImagePaths": [],
+      "battleBackgroundMode": "static",
+      "battleScenePresetId": "",
+      "battleVisualPool": []
     },
     {
       "id": "arena-9",
@@ -329,7 +372,12 @@
           "variantId": "default-electric"
         }
       ],
-      "leaderSheetId": "assets-characters-boardwalk-girl-sprite-tony"
+      "leaderSheetId": "assets-characters-boardwalk-girl-sprite-tony",
+      "battleBackgroundImagePath": "",
+      "battleBackgroundImagePaths": [],
+      "battleBackgroundMode": "static",
+      "battleScenePresetId": "",
+      "battleVisualPool": []
     }
   ]
 }

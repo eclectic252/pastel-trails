@@ -315,6 +315,80 @@
       "cloudScale": 35,
       "cloudOffsetX": 0,
       "cloudOffsetY": -18
+    },
+    {
+      "id": "battle-scene-5",
+      "name": "Plain Field",
+      "backgroundImagePath": "assets/Battle Scenes/Backgrounds/Gradient1.png",
+      "midgroundImagePath": "assets/Battle Scenes/Midgrounds/cloud-medium-bordered-v1.png",
+      "foregroundImagePath": "assets/Battle Scenes/Foregrounds/field-forest-treeline-foreground-v2 copy.png",
+      "particleSettings": {
+        "enabled": true,
+        "layerPlacement": "inFrontOfBattlers",
+        "count": 4,
+        "frequency": 1,
+        "direction": "down",
+        "speedMin": 16,
+        "speedMax": 25,
+        "sizeMin": 0.65,
+        "sizeMax": 1.1,
+        "opacityMin": 1,
+        "opacityMax": 1,
+        "spread": 100,
+        "rotationStartMin": -22,
+        "rotationStartMax": 22,
+        "rotationDirection": "mixed",
+        "rotationSpeedMin": 30,
+        "rotationSpeedMax": 140,
+        "shapeEffect": "none",
+        "imageEntries": [
+          {
+            "imagePath": "assets/Battle Scenes/Particles/leaf-particle-04.png",
+            "sizeMin": 3.9,
+            "sizeMax": 5.1,
+            "rotationStartMin": -22,
+            "rotationStartMax": 22,
+            "rotationDirection": "mixed",
+            "rotationSpeedMin": 30,
+            "rotationSpeedMax": 140
+          },
+          {
+            "imagePath": "assets/Battle Scenes/Particles/petal-blue.png",
+            "sizeMin": 3.85,
+            "sizeMax": 4.35,
+            "rotationStartMin": -22,
+            "rotationStartMax": 22,
+            "rotationDirection": "mixed",
+            "rotationSpeedMin": 30,
+            "rotationSpeedMax": 140
+          },
+          {
+            "imagePath": "assets/Battle Scenes/Particles/leaf-particle-07.png",
+            "sizeMin": 3.95,
+            "sizeMax": 5.05,
+            "rotationStartMin": -22,
+            "rotationStartMax": 22,
+            "rotationDirection": "mixed",
+            "rotationSpeedMin": 30,
+            "rotationSpeedMax": 140
+          },
+          {
+            "imagePath": "assets/Battle Scenes/Particles/leaf-particle-02.png",
+            "sizeMin": 3.95,
+            "sizeMax": 5.05,
+            "rotationStartMin": -22,
+            "rotationStartMax": 22,
+            "rotationDirection": "mixed",
+            "rotationSpeedMin": 30,
+            "rotationSpeedMax": 140
+          }
+        ]
+      },
+      "cloudDriftDirection": "left",
+      "cloudDriftSpeed": 3,
+      "cloudScale": 35,
+      "cloudOffsetX": 0,
+      "cloudOffsetY": -19
     }
   ]
 }

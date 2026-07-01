@@ -277,7 +277,8 @@
           },
           "label": "Lavender"
         }
-      ]
+      ],
+      "battleSpriteRenderWidth": 160
     },
     {
       "id": "Ruffin",
@@ -336,7 +337,7 @@
               3
             ],
             "frameDurationMs": 180,
-            "renderWidth": 90
+            "renderWidth": 95
           },
           "label": "Default"
         },
@@ -360,7 +361,7 @@
               3
             ],
             "frameDurationMs": 180,
-            "renderWidth": 90
+            "renderWidth": 95
           },
           "label": "Snow"
         },
@@ -384,7 +385,7 @@
               3
             ],
             "frameDurationMs": 180,
-            "renderWidth": 90
+            "renderWidth": 95
           },
           "label": "Grass"
         },
@@ -408,7 +409,7 @@
               3
             ],
             "frameDurationMs": 180,
-            "renderWidth": 90
+            "renderWidth": 95
           },
           "label": "Electric"
         },
@@ -432,7 +433,7 @@
               3
             ],
             "frameDurationMs": 180,
-            "renderWidth": 90
+            "renderWidth": 95
           },
           "label": "Water"
         },
@@ -456,7 +457,7 @@
               3
             ],
             "frameDurationMs": 180,
-            "renderWidth": 90
+            "renderWidth": 95
           },
           "label": "Fire"
         },
@@ -480,7 +481,7 @@
               3
             ],
             "frameDurationMs": 180,
-            "renderWidth": 90
+            "renderWidth": 95
           },
           "label": "Pink"
         },
@@ -504,7 +505,7 @@
               3
             ],
             "frameDurationMs": 180,
-            "renderWidth": 90
+            "renderWidth": 95
           },
           "label": "Dark"
         },
@@ -528,7 +529,7 @@
               3
             ],
             "frameDurationMs": 180,
-            "renderWidth": 90
+            "renderWidth": 95
           },
           "label": "Galaxy"
         },
@@ -552,11 +553,12 @@
               3
             ],
             "frameDurationMs": 180,
-            "renderWidth": 90
+            "renderWidth": 95
           },
           "label": "Lavender"
         }
-      ]
+      ],
+      "battleSpriteRenderWidth": 110
     },
     {
       "id": "Fluffram",
@@ -834,7 +836,8 @@
           },
           "label": "Lavender"
         }
-      ]
+      ],
+      "battleSpriteRenderWidth": 160
     },
     {
       "id": "pawlit",
@@ -2326,7 +2329,8 @@
               2,
               3
             ],
-            "frameDurationMs": 180
+            "frameDurationMs": 180,
+            "renderWidth": 100
           },
           "label": "Snow"
         },
@@ -2350,7 +2354,8 @@
               2,
               3
             ],
-            "frameDurationMs": 180
+            "frameDurationMs": 180,
+            "renderWidth": 100
           },
           "label": "Grass"
         },
@@ -2374,7 +2379,8 @@
               2,
               3
             ],
-            "frameDurationMs": 180
+            "frameDurationMs": 180,
+            "renderWidth": 100
           },
           "label": "Electric"
         },
@@ -2398,7 +2404,8 @@
               2,
               3
             ],
-            "frameDurationMs": 180
+            "frameDurationMs": 180,
+            "renderWidth": 100
           },
           "label": "Water"
         },
@@ -2422,7 +2429,8 @@
               2,
               3
             ],
-            "frameDurationMs": 180
+            "frameDurationMs": 180,
+            "renderWidth": 100
           },
           "label": "Fire"
         },
@@ -2446,7 +2454,8 @@
               2,
               3
             ],
-            "frameDurationMs": 180
+            "frameDurationMs": 180,
+            "renderWidth": 100
           },
           "label": "Pink"
         },
@@ -2470,7 +2479,8 @@
               2,
               3
             ],
-            "frameDurationMs": 180
+            "frameDurationMs": 180,
+            "renderWidth": 100
           },
           "label": "Dark"
         },
@@ -2494,7 +2504,8 @@
               2,
               3
             ],
-            "frameDurationMs": 180
+            "frameDurationMs": 180,
+            "renderWidth": 100
           },
           "label": "Galaxy"
         },
@@ -2518,7 +2529,8 @@
               2,
               3
             ],
-            "frameDurationMs": 180
+            "frameDurationMs": 180,
+            "renderWidth": 100
           },
           "label": "Lavender"
         }
