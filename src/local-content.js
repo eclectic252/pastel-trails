@@ -4975,8 +4975,608 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       }
     ]
   },
+  "characterParts": {
+    "layerOrder": [
+      "base",
+      "eyes",
+      "undershirt",
+      "bottom",
+      "shoes",
+      "top",
+      "foreground-arms",
+      "hair",
+      "accessory"
+    ],
+    "slots": [
+      {
+        "id": "eyes",
+        "label": "Eyes",
+        "paletteKey": "eyes",
+        "optional": false
+      },
+      {
+        "id": "hair",
+        "label": "Hair",
+        "paletteKey": "hair",
+        "optional": true
+      },
+      {
+        "id": "undershirt",
+        "label": "Undershirt",
+        "paletteKey": "clothing",
+        "optional": true
+      },
+      {
+        "id": "top",
+        "label": "Top",
+        "paletteKey": "clothing",
+        "optional": true
+      },
+      {
+        "id": "bottom",
+        "label": "Bottom",
+        "paletteKey": "clothing",
+        "optional": true
+      },
+      {
+        "id": "shoes",
+        "label": "Shoes",
+        "paletteKey": "clothing",
+        "optional": true
+      },
+      {
+        "id": "accessory",
+        "label": "Accessory",
+        "paletteKey": "clothing",
+        "optional": true
+      }
+    ],
+    "palettes": {
+      "skin": [
+        {
+          "id": "warm-02",
+          "label": "Warm",
+          "color": "#d99b73"
+        },
+        {
+          "id": "fair-01",
+          "label": "Fair",
+          "color": "#f0c9a5"
+        },
+        {
+          "id": "deep-03",
+          "label": "Deep",
+          "color": "#8f5b42"
+        }
+      ],
+      "hair": [
+        {
+          "id": "brown-01",
+          "label": "Brown",
+          "color": "#5b3827"
+        },
+        {
+          "id": "blonde-01",
+          "label": "Blonde",
+          "color": "#d9b75f"
+        },
+        {
+          "id": "black-01",
+          "label": "Black",
+          "color": "#2f2728"
+        },
+        {
+          "id": "pink-01",
+          "label": "Pink",
+          "color": "#cf6f9f"
+        }
+      ],
+      "eyes": [
+        {
+          "id": "blue-01",
+          "label": "Blue",
+          "color": "#3f79c8"
+        },
+        {
+          "id": "green-01",
+          "label": "Green",
+          "color": "#4c9362"
+        },
+        {
+          "id": "brown-01",
+          "label": "Brown",
+          "color": "#6c432c"
+        }
+      ],
+      "clothing": [
+        {
+          "id": "navy-01",
+          "label": "Navy",
+          "color": "#2f4e78"
+        },
+        {
+          "id": "rose-01",
+          "label": "Rose",
+          "color": "#b85f78"
+        },
+        {
+          "id": "sage-01",
+          "label": "Sage",
+          "color": "#708c6a"
+        }
+      ]
+    },
+    "bases": [
+      {
+        "id": "assets-characters-base-spritesheet",
+        "label": "Spritesheet",
+        "sheetId": "assets-characters-base-spritesheet",
+        "path": "assets/Characters/Base/Spritesheet.png",
+        "foregroundArmsSheetId": "assets-characters-base-foreground-arms-spritesheet",
+        "foregroundArmsPath": "assets/Characters/Base/Foreground Arms/Spritesheet.png",
+        "compatibleTags": []
+      },
+      {
+        "id": "assets-characters-base-female-base-pose-reference-walksheet",
+        "label": "Female Base Pose Reference Walksheet",
+        "sheetId": "assets-characters-base-female-base-pose-reference-walksheet",
+        "path": "assets/Characters/Base/female_base_pose_reference_walksheet.png",
+        "foregroundArmsSheetId": "",
+        "foregroundArmsPath": "",
+        "compatibleTags": [
+          "female"
+        ]
+      }
+    ],
+    "parts": [
+      {
+        "id": "round-eyes",
+        "slot": "eyes",
+        "label": "Round Eyes",
+        "compatibleBaseIds": [
+          "assets-characters-base-female-base-pose-reference-walksheet"
+        ],
+        "tintPalette": "eyes",
+        "path": ""
+      },
+      {
+        "id": "soft-eyes",
+        "slot": "eyes",
+        "label": "Soft Eyes",
+        "compatibleBaseIds": [
+          "assets-characters-base-female-base-pose-reference-walksheet"
+        ],
+        "tintPalette": "eyes",
+        "path": ""
+      },
+      {
+        "id": "braid-long",
+        "slot": "hair",
+        "label": "Long Braid",
+        "compatibleBaseIds": [
+          "assets-characters-base-female-base-pose-reference-walksheet"
+        ],
+        "tintPalette": "hair",
+        "path": ""
+      },
+      {
+        "id": "short-sidepart",
+        "slot": "hair",
+        "label": "Short Sidepart",
+        "compatibleBaseIds": [
+          "assets-characters-base-spritesheet"
+        ],
+        "tintPalette": "hair",
+        "path": ""
+      },
+      {
+        "id": "ranch-shirt",
+        "slot": "top",
+        "label": "Ranch Shirt",
+        "compatibleBaseIds": [
+          "assets-characters-base-female-base-pose-reference-walksheet"
+        ],
+        "tintPalette": "clothing",
+        "path": ""
+      },
+      {
+        "id": "western-red-shirt",
+        "slot": "top",
+        "label": "Western Shirt",
+        "compatibleBaseIds": [
+          "assets-characters-base-female-base-pose-reference-walksheet"
+        ],
+        "tintPalette": "clothing",
+        "path": ""
+      },
+      {
+        "id": "jeans",
+        "slot": "bottom",
+        "label": "Jeans",
+        "compatibleBaseIds": [
+          "assets-characters-base-female-base-pose-reference-walksheet"
+        ],
+        "tintPalette": "clothing",
+        "path": ""
+      },
+      {
+        "id": "gray-pants",
+        "slot": "bottom",
+        "label": "Gray Pants",
+        "compatibleBaseIds": [
+          "assets-characters-base-female-base-pose-reference-walksheet"
+        ],
+        "tintPalette": "clothing",
+        "path": ""
+      },
+      {
+        "id": "boots",
+        "slot": "shoes",
+        "label": "Boots",
+        "compatibleBaseIds": [
+          "assets-characters-base-female-base-pose-reference-walksheet"
+        ],
+        "tintPalette": "clothing",
+        "path": ""
+      },
+      {
+        "id": "sneakers",
+        "slot": "shoes",
+        "label": "Sneakers",
+        "compatibleBaseIds": [
+          "assets-characters-base-female-base-pose-reference-walksheet"
+        ],
+        "tintPalette": "clothing",
+        "path": ""
+      },
+      {
+        "id": "none",
+        "slot": "accessory",
+        "label": "None",
+        "compatibleBaseIds": [
+          "assets-characters-base-female-base-pose-reference-walksheet"
+        ],
+        "path": ""
+      },
+      {
+        "id": "assets-characters-base-bottoms-100-pants-navy",
+        "slot": "bottom",
+        "label": "100 Pants Navy",
+        "path": "assets/Characters/Base/Bottoms/100_Pants_Navy.png",
+        "sheetId": "assets-characters-base-bottoms-100-pants-navy",
+        "tintPalette": "",
+        "layerMode": "",
+        "compatibleBaseIds": [
+          "assets-characters-base-spritesheet",
+          "assets-characters-base-female-base-pose-reference-walksheet"
+        ]
+      },
+      {
+        "id": "assets-characters-base-bottoms-100-pants-pink",
+        "slot": "bottom",
+        "label": "100 Pants Pink",
+        "path": "assets/Characters/Base/Bottoms/100_Pants_Pink.png",
+        "sheetId": "assets-characters-base-bottoms-100-pants-pink",
+        "tintPalette": "",
+        "layerMode": "",
+        "compatibleBaseIds": [
+          "assets-characters-base-spritesheet",
+          "assets-characters-base-female-base-pose-reference-walksheet"
+        ]
+      },
+      {
+        "id": "assets-characters-base-shoes-110-boots-brown",
+        "slot": "shoes",
+        "label": "110 Boots Brown",
+        "path": "assets/Characters/Base/Shoes/110_Boots_Brown.png",
+        "sheetId": "assets-characters-base-shoes-110-boots-brown",
+        "tintPalette": "",
+        "layerMode": "",
+        "compatibleBaseIds": [
+          "assets-characters-base-spritesheet",
+          "assets-characters-base-female-base-pose-reference-walksheet"
+        ]
+      },
+      {
+        "id": "assets-characters-base-shoes-110-boots-navy",
+        "slot": "shoes",
+        "label": "110 Boots Navy",
+        "path": "assets/Characters/Base/Shoes/110_Boots_Navy.png",
+        "sheetId": "assets-characters-base-shoes-110-boots-navy",
+        "tintPalette": "",
+        "layerMode": "",
+        "compatibleBaseIds": [
+          "assets-characters-base-spritesheet",
+          "assets-characters-base-female-base-pose-reference-walksheet"
+        ]
+      },
+      {
+        "id": "assets-characters-base-tops-120-shirt-mint",
+        "slot": "top",
+        "label": "120 Shirt Mint",
+        "path": "assets/Characters/Base/Tops/120_Shirt_Mint.png",
+        "sheetId": "assets-characters-base-tops-120-shirt-mint",
+        "tintPalette": "",
+        "layerMode": "over-bottom",
+        "compatibleBaseIds": [
+          "assets-characters-base-spritesheet",
+          "assets-characters-base-female-base-pose-reference-walksheet"
+        ]
+      },
+      {
+        "id": "assets-characters-base-tops-120-undershirt-highneckwhite",
+        "slot": "undershirt",
+        "label": "120 Undershirt Highneckwhite",
+        "path": "assets/Characters/Base/Tops/120_Undershirt_highneckwhite.png",
+        "sheetId": "assets-characters-base-tops-120-undershirt-highneckwhite",
+        "tintPalette": "",
+        "layerMode": "",
+        "compatibleBaseIds": [
+          "assets-characters-base-spritesheet",
+          "assets-characters-base-female-base-pose-reference-walksheet"
+        ]
+      },
+      {
+        "id": "assets-characters-base-tops-120-undershirt-tankwhite",
+        "slot": "undershirt",
+        "label": "120 Undershirt Tankwhite",
+        "path": "assets/Characters/Base/Tops/120_Undershirt_tankwhite.png",
+        "sheetId": "assets-characters-base-tops-120-undershirt-tankwhite",
+        "tintPalette": "",
+        "layerMode": "",
+        "compatibleBaseIds": [
+          "assets-characters-base-spritesheet",
+          "assets-characters-base-female-base-pose-reference-walksheet"
+        ]
+      },
+      {
+        "id": "assets-characters-base-tops-mint-tshirt-walksheet",
+        "slot": "top",
+        "label": "Mint Tshirt Walksheet",
+        "path": "assets/Characters/Base/Tops/mint_tshirt_walksheet.png",
+        "sheetId": "assets-characters-base-tops-mint-tshirt-walksheet",
+        "tintPalette": "",
+        "layerMode": "over-bottom",
+        "compatibleBaseIds": [
+          "assets-characters-base-spritesheet",
+          "assets-characters-base-female-base-pose-reference-walksheet"
+        ]
+      }
+    ],
+    "presets": [
+      {
+        "id": "player-ranch-starter",
+        "label": "Ranch Starter",
+        "appearance": {
+          "baseId": "assets-characters-base-female-base-pose-reference-walksheet",
+          "palette": {
+            "skin": "warm-02",
+            "hair": "blonde-01",
+            "eyes": "blue-01",
+            "clothing": "navy-01"
+          },
+          "parts": {
+            "eyes": "round-eyes",
+            "hair": "braid-long",
+            "top": "ranch-shirt",
+            "bottom": "jeans",
+            "shoes": "boots",
+            "accessory": "none"
+          }
+        }
+      },
+      {
+        "id": "trainer-western-starter",
+        "label": "Western Trainer",
+        "appearance": {
+          "baseId": "assets-characters-base-spritesheet",
+          "palette": {
+            "skin": "warm-02",
+            "hair": "brown-01",
+            "eyes": "green-01",
+            "clothing": "rose-01"
+          },
+          "parts": {
+            "eyes": "soft-eyes",
+            "hair": "short-sidepart",
+            "top": "western-red-shirt",
+            "bottom": "gray-pants",
+            "shoes": "boots",
+            "accessory": "none"
+          }
+        }
+      }
+    ]
+  },
   "characterSheets": {
     "sheets": [
+      {
+        "id": "assets-characters-base-bottoms-100-pants-navy",
+        "label": "100 Pants Navy",
+        "playerLabel": "100 Pants Navy",
+        "playerSelectable": false,
+        "kind": "character",
+        "group": "Characters / Base / Bottoms",
+        "path": "assets/Characters/Base/Bottoms/100_Pants_Navy.png",
+        "columns": 4,
+        "rows": 4,
+        "frameHeight": 313,
+        "offsetX": 0,
+        "offsetY": 0,
+        "renderWidth": null,
+        "rowOffsets": [],
+        "frameOffsets": []
+      },
+      {
+        "id": "assets-characters-base-bottoms-100-pants-pink",
+        "label": "100 Pants Pink",
+        "playerLabel": "100 Pants Pink",
+        "playerSelectable": false,
+        "kind": "character",
+        "group": "Characters / Base / Bottoms",
+        "path": "assets/Characters/Base/Bottoms/100_Pants_Pink.png",
+        "columns": 4,
+        "rows": 4,
+        "frameHeight": 313,
+        "offsetX": 0,
+        "offsetY": 0,
+        "renderWidth": null,
+        "rowOffsets": [],
+        "frameOffsets": []
+      },
+      {
+        "id": "assets-characters-base-foreground-arms-spritesheet",
+        "label": "Spritesheet",
+        "playerLabel": "Spritesheet",
+        "playerSelectable": false,
+        "kind": "character",
+        "group": "Characters / Base / Foreground Arms",
+        "path": "assets/Characters/Base/Foreground Arms/Spritesheet.png",
+        "columns": 4,
+        "rows": 4,
+        "frameHeight": 313,
+        "offsetX": 0,
+        "offsetY": 0,
+        "renderWidth": null,
+        "rowOffsets": [],
+        "frameOffsets": []
+      },
+      {
+        "id": "assets-characters-base-shoes-110-boots-brown",
+        "label": "110 Boots Brown",
+        "playerLabel": "110 Boots Brown",
+        "playerSelectable": false,
+        "kind": "character",
+        "group": "Characters / Base / Shoes",
+        "path": "assets/Characters/Base/Shoes/110_Boots_Brown.png",
+        "columns": 4,
+        "rows": 4,
+        "frameHeight": 313,
+        "offsetX": 0,
+        "offsetY": 0,
+        "renderWidth": null,
+        "rowOffsets": [],
+        "frameOffsets": []
+      },
+      {
+        "id": "assets-characters-base-shoes-110-boots-navy",
+        "label": "110 Boots Navy",
+        "playerLabel": "110 Boots Navy",
+        "playerSelectable": false,
+        "kind": "character",
+        "group": "Characters / Base / Shoes",
+        "path": "assets/Characters/Base/Shoes/110_Boots_Navy.png",
+        "columns": 4,
+        "rows": 4,
+        "frameHeight": 313,
+        "offsetX": 0,
+        "offsetY": 0,
+        "renderWidth": null,
+        "rowOffsets": [],
+        "frameOffsets": []
+      },
+      {
+        "id": "assets-characters-base-spritesheet",
+        "label": "Spritesheet",
+        "playerLabel": "Spritesheet",
+        "playerSelectable": false,
+        "kind": "character",
+        "group": "Characters / Base",
+        "path": "assets/Characters/Base/Spritesheet.png",
+        "columns": 4,
+        "rows": 4,
+        "frameHeight": 313,
+        "offsetX": 0,
+        "offsetY": 0,
+        "renderWidth": null,
+        "rowOffsets": [],
+        "frameOffsets": []
+      },
+      {
+        "id": "assets-characters-base-tops-120-shirt-mint",
+        "label": "120 Shirt Mint",
+        "playerLabel": "120 Shirt Mint",
+        "playerSelectable": false,
+        "kind": "character",
+        "group": "Characters / Base / Tops",
+        "path": "assets/Characters/Base/Tops/120_Shirt_Mint.png",
+        "columns": 4,
+        "rows": 4,
+        "frameHeight": 313,
+        "offsetX": 0,
+        "offsetY": 0,
+        "renderWidth": null,
+        "rowOffsets": [],
+        "frameOffsets": []
+      },
+      {
+        "id": "assets-characters-base-tops-120-undershirt-highneckwhite",
+        "label": "120 Undershirt Highneckwhite",
+        "playerLabel": "120 Undershirt Highneckwhite",
+        "playerSelectable": false,
+        "kind": "character",
+        "group": "Characters / Base / Tops",
+        "path": "assets/Characters/Base/Tops/120_Undershirt_highneckwhite.png",
+        "columns": 4,
+        "rows": 4,
+        "frameHeight": 313,
+        "offsetX": 0,
+        "offsetY": 0,
+        "renderWidth": null,
+        "rowOffsets": [],
+        "frameOffsets": []
+      },
+      {
+        "id": "assets-characters-base-tops-120-undershirt-tankwhite",
+        "label": "120 Undershirt Tankwhite",
+        "playerLabel": "120 Undershirt Tankwhite",
+        "playerSelectable": false,
+        "kind": "character",
+        "group": "Characters / Base / Tops",
+        "path": "assets/Characters/Base/Tops/120_Undershirt_tankwhite.png",
+        "columns": 4,
+        "rows": 4,
+        "frameHeight": 313,
+        "offsetX": 0,
+        "offsetY": 0,
+        "renderWidth": null,
+        "rowOffsets": [],
+        "frameOffsets": []
+      },
+      {
+        "id": "assets-characters-base-tops-mint-tshirt-walksheet",
+        "label": "Mint Tshirt Walksheet",
+        "playerLabel": "Mint Tshirt Walksheet",
+        "playerSelectable": false,
+        "kind": "character",
+        "group": "Characters / Base / Tops",
+        "path": "assets/Characters/Base/Tops/mint_tshirt_walksheet.png",
+        "columns": 4,
+        "rows": 4,
+        "frameHeight": 313,
+        "offsetX": 0,
+        "offsetY": 0,
+        "renderWidth": null,
+        "rowOffsets": [],
+        "frameOffsets": []
+      },
+      {
+        "id": "assets-characters-base-female-base-pose-reference-walksheet",
+        "label": "Female Base Pose Reference Walksheet",
+        "playerLabel": "Female Base Pose Reference Walksheet",
+        "playerSelectable": false,
+        "kind": "character",
+        "group": "Characters / Base",
+        "path": "assets/Characters/Base/female_base_pose_reference_walksheet.png",
+        "columns": 4,
+        "rows": 4,
+        "frameHeight": 313,
+        "offsetX": 0,
+        "offsetY": 0,
+        "renderWidth": null,
+        "rowOffsets": [],
+        "frameOffsets": []
+      },
       {
         "id": "assets-characters-boardwalk-girl-sprite-bouganvillea1",
         "label": "Bouganvillea1",

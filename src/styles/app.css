@@ -628,6 +628,36 @@ button {
   border: 1px solid rgba(57, 79, 91, 0.12);
 }
 
+.character-creator-layout {
+  display: grid;
+  grid-template-columns: minmax(150px, 220px) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.character-creator-preview {
+  display: grid;
+  place-items: center;
+  min-height: 180px;
+  border: 1px solid rgba(57, 79, 91, 0.12);
+  border-radius: 8px;
+  background: rgba(252, 250, 246, 0.72);
+}
+
+.character-creator-main-preview {
+  width: 156px;
+  height: 156px;
+  border-radius: 8px;
+}
+
+.character-creator-controls {
+  min-width: 0;
+}
+
+.character-appearance-dev-editor {
+  margin-top: 1rem;
+}
+
 .setup-summary {
   margin-top: 1.25rem;
   padding: 1rem;
@@ -2880,6 +2910,52 @@ button {
   overflow: auto;
 }
 
+.dev-layered-animation-panel {
+  margin-top: 1.25rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid rgba(57, 79, 91, 0.14);
+}
+
+.dev-layered-animation-controls {
+  margin-bottom: 0.85rem;
+}
+
+.dev-layered-animation-controls .secondary-button {
+  min-height: 42px;
+  justify-self: start;
+}
+
+.dev-layered-animation-stage {
+  max-height: none;
+  border: 1px solid rgba(57, 79, 91, 0.16);
+  background: #f4efe8;
+}
+
+.dev-layered-animation-canvas {
+  width: 100%;
+  height: auto;
+}
+
+.dev-layered-frame-inspector {
+  margin-top: 1rem;
+}
+
+.dev-layered-row-stage {
+  max-height: none;
+  border: 1px solid rgba(57, 79, 91, 0.16);
+  background: #f4efe8;
+}
+
+.dev-layered-row-canvas {
+  width: 100%;
+  height: auto;
+}
+
+.dev-layered-frame-actions {
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+}
+
 .dev-character-compare-strip {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3745,7 +3821,8 @@ button {
 
   .form-grid,
   .option-grid,
-  .avatar-grid {
+  .avatar-grid,
+  .character-creator-layout {
     grid-template-columns: 1fr;
   }
 

@@ -125,6 +125,222 @@ function isLikelyMonsterSheetPath(relativePath) {
     || normalized.includes("spritesheet");
 }
 
+function isLayeredBaseSheetPath(relativePath) {
+  const parts = String(relativePath || "").replace(/\\/g, "/").toLowerCase().split("/");
+  const charactersIndex = parts.indexOf("characters");
+  return charactersIndex >= 0
+    && parts[charactersIndex + 1] === "base"
+    && parts.length === charactersIndex + 3;
+}
+
+function isLayeredCharacterAssetPath(relativePath) {
+  const parts = String(relativePath || "").replace(/\\/g, "/").toLowerCase().split("/");
+  const charactersIndex = parts.indexOf("characters");
+  return charactersIndex >= 0 && parts[charactersIndex + 1] === "base";
+}
+
+function isForegroundArmsSheetPath(pathValue) {
+  const parts = String(pathValue || "").replace(/\\/g, "/").toLowerCase().split("/");
+  const charactersIndex = parts.indexOf("characters");
+  if (charactersIndex < 0 || parts[charactersIndex + 1] !== "base" || parts.length < charactersIndex + 4) {
+    return false;
+  }
+  return String(parts[charactersIndex + 2] || "").replace(/[^a-z]/g, "") === "foregroundarms";
+}
+
+function getCharacterLayerAssociationKey(pathValue) {
+  return String(pathValue || "")
+    .replace(/\\/g, "/")
+    .split("/")
+    .pop()
+    .replace(/\.[^.]+$/, "")
+    .toLowerCase()
+    .replace(/(?:^|[_ -])(?:foreground[_ -]*arms|arms[_ -]*foreground)(?:$|[_ -])/g, "-")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function findForegroundArmsSheetForBase(baseSheet, sheets) {
+  const baseKey = getCharacterLayerAssociationKey(baseSheet?.path || baseSheet?.id);
+  if (!baseKey) {
+    return null;
+  }
+  return (sheets || []).find((sheet) => isForegroundArmsSheetPath(sheet?.path)
+    && getCharacterLayerAssociationKey(sheet.path || sheet.id) === baseKey) || null;
+}
+
+function getLayeredPartSlotFromPath(relativePath) {
+  const parts = String(relativePath || "").replace(/\\/g, "/").toLowerCase().split("/");
+  const charactersIndex = parts.indexOf("characters");
+  if (charactersIndex < 0 || parts[charactersIndex + 1] !== "base" || parts.length < charactersIndex + 4) {
+    return "";
+  }
+  const fileName = parts[parts.length - 1] || "";
+  if (fileName.includes("undershirt")) {
+    return "undershirt";
+  }
+  const folder = parts[charactersIndex + 2];
+  const slotAliases = {
+    eye: "eyes",
+    eyes: "eyes",
+    face: "eyes",
+    hair: "hair",
+    hairs: "hair",
+    hairstyles: "hair",
+    hairstyle: "hair",
+    top: "top",
+    tops: "top",
+    shirt: "top",
+    shirts: "top",
+    undershirt: "undershirt",
+    undershirts: "undershirt",
+    bottom: "bottom",
+    bottoms: "bottom",
+    pants: "bottom",
+    shorts: "bottom",
+    skirt: "bottom",
+    skirts: "bottom",
+    shoe: "shoes",
+    shoes: "shoes",
+    boot: "shoes",
+    boots: "shoes",
+    accessory: "accessory",
+    accessories: "accessory",
+  };
+  return slotAliases[folder] || "";
+}
+
+function inferCharacterPartLayerMode(pathValue, slot, existingMode) {
+  if (existingMode === "under-bottom" || existingMode === "over-bottom") {
+    return existingMode;
+  }
+  if (slot !== "top") {
+    return "";
+  }
+  const normalizedPath = String(pathValue || "").replace(/\\/g, "/").toLowerCase();
+  const pathParts = normalizedPath.split("/");
+  const fileName = pathParts[pathParts.length - 1] || "";
+  const isTucked = pathParts.includes("tucked") || /(^|[_ -])tucked([_. -]|$)/.test(fileName);
+  return isTucked ? "under-bottom" : "over-bottom";
+}
+
+function inferCharacterBaseTags(pathValue) {
+  const value = String(pathValue || "").toLowerCase();
+  if (value.includes("female") || value.includes("girl") || value.includes("woman")) {
+    return ["female"];
+  }
+  if (value.includes("male") || value.includes("boy") || value.includes("man")) {
+    return ["male"];
+  }
+  return [];
+}
+
+function normalizeCharacterPartsCatalog(catalog) {
+  return {
+    layerOrder: Array.isArray(catalog?.layerOrder) ? catalog.layerOrder : [],
+    slots: Array.isArray(catalog?.slots) ? catalog.slots : [],
+    palettes: catalog?.palettes && typeof catalog.palettes === "object" ? catalog.palettes : {},
+    bases: Array.isArray(catalog?.bases) ? catalog.bases : [],
+    parts: Array.isArray(catalog?.parts) ? catalog.parts : [],
+    presets: Array.isArray(catalog?.presets) ? catalog.presets : [],
+  };
+}
+
+function mergeLayeredBaseSheets(characterParts, characterSheets) {
+  const catalog = normalizeCharacterPartsCatalog(characterParts);
+  const baseSheets = (characterSheets?.sheets || []).filter((sheet) => isLayeredBaseSheetPath(sheet.path));
+  if (!baseSheets.length) {
+    return catalog;
+  }
+
+  const existingByPath = new Map(catalog.bases.map((base) => [base.path, base]));
+  const existingBySheetId = new Map(catalog.bases.map((base) => [base.sheetId, base]));
+  const existingById = new Map(catalog.bases.map((base) => [base.id, base]));
+  const previousBases = catalog.bases.slice();
+  const previousById = new Map(previousBases.map((base) => [base.id, base]));
+  const nextBases = baseSheets.map((sheet) => {
+    const existing = existingByPath.get(sheet.path) || existingBySheetId.get(sheet.id) || existingById.get(sheet.id);
+    const foregroundArmsSheet = findForegroundArmsSheetForBase(sheet, characterSheets?.sheets || []);
+    const fallbackId = slugify((sheet.path || sheet.id || "character-base").replace(/\.[^.]+$/, ""));
+    return {
+      id: existing?.id || sheet.id || fallbackId,
+      label: existing?.label || sheet.playerLabel || sheet.label || prettifyCharacterSheetLabel(sheet.path || sheet.id),
+      sheetId: sheet.id,
+      path: sheet.path || existing?.path || "",
+      foregroundArmsSheetId: foregroundArmsSheet?.id || existing?.foregroundArmsSheetId || "",
+      foregroundArmsPath: foregroundArmsSheet?.path || existing?.foregroundArmsPath || "",
+      compatibleTags: Array.isArray(existing?.compatibleTags) && existing.compatibleTags.length
+        ? existing.compatibleTags
+        : inferCharacterBaseTags(sheet.path || sheet.label || sheet.id),
+    };
+  });
+  const nextBaseIds = nextBases.map((base) => base.id);
+  const findReplacementBaseId = (oldBaseIds) => {
+    const oldTags = new Set(oldBaseIds
+      .map((id) => previousById.get(id))
+      .filter(Boolean)
+      .flatMap((base) => base.compatibleTags || []));
+    const taggedMatch = nextBases.find((base) => (base.compatibleTags || []).some((tag) => oldTags.has(tag)));
+    return taggedMatch?.id || nextBases[0]?.id || "";
+  };
+  const remappedParts = catalog.parts.map((part) => {
+    if (!Array.isArray(part.compatibleBaseIds) || !part.compatibleBaseIds.length) {
+      return part;
+    }
+    const retained = part.compatibleBaseIds.filter((id) => nextBaseIds.includes(id));
+    if (retained.length) {
+      return { ...part, compatibleBaseIds: retained };
+    }
+    const replacementId = findReplacementBaseId(part.compatibleBaseIds);
+    return {
+      ...part,
+      compatibleBaseIds: replacementId ? [replacementId] : [],
+    };
+  });
+  const existingPartsByPath = new Map(remappedParts.map((part) => [part.path, part]));
+  const existingPartsBySheetId = new Map(remappedParts.map((part) => [part.sheetId, part]));
+  const discoveredParts = (characterSheets?.sheets || [])
+    .map((sheet) => {
+      const slot = getLayeredPartSlotFromPath(sheet.path);
+      if (!slot) {
+        return null;
+      }
+      const existing = existingPartsByPath.get(sheet.path) || existingPartsBySheetId.get(sheet.id);
+      return {
+        id: existing?.id || sheet.id || slugify((sheet.path || "character-part").replace(/\.[^.]+$/, "")),
+        slot,
+        label: existing?.label || sheet.playerLabel || sheet.label || prettifyCharacterSheetLabel(sheet.path || sheet.id),
+        path: sheet.path || existing?.path || "",
+        sheetId: sheet.id || existing?.sheetId || "",
+        tintPalette: existing?.tintPalette || "",
+        layerMode: inferCharacterPartLayerMode(sheet.path || existing?.path, slot, existing?.layerMode),
+        compatibleBaseIds: Array.isArray(existing?.compatibleBaseIds) && existing.compatibleBaseIds.length
+          ? existing.compatibleBaseIds
+          : nextBaseIds.slice(),
+      };
+    })
+    .filter(Boolean);
+  const discoveredPartKeys = new Set(discoveredParts.map((part) => part.path || part.sheetId || part.id));
+
+  return {
+    ...catalog,
+    bases: nextBases,
+    parts: remappedParts
+      .filter((part) => !discoveredPartKeys.has(part.path || part.sheetId || part.id))
+      .concat(discoveredParts),
+    presets: catalog.presets.map((preset) => {
+      const appearance = { ...(preset.appearance || {}) };
+      if (!nextBaseIds.includes(appearance.baseId)) {
+        appearance.baseId = findReplacementBaseId([appearance.baseId]);
+      }
+      return {
+        ...preset,
+        appearance,
+      };
+    }),
+  };
+}
+
 async function loadMonsterAssets() {
   const monsterRoot = path.join(projectRoot, "assets", "Monsters");
 
@@ -230,6 +446,7 @@ async function loadCharacterSheets() {
           return;
         }
         const savedEntry = (saved.sheets || []).find((entry) => entry.path === relativePath);
+        const isLayeredAsset = isLayeredCharacterAssetPath(relativePath);
         const baseId = relativePath
           .replace(/\.[^.]+$/, "")
           .toLowerCase()
@@ -240,7 +457,7 @@ async function loadCharacterSheets() {
           id: savedEntry?.id || baseId,
           label: savedEntry?.label || prettifyCharacterSheetLabel(relativePath),
           playerLabel: savedEntry?.playerLabel || savedEntry?.label || prettifyCharacterSheetLabel(relativePath),
-          playerSelectable: savedEntry?.playerSelectable ?? spriteRoot.defaultPlayerSelectable,
+          playerSelectable: savedEntry?.playerSelectable ?? (spriteRoot.defaultPlayerSelectable && !isLayeredAsset),
           kind: savedEntry?.kind || spriteRoot.kind,
           group: savedEntry?.group || relativePath.split("/").slice(1, -1).join(" / "),
           path: relativePath,
@@ -378,7 +595,7 @@ async function loadMapMetadata(mapIds, maps) {
 }
 
 async function buildLocalContent() {
-  const [settings, themes, items, skills, monsters, towns, arenas, events, trainers, battleScenePresets, characterSheets, monsterAssets, townAssets, crestAssets, battleBackgroundAssets, battleSceneAssets, maps] = await Promise.all([
+  const [settings, themes, items, skills, monsters, towns, arenas, events, trainers, battleScenePresets, rawCharacterParts, characterSheets, monsterAssets, townAssets, crestAssets, battleBackgroundAssets, battleSceneAssets, maps] = await Promise.all([
     readJson("data/settings.json"),
     readJson("data/themes.json"),
     readJson("data/items.json"),
@@ -399,6 +616,7 @@ async function buildLocalContent() {
     readOptionalJson("data/events.json", { events: [] }),
     readJson("data/trainers.json"),
     readOptionalJson("data/battle-scenes.json", { presets: [] }),
+    readOptionalJson("data/character-parts.json", { layerOrder: [], slots: [], palettes: {}, bases: [], parts: [], presets: [] }),
     loadCharacterSheets(),
     loadMonsterAssets(),
     loadTownAssets(),
@@ -409,6 +627,7 @@ async function buildLocalContent() {
   ]);
 
   const mapMetadata = await loadMapMetadata(Object.keys(maps), maps);
+  const characterParts = mergeLayeredBaseSheets(rawCharacterParts, characterSheets);
 
   return {
     settings,
@@ -421,6 +640,7 @@ async function buildLocalContent() {
     events,
     trainers,
     battleScenePresets,
+    characterParts,
     characterSheets,
     monsterAssets,
     townAssets,

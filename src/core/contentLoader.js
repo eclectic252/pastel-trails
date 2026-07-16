@@ -7,6 +7,7 @@ const CONTENT_FILES = {
   monsters: "/data/monsters.json",
   towns: "/data/towns.json",
   trainers: "/data/trainers.json",
+  characterParts: "/data/character-parts.json",
 };
 
 const DIRECTORY_CONTENT_FILES = {
@@ -16,6 +17,7 @@ const DIRECTORY_CONTENT_FILES = {
   monsters: ["data", "monsters.json"],
   towns: ["data", "towns.json"],
   trainers: ["data", "trainers.json"],
+  characterParts: ["data", "character-parts.json"],
 };
 
 async function fetchJson(path) {

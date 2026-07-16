@@ -1,0 +1,84 @@
+{
+  "layerOrder": ["base", "eyes", "undershirt", "bottom", "shoes", "top", "foreground-arms", "hair", "accessory"],
+  "slots": [
+    { "id": "eyes", "label": "Eyes", "paletteKey": "eyes", "optional": false },
+    { "id": "hair", "label": "Hair", "paletteKey": "hair", "optional": true },
+    { "id": "undershirt", "label": "Undershirt", "paletteKey": "clothing", "optional": true },
+    { "id": "top", "label": "Top", "paletteKey": "clothing", "optional": true },
+    { "id": "bottom", "label": "Bottom", "paletteKey": "clothing", "optional": true },
+    { "id": "shoes", "label": "Shoes", "paletteKey": "clothing", "optional": true },
+    { "id": "accessory", "label": "Accessory", "paletteKey": "clothing", "optional": true }
+  ],
+  "palettes": {
+    "skin": [
+      { "id": "warm-02", "label": "Warm", "color": "#d99b73" },
+      { "id": "fair-01", "label": "Fair", "color": "#f0c9a5" },
+      { "id": "deep-03", "label": "Deep", "color": "#8f5b42" }
+    ],
+    "hair": [
+      { "id": "brown-01", "label": "Brown", "color": "#5b3827" },
+      { "id": "blonde-01", "label": "Blonde", "color": "#d9b75f" },
+      { "id": "black-01", "label": "Black", "color": "#2f2728" },
+      { "id": "pink-01", "label": "Pink", "color": "#cf6f9f" }
+    ],
+    "eyes": [
+      { "id": "blue-01", "label": "Blue", "color": "#3f79c8" },
+      { "id": "green-01", "label": "Green", "color": "#4c9362" },
+      { "id": "brown-01", "label": "Brown", "color": "#6c432c" }
+    ],
+    "clothing": [
+      { "id": "navy-01", "label": "Navy", "color": "#2f4e78" },
+      { "id": "rose-01", "label": "Rose", "color": "#b85f78" },
+      { "id": "sage-01", "label": "Sage", "color": "#708c6a" }
+    ]
+  },
+  "bases": [
+    {
+      "id": "female-base-01",
+      "label": "Female Base",
+      "sheetId": "dawn-tan-overalls",
+      "path": "assets/Characters/Boardwalk girl sprite/Dawn_Tan_overalls.png",
+      "compatibleTags": ["female", "slim"]
+    },
+    {
+      "id": "male-base-01",
+      "label": "Male Base",
+      "sheetId": "man-walksheet-v1-4x4-source-alpha",
+      "path": "assets/Characters/Boardwalk girl sprite/man_walksheet_v1_4x4_source_alpha.png",
+      "compatibleTags": ["male", "slim"]
+    }
+  ],
+  "parts": [
+    { "id": "round-eyes", "slot": "eyes", "label": "Round Eyes", "compatibleBaseIds": ["female-base-01", "male-base-01"], "tintPalette": "eyes", "path": "" },
+    { "id": "soft-eyes", "slot": "eyes", "label": "Soft Eyes", "compatibleBaseIds": ["female-base-01", "male-base-01"], "tintPalette": "eyes", "path": "" },
+    { "id": "braid-long", "slot": "hair", "label": "Long Braid", "compatibleBaseIds": ["female-base-01"], "tintPalette": "hair", "path": "" },
+    { "id": "short-sidepart", "slot": "hair", "label": "Short Sidepart", "compatibleBaseIds": ["male-base-01"], "tintPalette": "hair", "path": "" },
+    { "id": "ranch-shirt", "slot": "top", "label": "Ranch Shirt", "compatibleBaseIds": ["female-base-01", "male-base-01"], "tintPalette": "clothing", "path": "" },
+    { "id": "western-red-shirt", "slot": "top", "label": "Western Shirt", "compatibleBaseIds": ["female-base-01", "male-base-01"], "tintPalette": "clothing", "path": "" },
+    { "id": "jeans", "slot": "bottom", "label": "Jeans", "compatibleBaseIds": ["female-base-01", "male-base-01"], "tintPalette": "clothing", "path": "" },
+    { "id": "gray-pants", "slot": "bottom", "label": "Gray Pants", "compatibleBaseIds": ["female-base-01", "male-base-01"], "tintPalette": "clothing", "path": "" },
+    { "id": "boots", "slot": "shoes", "label": "Boots", "compatibleBaseIds": ["female-base-01", "male-base-01"], "tintPalette": "clothing", "path": "" },
+    { "id": "sneakers", "slot": "shoes", "label": "Sneakers", "compatibleBaseIds": ["female-base-01", "male-base-01"], "tintPalette": "clothing", "path": "" },
+    { "id": "none", "slot": "accessory", "label": "None", "compatibleBaseIds": ["female-base-01", "male-base-01"], "path": "" }
+  ],
+  "presets": [
+    {
+      "id": "player-ranch-starter",
+      "label": "Ranch Starter",
+      "appearance": {
+        "baseId": "female-base-01",
+        "palette": { "skin": "warm-02", "hair": "blonde-01", "eyes": "blue-01", "clothing": "navy-01" },
+        "parts": { "eyes": "round-eyes", "hair": "braid-long", "top": "ranch-shirt", "bottom": "jeans", "shoes": "boots", "accessory": "none" }
+      }
+    },
+    {
+      "id": "trainer-western-starter",
+      "label": "Western Trainer",
+      "appearance": {
+        "baseId": "male-base-01",
+        "palette": { "skin": "warm-02", "hair": "brown-01", "eyes": "green-01", "clothing": "rose-01" },
+        "parts": { "eyes": "soft-eyes", "hair": "short-sidepart", "top": "western-red-shirt", "bottom": "gray-pants", "shoes": "boots", "accessory": "none" }
+      }
+    }
+  ]
+}
