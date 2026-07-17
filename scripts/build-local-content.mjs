@@ -160,6 +160,44 @@ function getCharacterLayerAssociationKey(pathValue) {
     .replace(/^-|-$/g, "");
 }
 
+function isForegroundCharacterPartSheetPath(pathValue) {
+  const normalizedPath = String(pathValue || "").replace(/\\/g, "/").toLowerCase();
+  const fileName = normalizedPath.split("/").pop() || "";
+  return /(?:^|[_ -])foreground\.[^.]+$/.test(fileName)
+    && !!getLayeredPartSlotFromPath(normalizedPath);
+}
+
+function getCharacterPartAssociationKey(pathValue) {
+  const normalizedPath = String(pathValue || "")
+    .replace(/\\/g, "/")
+    .toLowerCase()
+    .replace(/\.[^.]+$/, "");
+  const pathParts = normalizedPath.split("/");
+  const fileName = (pathParts.pop() || "")
+    .replace(/^\d+[_ -]+/, "")
+    .replace(/(?:[_ -]+foreground)$/, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+  return pathParts.concat(fileName).join("/");
+}
+
+function getCharacterPartNumericLayer(pathValue) {
+  const fileName = String(pathValue || "").replace(/\\/g, "/").split("/").pop() || "";
+  const match = fileName.replace(/\.[^.]+$/, "").match(/^(\d+)[_ -]+(.+)$/);
+  return match ? Number(match[1]) : null;
+}
+
+function isCharacterPartReferenceSheetPath(pathValue) {
+  const fileName = String(pathValue || "").replace(/\\/g, "/").split("/").pop() || "";
+  return fileName.toLowerCase() === "spritesheet.png";
+}
+
+function findForegroundSheetForPart(partSheet, sheets) {
+  const associationKey = getCharacterPartAssociationKey(partSheet?.path || partSheet?.id);
+  return (sheets || []).find((sheet) => isForegroundCharacterPartSheetPath(sheet?.path)
+    && getCharacterPartAssociationKey(sheet.path || sheet.id) === associationKey) || null;
+}
+
 function findForegroundArmsSheetForBase(baseSheet, sheets) {
   const baseKey = getCharacterLayerAssociationKey(baseSheet?.path || baseSheet?.id);
   if (!baseKey) {
@@ -179,7 +217,6 @@ function getLayeredPartSlotFromPath(relativePath) {
   if (fileName.includes("undershirt")) {
     return "undershirt";
   }
-  const folder = parts[charactersIndex + 2];
   const slotAliases = {
     eye: "eyes",
     eyes: "eyes",
@@ -207,6 +244,7 @@ function getLayeredPartSlotFromPath(relativePath) {
     accessory: "accessory",
     accessories: "accessory",
   };
+  const folder = parts.slice(charactersIndex + 2, -1).reverse().find((candidate) => slotAliases[candidate]);
   return slotAliases[folder] || "";
 }
 
@@ -299,19 +337,44 @@ function mergeLayeredBaseSheets(characterParts, characterSheets) {
   });
   const existingPartsByPath = new Map(remappedParts.map((part) => [part.path, part]));
   const existingPartsBySheetId = new Map(remappedParts.map((part) => [part.sheetId, part]));
-  const discoveredParts = (characterSheets?.sheets || [])
+  const allLayeredPartSheets = (characterSheets?.sheets || []).filter((sheet) => getLayeredPartSlotFromPath(sheet.path));
+  const layeredPartSheets = allLayeredPartSheets.filter((sheet) => !isCharacterPartReferenceSheetPath(sheet.path));
+  const numericLayerGroups = new Map();
+  layeredPartSheets.forEach((sheet) => {
+    const layerNumber = getCharacterPartNumericLayer(sheet.path);
+    if (layerNumber !== 30 && layerNumber !== 190) {
+      return;
+    }
+    const key = getCharacterPartAssociationKey(sheet.path || sheet.id);
+    if (!numericLayerGroups.has(key)) {
+      numericLayerGroups.set(key, new Map());
+    }
+    numericLayerGroups.get(key).set(layerNumber, sheet);
+  });
+  const pairedLayerGroups = Array.from(numericLayerGroups.entries()).filter(([, layers]) => layers.has(30) && layers.has(190));
+  const pairedLayerPaths = new Set(pairedLayerGroups.flatMap(([, layers]) => [layers.get(30).path, layers.get(190).path]));
+  const discoveredParts = layeredPartSheets
+    .filter((sheet) => !isForegroundCharacterPartSheetPath(sheet.path) && !pairedLayerPaths.has(sheet.path))
     .map((sheet) => {
       const slot = getLayeredPartSlotFromPath(sheet.path);
-      if (!slot) {
-        return null;
-      }
       const existing = existingPartsByPath.get(sheet.path) || existingPartsBySheetId.get(sheet.id);
+      const foregroundSheet = findForegroundSheetForPart(sheet, layeredPartSheets);
+      const renderPriority = getCharacterPartNumericLayer(sheet.path);
+      const labelPath = renderPriority === null
+        ? sheet.path
+        : String(sheet.path || sheet.id)
+          .replace(/(^|\/)\d+[_ -]+/i, "$1")
+          .replace(/([a-z])([A-Z])/g, "$1 $2");
+      const nameKey = getCharacterPartAssociationKey(sheet.path || sheet.id).split("/").pop() || "";
       return {
-        id: existing?.id || sheet.id || slugify((sheet.path || "character-part").replace(/\.[^.]+$/, "")),
+        id: existing?.id || (slot === "accessory" && nameKey ? slugify(slot + "-" + nameKey) : sheet.id) || slugify((sheet.path || "character-part").replace(/\.[^.]+$/, "")),
         slot,
-        label: existing?.label || sheet.playerLabel || sheet.label || prettifyCharacterSheetLabel(sheet.path || sheet.id),
+        label: existing?.label || (renderPriority === null ? (sheet.playerLabel || sheet.label) : "") || prettifyCharacterSheetLabel(labelPath || sheet.id),
         path: sheet.path || existing?.path || "",
         sheetId: sheet.id || existing?.sheetId || "",
+        renderPriority: renderPriority ?? existing?.renderPriority ?? null,
+        foregroundPath: foregroundSheet?.path || existing?.foregroundPath || "",
+        foregroundSheetId: foregroundSheet?.id || existing?.foregroundSheetId || "",
         tintPalette: existing?.tintPalette || "",
         layerMode: inferCharacterPartLayerMode(sheet.path || existing?.path, slot, existing?.layerMode),
         compatibleBaseIds: Array.isArray(existing?.compatibleBaseIds) && existing.compatibleBaseIds.length
@@ -319,14 +382,42 @@ function mergeLayeredBaseSheets(characterParts, characterSheets) {
           : nextBaseIds.slice(),
       };
     })
-    .filter(Boolean);
-  const discoveredPartKeys = new Set(discoveredParts.map((part) => part.path || part.sheetId || part.id));
+    .concat(pairedLayerGroups.map(([associationKey, layers]) => {
+      const belowSheet = layers.get(30);
+      const aboveSheet = layers.get(190);
+      const existing = remappedParts.find((part) => part.path === belowSheet.path
+        || part.sheetId === belowSheet.id
+        || part.abovePath === aboveSheet.path
+        || part.aboveSheetId === aboveSheet.id);
+      const labelPath = String(belowSheet.path || belowSheet.id).replace(/(^|\/)30[_ -]+/i, "$1");
+      const slot = getLayeredPartSlotFromPath(belowSheet.path);
+      const nameKey = associationKey.split("/").pop() || associationKey;
+      return {
+        id: existing?.id || slugify(slot + "-" + nameKey),
+        slot,
+        label: existing?.label || prettifyCharacterSheetLabel(labelPath),
+        path: belowSheet.path,
+        sheetId: belowSheet.id,
+        layerPosition: "below-all",
+        abovePath: aboveSheet.path,
+        aboveSheetId: aboveSheet.id,
+        tintPalette: existing?.tintPalette || "",
+        layerMode: "",
+        compatibleBaseIds: Array.isArray(existing?.compatibleBaseIds) && existing.compatibleBaseIds.length
+          ? existing.compatibleBaseIds
+          : nextBaseIds.slice(),
+      };
+    }));
+  const discoveredPartKeys = new Set(allLayeredPartSheets.flatMap((sheet) => [sheet.path, sheet.id]).filter(Boolean));
 
   return {
     ...catalog,
     bases: nextBases,
     parts: remappedParts
-      .filter((part) => !discoveredPartKeys.has(part.path || part.sheetId || part.id))
+      .filter((part) => !discoveredPartKeys.has(part.path)
+        && !discoveredPartKeys.has(part.sheetId)
+        && !discoveredPartKeys.has(part.abovePath)
+        && !discoveredPartKeys.has(part.aboveSheetId))
       .concat(discoveredParts),
     presets: catalog.presets.map((preset) => {
       const appearance = { ...(preset.appearance || {}) };

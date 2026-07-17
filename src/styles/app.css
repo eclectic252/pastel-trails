@@ -2936,6 +2936,14 @@ button {
   height: auto;
 }
 
+.dev-layered-animation-canvas-game-scale {
+  display: block;
+  width: 720px;
+  min-width: 720px;
+  max-width: none;
+  margin: 0 auto;
+}
+
 .dev-layered-frame-inspector {
   margin-top: 1rem;
 }

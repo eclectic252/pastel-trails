@@ -4,7 +4,7 @@
     "zoom": 100,
     "walkSpeed": 260,
     "partySize": 6,
-    "playerSpriteRenderWidth": 155,
+    "playerSpriteRenderWidth": 220,
     "monsterSpriteRenderWidth": 128,
     "playerSpriteAnchorOffsetY": 0,
     "shareExperience": true,
@@ -19,6 +19,9 @@
     "trainerRefightCooldownSeconds": 180,
     "wildMonsterMinLevel": 1,
     "wildMonsterMaxLevel": 5,
+    "defaultBattleBackgroundMode": "static",
+    "defaultBattleBackgroundImagePath": "",
+    "defaultBattleScenePresetId": "",
     "crestLevelCaps": [
       {
         "crestMin": 0,

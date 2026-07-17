@@ -968,6 +968,12 @@
           label: String(part?.label || part?.id || "").trim(),
           path: String(part?.path || "").trim(),
           sheetId: String(part?.sheetId || "").trim(),
+          foregroundPath: String(part?.foregroundPath || "").trim(),
+          foregroundSheetId: String(part?.foregroundSheetId || "").trim(),
+          layerPosition: String(part?.layerPosition || "").trim(),
+          abovePath: String(part?.abovePath || "").trim(),
+          aboveSheetId: String(part?.aboveSheetId || "").trim(),
+          renderPriority: Number.isFinite(Number(part?.renderPriority)) ? Number(part.renderPriority) : null,
           tintPalette: String(part?.tintPalette || "").trim(),
           layerMode: inferCharacterPartLayerMode(part?.path, String(part?.slot || "").trim(), String(part?.layerMode || "").trim()),
           compatibleBaseIds: Array.isArray(part?.compatibleBaseIds)
@@ -1031,6 +1037,46 @@
       .replace(/^-|-$/g, "");
   }
 
+  function isForegroundCharacterPartSheetPath(pathValue) {
+    const normalizedPath = String(pathValue || "").replace(/\\/g, "/").toLowerCase();
+    const fileName = normalizedPath.split("/").pop() || "";
+    return /(?:^|[_ -])foreground\.[^.]+$/.test(fileName)
+      && !!getLayeredPartSlotFromPath(normalizedPath);
+  }
+
+  function getCharacterPartAssociationKey(pathValue) {
+    const normalizedPath = String(pathValue || "")
+      .replace(/\\/g, "/")
+      .toLowerCase()
+      .replace(/\.[^.]+$/, "");
+    const pathParts = normalizedPath.split("/");
+    const fileName = (pathParts.pop() || "")
+      .replace(/^\d+[_ -]+/, "")
+      .replace(/(?:[_ -]+foreground)$/, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+    return pathParts.concat(fileName).join("/");
+  }
+
+  function getCharacterPartNumericLayer(pathValue) {
+    const fileName = String(pathValue || "").replace(/\\/g, "/").split("/").pop() || "";
+    const match = fileName.replace(/\.[^.]+$/, "").match(/^(\d+)[_ -]+(.+)$/);
+    return match ? Number(match[1]) : null;
+  }
+
+  function isCharacterPartReferenceSheetPath(pathValue) {
+    const fileName = String(pathValue || "").replace(/\\/g, "/").split("/").pop() || "";
+    return fileName.toLowerCase() === "spritesheet.png";
+  }
+
+  function findForegroundSheetForPart(partSheet, sheets) {
+    const associationKey = getCharacterPartAssociationKey(partSheet?.path || partSheet?.id);
+    return (sheets || []).find(function (sheet) {
+      return isForegroundCharacterPartSheetPath(sheet?.path)
+        && getCharacterPartAssociationKey(sheet.path || sheet.id) === associationKey;
+    }) || null;
+  }
+
   function findForegroundArmsSheetForBase(baseSheet, sheets) {
     const baseKey = getCharacterLayerAssociationKey(baseSheet?.path || baseSheet?.id);
     if (!baseKey) {
@@ -1052,7 +1098,6 @@
     if (fileName.includes("undershirt")) {
       return "undershirt";
     }
-    const folder = parts[charactersIndex + 2];
     const slotAliases = {
       eye: "eyes",
       eyes: "eyes",
@@ -1080,6 +1125,9 @@
       accessory: "accessory",
       accessories: "accessory",
     };
+    const folder = parts.slice(charactersIndex + 2, -1).reverse().find(function (candidate) {
+      return !!slotAliases[candidate];
+    });
     return slotAliases[folder] || "";
   }
 
@@ -1123,13 +1171,15 @@
     };
   }
 
-  function buildLayeredPartFromSheet(sheet, slot, compatibleBaseIds, existingPart) {
+  function buildLayeredPartFromSheet(sheet, slot, compatibleBaseIds, existingPart, foregroundSheet) {
     return {
       id: existingPart?.id || sheet.id || slugify((sheet.path || "character-part").replace(/\.[^.]+$/, "")),
       slot,
       label: existingPart?.label || sheet.playerLabel || sheet.label || prettifyCharacterSheetLabel(sheet.path || sheet.id),
       path: sheet.path || existingPart?.path || "",
       sheetId: sheet.id || existingPart?.sheetId || "",
+      foregroundPath: foregroundSheet?.path || existingPart?.foregroundPath || "",
+      foregroundSheetId: foregroundSheet?.id || existingPart?.foregroundSheetId || "",
       tintPalette: existingPart?.tintPalette || "",
       layerMode: inferCharacterPartLayerMode(sheet.path || existingPart?.path, slot, existingPart?.layerMode),
       compatibleBaseIds: existingPart?.compatibleBaseIds?.length
@@ -1204,20 +1254,89 @@
     const existingPartsBySheetId = new Map(catalog.parts.map(function (part) {
       return [part.sheetId, part];
     }));
-    const discoveredParts = sheets.map(function (sheet) {
-      const slot = getLayeredPartSlotFromPath(sheet.path);
-      if (!slot) {
-        return null;
+    const allLayeredPartSheets = sheets.filter(function (sheet) {
+      return !!getLayeredPartSlotFromPath(sheet.path);
+    });
+    const layeredPartSheets = allLayeredPartSheets.filter(function (sheet) {
+      return !isCharacterPartReferenceSheetPath(sheet.path);
+    });
+    const numericLayerGroups = new Map();
+    layeredPartSheets.forEach(function (sheet) {
+      const layerNumber = getCharacterPartNumericLayer(sheet.path);
+      if (layerNumber !== 30 && layerNumber !== 190) {
+        return;
       }
-      const existing = existingPartsByPath.get(sheet.path) || existingPartsBySheetId.get(sheet.id);
-      return buildLayeredPartFromSheet(sheet, slot, nextBaseIds, existing);
-    }).filter(Boolean);
-    const discoveredPartKeys = new Set(discoveredParts.map(function (part) {
-      return part.path || part.sheetId || part.id;
+      const key = getCharacterPartAssociationKey(sheet.path || sheet.id);
+      if (!numericLayerGroups.has(key)) {
+        numericLayerGroups.set(key, new Map());
+      }
+      numericLayerGroups.get(key).set(layerNumber, sheet);
+    });
+    const pairedLayerGroups = Array.from(numericLayerGroups.entries()).filter(function (entry) {
+      return entry[1].has(30) && entry[1].has(190);
+    });
+    const pairedLayerPaths = new Set(pairedLayerGroups.flatMap(function (entry) {
+      return [entry[1].get(30).path, entry[1].get(190).path];
     }));
+    const discoveredParts = layeredPartSheets.filter(function (sheet) {
+      return !isForegroundCharacterPartSheetPath(sheet.path) && !pairedLayerPaths.has(sheet.path);
+    }).map(function (sheet) {
+      const slot = getLayeredPartSlotFromPath(sheet.path);
+      const existing = existingPartsByPath.get(sheet.path) || existingPartsBySheetId.get(sheet.id);
+      const foregroundSheet = findForegroundSheetForPart(sheet, layeredPartSheets);
+      const part = buildLayeredPartFromSheet(sheet, slot, nextBaseIds, existing, foregroundSheet);
+      const renderPriority = getCharacterPartNumericLayer(sheet.path);
+      const labelPath = renderPriority === null
+        ? sheet.path
+        : String(sheet.path || sheet.id)
+          .replace(/(^|\/)\d+[_ -]+/i, "$1")
+          .replace(/([a-z])([A-Z])/g, "$1 $2");
+      const nameKey = getCharacterPartAssociationKey(sheet.path || sheet.id).split("/").pop() || "";
+      if (slot === "accessory" && nameKey && !existing) {
+        part.id = slugify(slot + "-" + nameKey);
+      }
+      if (renderPriority !== null) {
+        part.label = existing?.label || prettifyCharacterSheetLabel(labelPath || sheet.id);
+        part.renderPriority = renderPriority;
+      }
+      return part;
+    }).concat(pairedLayerGroups.map(function (entry) {
+      const associationKey = entry[0];
+      const belowSheet = entry[1].get(30);
+      const aboveSheet = entry[1].get(190);
+      const existing = catalog.parts.find(function (part) {
+        return part.path === belowSheet.path
+          || part.sheetId === belowSheet.id
+          || part.abovePath === aboveSheet.path
+          || part.aboveSheetId === aboveSheet.id;
+      });
+      const labelPath = String(belowSheet.path || belowSheet.id).replace(/(^|\/)30[_ -]+/i, "$1");
+      const slot = getLayeredPartSlotFromPath(belowSheet.path);
+      const nameKey = associationKey.split("/").pop() || associationKey;
+      return {
+        id: existing?.id || slugify(slot + "-" + nameKey),
+        slot,
+        label: existing?.label || prettifyCharacterSheetLabel(labelPath),
+        path: belowSheet.path,
+        sheetId: belowSheet.id,
+        layerPosition: "below-all",
+        abovePath: aboveSheet.path,
+        aboveSheetId: aboveSheet.id,
+        tintPalette: existing?.tintPalette || "",
+        layerMode: "",
+        compatibleBaseIds: existing?.compatibleBaseIds?.length
+          ? existing.compatibleBaseIds
+          : nextBaseIds.slice(),
+      };
+    }));
+    const discoveredPartKeys = new Set(allLayeredPartSheets.flatMap(function (sheet) {
+      return [sheet.path, sheet.id];
+    }).filter(Boolean));
     catalog.parts = catalog.parts.filter(function (part) {
-      const key = part.path || part.sheetId || part.id;
-      return !key || !discoveredPartKeys.has(key);
+      return !discoveredPartKeys.has(part.path)
+        && !discoveredPartKeys.has(part.sheetId)
+        && !discoveredPartKeys.has(part.abovePath)
+        && !discoveredPartKeys.has(part.aboveSheetId);
     }).concat(discoveredParts);
     catalog.presets = catalog.presets.map(function (preset) {
       const appearance = Object.assign({}, preset.appearance || {});
@@ -1274,6 +1393,18 @@
         return part.slot === slot.id
           && (!part.compatibleBaseIds.length || part.compatibleBaseIds.includes(base.id));
       });
+      if (appearance.parts[slot.id] && !compatibleParts.some(function (part) { return part.id === appearance.parts[slot.id]; })) {
+        const legacyMarker = "-" + slot.id + "-";
+        const legacyId = String(appearance.parts[slot.id]);
+        const markerIndex = legacyId.lastIndexOf(legacyMarker);
+        const legacyNameKey = markerIndex >= 0 ? legacyId.slice(markerIndex + legacyMarker.length) : "";
+        const migratedPart = legacyNameKey ? compatibleParts.find(function (part) {
+          return part.id === slot.id + "-" + legacyNameKey || part.id.endsWith(legacyMarker + legacyNameKey);
+        }) : null;
+        if (migratedPart) {
+          appearance.parts[slot.id] = migratedPart.id;
+        }
+      }
       if (slot.optional && appearance.parts[slot.id] === "none") {
         delete appearance.parts[slot.id];
       }
@@ -14580,9 +14711,45 @@
     const partsById = new Map(catalog.parts.map(function (part) {
       return [part.id, part];
     }));
-    const layers = [{ id: "base", slot: "base", label: base.label, path: baseSheet.path, sheetId: baseSheet.id, sheet: baseSheet }];
+    const layers = [];
+    const baseLayer = { id: "base", slot: "base", label: base.label, path: baseSheet.path, sheetId: baseSheet.id, sheet: baseSheet };
+    const selectedParts = Object.values(appearance.parts || {}).map(function (partId) {
+      return partsById.get(partId) || null;
+    }).filter(Boolean);
     const selectedTop = partsById.get(appearance.parts?.top || "") || null;
     const tuckedTop = selectedTop?.layerMode === "under-bottom" ? selectedTop : null;
+    const selectedForegroundLayers = selectedParts.map(function (part) {
+      if (!part.foregroundPath && !part.foregroundSheetId) {
+        return null;
+      }
+      return {
+        id: part.id + "-foreground",
+        slot: part.slot + "-foreground",
+        label: part.label + " Foreground",
+        path: part.foregroundPath || "",
+        sheetId: part.foregroundSheetId || "",
+        tintPalette: part.tintPalette || "",
+      };
+    }).filter(Boolean);
+    const selectedBelowLayers = selectedParts.filter(function (part) {
+      return part.layerPosition === "below-all";
+    });
+    const selectedAboveLayers = selectedParts.map(function (part) {
+      if (!part.abovePath && !part.aboveSheetId) {
+        return null;
+      }
+      return {
+        id: part.id + "-above-all",
+        slot: part.slot + "-above-all",
+        label: part.label + " Above All",
+        path: part.abovePath || "",
+        sheetId: part.aboveSheetId || "",
+        tintPalette: part.tintPalette || "",
+      };
+    }).filter(Boolean);
+    const selectedTopmostLayers = selectedParts.filter(function (part) {
+      return Number(part.renderPriority || 0) > 190;
+    });
     const foregroundArmsLayer = base.foregroundArmsPath || base.foregroundArmsSheetId
       ? {
           id: base.id + "-foreground-arms",
@@ -14606,12 +14773,15 @@
         tintColor: getCharacterPaletteColor(catalog, appearance, part.tintPalette),
       }));
     };
+    selectedBelowLayers.forEach(addPartLayer);
+    layers.push(baseLayer);
     catalog.layerOrder.forEach(function (slotId) {
       if (slotId === "base") {
         return;
       }
       if (slotId === "foreground-arms") {
         addPartLayer(foregroundArmsLayer);
+        selectedForegroundLayers.forEach(addPartLayer);
         return;
       }
       if (slotId === "bottom") {
@@ -14622,8 +14792,13 @@
       }
       const partId = appearance.parts?.[slotId] || "";
       const part = partsById.get(partId);
+      if (part?.layerPosition === "below-all" || Number(part?.renderPriority || 0) > 190) {
+        return;
+      }
       addPartLayer(part);
     });
+    selectedAboveLayers.forEach(addPartLayer);
+    selectedTopmostLayers.forEach(addPartLayer);
 
     return {
       type: "layered",
@@ -15224,12 +15399,38 @@
     ensureLayeredSpritePreviewState(devToolsState, sheet);
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const tileSize = 24;
+    const isGameScale = devToolsState.layeredSpritePreviewDisplayMode === "game";
+    const tileSize = isGameScale ? 128 : 24;
     for (let y = 0; y < canvas.height; y += tileSize) {
       for (let x = 0; x < canvas.width; x += tileSize) {
-        ctx.fillStyle = ((x / tileSize + y / tileSize) % 2 === 0) ? "#f7f3ed" : "#e8e0d7";
+        ctx.fillStyle = isGameScale
+          ? (((x / tileSize + y / tileSize) % 2 === 0) ? "#b9d88d" : "#acd17d")
+          : (((x / tileSize + y / tileSize) % 2 === 0) ? "#f7f3ed" : "#e8e0d7");
         ctx.fillRect(x, y, tileSize, tileSize);
       }
+    }
+    if (isGameScale) {
+      ctx.save();
+      ctx.strokeStyle = "rgba(61, 91, 48, 0.28)";
+      ctx.lineWidth = 1;
+      for (let x = 0; x <= canvas.width; x += tileSize) {
+        ctx.beginPath();
+        ctx.moveTo(x + 0.5, 0);
+        ctx.lineTo(x + 0.5, canvas.height);
+        ctx.stroke();
+      }
+      for (let y = 0; y <= canvas.height; y += tileSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y + 0.5);
+        ctx.lineTo(canvas.width, y + 0.5);
+        ctx.stroke();
+      }
+      ctx.fillStyle = "rgba(44, 72, 38, 0.72)";
+      ctx.font = "600 13px sans-serif";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "top";
+      ctx.fillText("128 px tile reference", 10, 10);
+      ctx.restore();
     }
 
     if (!sheet?.path) {
@@ -15245,7 +15446,9 @@
     const frameIndex = Math.max(0, Math.min(columns - 1, Number(devToolsState.layeredSpriteAnimation?.frameIndex || 0)));
     const rowIndex = Math.max(0, Math.min(Math.max(1, Number(sheet.rows || 4)) - 1, Number(devToolsState.layeredSpritePreviewRow || 0)));
     const scale = Math.max(0.5, Math.min(4, Number(devToolsState.layeredSpritePreviewScale || 1.5)));
-    const spriteSize = Math.min(canvas.width - 48, canvas.height - 48, Math.round(getEffectiveRenderWidthForSheet(content, sheet) * scale));
+    const gameRenderWidth = Math.max(64, Number(ensureGlobalPlayerSpriteSettings(content).playerSpriteRenderWidth || PLAYER_RENDER_WIDTH));
+    const requestedSpriteSize = isGameScale ? gameRenderWidth : getEffectiveRenderWidthForSheet(content, sheet) * scale;
+    const spriteSize = Math.min(canvas.width - 48, canvas.height - 48, Math.round(requestedSpriteSize));
     const drawX = Math.round((canvas.width - spriteSize) / 2);
     const drawY = Math.round((canvas.height - spriteSize) / 2) - 4;
 
@@ -15254,7 +15457,7 @@
     ctx.ellipse(canvas.width / 2, drawY + spriteSize - 5, Math.max(28, spriteSize * 0.22), Math.max(8, spriteSize * 0.055), 0, 0, Math.PI * 2);
     ctx.fill();
 
-    const drewFrame = drawCharacterVisualFrame(ctx, content, visual, rowIndex, frameIndex, drawX, drawY, spriteSize, spriteSize, { smoothSampling: true });
+    const drewFrame = drawCharacterVisualFrame(ctx, content, visual, rowIndex, frameIndex, drawX, drawY, spriteSize, spriteSize, { smoothSampling: !isGameScale });
     if (!drewFrame) {
       ctx.fillStyle = "#6a5044";
       ctx.font = "600 18px sans-serif";
@@ -15265,7 +15468,7 @@
 
     const frameLabel = canvas.closest(".dev-layered-animation-panel")?.querySelector("[data-layered-preview-frame-label]");
     if (frameLabel) {
-      frameLabel.textContent = "Frame " + (frameIndex + 1) + " of " + columns;
+      frameLabel.textContent = "Frame " + (frameIndex + 1) + " of " + columns + (isGameScale ? " · " + Math.round(gameRenderWidth) + " px game width" : "");
     }
   }
 
@@ -15647,6 +15850,9 @@
     if (typeof devToolsState.layeredSpritePreviewScale !== "number" || devToolsState.layeredSpritePreviewScale <= 0) {
       devToolsState.layeredSpritePreviewScale = 1.5;
     }
+    if (!['workbench', 'game'].includes(devToolsState.layeredSpritePreviewDisplayMode)) {
+      devToolsState.layeredSpritePreviewDisplayMode = "workbench";
+    }
     if (typeof devToolsState.layeredSpritePreviewFrameDurationMs !== "number" || devToolsState.layeredSpritePreviewFrameDurationMs < 40) {
       devToolsState.layeredSpritePreviewFrameDurationMs = PLAYER_WALK_ANIMATION_MS.vertical;
     }
@@ -15672,6 +15878,8 @@
     const selectedBase = findCharacterBase(content, selectedPreset?.appearance?.baseId);
     const selectedBaseSheet = getSheetForCharacterLayer(content, selectedBase, getCharacterSheetConfig(content, ""));
     ensureLayeredSpritePreviewState(devToolsState, selectedBaseSheet);
+    const isGameScalePreview = devToolsState.layeredSpritePreviewDisplayMode === "game";
+    const gameScaleRenderWidth = Math.max(64, Number(ensureGlobalPlayerSpriteSettings(content).playerSpriteRenderWidth || PLAYER_RENDER_WIDTH));
     const directionLabels = ["Down", "Left", "Right", "Up"];
     const previewRowOptions = Array.from({ length: Math.max(1, Number(selectedBaseSheet?.rows || 4)) }, function (_, index) {
       const selected = index === devToolsState.layeredSpritePreviewRow ? " selected" : "";
@@ -15715,12 +15923,13 @@
           '<div class="section-heading"><h3>Animation Preview</h3><span data-layered-preview-frame-label>Frame ' + (Number(devToolsState.layeredSpriteAnimation?.frameIndex || 0) + 1) + '</span></div>',
           '<div class="form-grid dev-layered-animation-controls">',
           '<label class="input-group"><span>Direction</span><select data-dev-layered-preview-field="row">' + previewRowOptions + '</select></label>',
+          '<label class="input-group"><span>Display Size</span><select data-dev-layered-preview-field="displayMode"><option value="workbench"' + (!isGameScalePreview ? " selected" : "") + '>Workbench</option><option value="game"' + (isGameScalePreview ? " selected" : "") + '>Game Scale (' + Math.round(gameScaleRenderWidth) + ' px)</option></select></label>',
           '<label class="input-group"><span>Frame Time (ms)</span><input type="number" min="40" max="1000" step="10" data-dev-layered-preview-field="frameDurationMs" value="' + Number(devToolsState.layeredSpritePreviewFrameDurationMs || PLAYER_WALK_ANIMATION_MS.vertical) + '" /></label>',
-          '<label class="input-group"><span>Preview Scale</span><input type="number" min="0.5" max="4" step="0.25" data-dev-layered-preview-field="scale" value="' + Number(devToolsState.layeredSpritePreviewScale || 1.5) + '" /></label>',
+          '<label class="input-group"><span>Workbench Scale</span><input type="number" min="0.5" max="4" step="0.25" data-dev-layered-preview-field="scale" value="' + Number(devToolsState.layeredSpritePreviewScale || 1.5) + '"' + (isGameScalePreview ? " disabled" : "") + ' /></label>',
           '<div class="input-group"><span>Playback</span><button class="secondary-button" type="button" data-action="toggle-layered-animation">' + (devToolsState.layeredSpritePreviewPlaying ? "Pause" : "Play") + '</button></div>',
           '</div>',
-          '<div class="dev-layered-animation-stage dev-canvas-scroll"><canvas class="dev-layered-animation-canvas" width="720" height="320"></canvas></div>',
-          '<div class="map-caption">The selected base and every equipped part are composited in the game layer order. Empty direction rows will appear blank until those frames are drawn.</div>',
+          '<div class="dev-layered-animation-stage dev-canvas-scroll"><canvas class="dev-layered-animation-canvas' + (isGameScalePreview ? ' dev-layered-animation-canvas-game-scale' : '') + '" width="720" height="320"></canvas></div>',
+          '<div class="map-caption">' + (isGameScalePreview ? 'Game Scale uses the current Global Character Width and a 128 px tile reference grid.' : 'Workbench mode enlarges the sprite for inspecting its equipped layers.') + ' Empty direction rows will appear blank until those frames are drawn.</div>',
           '<section class="dev-layered-frame-inspector">',
           '<div class="section-heading"><h3>Selected Row Frames</h3><span>' + escapeHtml(directionLabels[devToolsState.layeredSpritePreviewRow] || ("Row " + (devToolsState.layeredSpritePreviewRow + 1))) + '</span></div>',
           '<div class="dev-layered-row-stage dev-canvas-scroll"><canvas class="dev-layered-row-canvas" width="720" height="260"></canvas></div>',
@@ -17616,6 +17825,7 @@
         selectedLayeredSpritePresetId: getCharacterPartsCatalog(content).presets?.[0]?.id || "",
         layeredSpritePreviewRow: 0,
         layeredSpritePreviewScale: 1.5,
+        layeredSpritePreviewDisplayMode: "workbench",
         layeredSpritePreviewFrameDurationMs: PLAYER_WALK_ANIMATION_MS.vertical,
         layeredSpritePreviewPlaying: true,
         layeredSpriteSelectedFrame: 0,
@@ -19137,6 +19347,8 @@
           this.devTools.layeredSpritePreviewFrameDurationMs = Math.max(40, Math.min(1000, Number(rawValue || PLAYER_WALK_ANIMATION_MS.vertical)));
         } else if (field === "scale") {
           this.devTools.layeredSpritePreviewScale = Math.max(0.5, Math.min(4, Number(rawValue || 1.5)));
+        } else if (field === "displayMode") {
+          this.devTools.layeredSpritePreviewDisplayMode = rawValue === "game" ? "game" : "workbench";
         }
         this.render();
       },
