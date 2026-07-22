@@ -4,7 +4,7 @@
     "zoom": 100,
     "walkSpeed": 260,
     "partySize": 6,
-    "playerSpriteRenderWidth": 220,
+    "playerSpriteRenderWidth": 200,
     "monsterSpriteRenderWidth": 128,
     "playerSpriteAnchorOffsetY": 0,
     "shareExperience": true,

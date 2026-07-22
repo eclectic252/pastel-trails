@@ -2019,6 +2019,7 @@
           const root = document.querySelector("#app");
           if (root) {
             drawMonsterVariantCanvases(root, ACTIVE_APP.content);
+            safeDrawAvatarPreviewCanvases(root, ACTIVE_APP.content);
           }
           return;
         }
@@ -11695,6 +11696,7 @@
       registry: "Notebook",
       quests: "Quests",
       settings: "Settings",
+      "character-editor": "Edit Character",
     }[panel] || "Panel";
 
     let panelBody = "";
@@ -11755,7 +11757,7 @@
       panelBody = [
         '<section class="character-panel-layout">',
         '<div class="character-panel-identity">',
-        '<div class="character-panel-portrait-frame">' + renderAvatarPreviewMarkup(currentAvatar, "character-panel-avatar") + "</div>",
+        '<div class="character-panel-portrait-frame">' + renderAvatarPreviewMarkup(currentAvatar, "character-panel-avatar", { appearance: state.player.appearance || null }) + "</div>",
         '<div class="character-panel-name">' + escapeHtml(state.player.name || "Player") + "</div>",
         "</div>",
         '<div class="character-panel-main">',
@@ -11813,14 +11815,35 @@
       panelBody = renderNotebookPanel(state, content);
     } else if (panel === "quests") {
       panelBody = "<p>Quest tracking is still planned work. This panel is ready for that system when you want it.</p>";
+    } else if (panel === "character-editor") {
+      const draftAppearance = normalizeCharacterAppearance(ui.characterEditorDraft, getCharacterPartsCatalog(content))
+        || normalizeCharacterAppearance(state.player.appearance, getCharacterPartsCatalog(content))
+        || createDefaultCharacterAppearance(content);
+      ui.characterEditorDraft = JSON.parse(JSON.stringify(draftAppearance));
+      const creatorMarkup = renderCharacterAppearanceControls(content, draftAppearance, {
+        fieldAttribute: "data-world-character-appearance-field",
+        previewClass: "avatar-preview-sprite character-editor-main-preview",
+        transparentPreview: true,
+      });
+      panelBody = [
+        '<section class="character-editor-page">',
+        '<div class="character-editor-intro"><span class="eyebrow">Player appearance</span><h3>Make this character yours</h3><p>Choose a base, hairstyle, outfit, accessories, and colors. Your preview updates as you make changes.</p></div>',
+        creatorMarkup,
+        '<div class="character-editor-actions"><button class="secondary-button" type="button" data-action="randomize-world-character">Surprise Me</button><div><button class="secondary-button" type="button" data-action="cancel-character-editor">Cancel</button><button class="primary-button" type="button" data-action="save-character-editor">Save Changes</button></div></div>',
+        '<p class="dev-helper-text character-editor-save-note">Changes remain a preview until you choose Save Changes. Cancel or Close will discard them.</p>',
+        '</section>',
+      ].join("");
     } else if (panel === "settings") {
       const activeMonster = state.party[0] || null;
       const activeSpecies = activeMonster ? getSpecies(content, activeMonster.speciesId) : null;
       const saveSlots = ACTIVE_APP?.saveManager?.listSaves?.() || [];
-      const avatarOptions = getPlayerAvatarOptions(content).map(function (sheet) {
-        const selected = state.player.avatarId === sheet.id ? " selected" : "";
-        return '<option value="' + escapeHtml(sheet.id) + '"' + selected + '>' + escapeHtml(sheet.playerLabel || sheet.label || sheet.id) + "</option>";
-      }).join("");
+      const playerAppearance = normalizeCharacterAppearance(state.player.appearance, getCharacterPartsCatalog(content)) || createDefaultCharacterAppearance(content);
+      const playerBase = findCharacterBase(content, playerAppearance?.baseId);
+      const playerBaseSheet = getSheetForCharacterLayer(content, playerBase, getCharacterSheetConfig(content, state.player.avatarId || ""));
+      const characterPreview = renderAvatarPreviewMarkup(playerBaseSheet, "settings-character-preview", {
+        appearance: playerAppearance,
+        transparent: true,
+      });
       const themeOptions = (content.themes.themes || []).map(function (theme) {
         const selected = state.settings.theme === theme.id ? " selected" : "";
         return '<option value="' + escapeHtml(theme.id) + '"' + selected + ">" + escapeHtml(theme.label) + "</option>";
@@ -11845,10 +11868,7 @@
       const trainerRefightRange = getTrainerRefightLevelRange(state);
       panelBody = [
         '<section class="panel-block"><div class="section-heading"><h3>Now Playing</h3></div><p>' + escapeHtml(state.message || "Exploring the world.") + '</p><p><strong>Location:</strong> ' + escapeHtml(content.mapMetadata[state.world.currentMapId]?.displayName || state.world.currentMapId || "Unknown") + '</p><p><strong>Money:</strong> $' + Number(state.player.money || 0) + '</p><p><strong>Party Lead:</strong> ' + escapeHtml(activeSpecies?.name || activeMonster?.speciesId || "Unknown") + (activeMonster ? (" Lv " + Number(activeMonster.level || 1) + " · HP " + Number(activeMonster.currentHp || 0) + "/" + Number(activeMonster.stats?.hp || 0)) : "") + '</p><p><strong>Save Slots:</strong> ' + saveSlots.length + " stored locally in this browser.</p></section>",
-        '<section class="panel-block"><div class="section-heading"><h3>Player Settings</h3></div><div class="form-grid">' +
-        '<label class="input-group"><span>Theme</span><select data-world-setting="theme">' + themeOptions + "</select></label>" +
-        '<label class="input-group"><span>Sprite Avatar</span><select data-world-player-field="avatarId">' + avatarOptions + "</select></label>" +
-        '</div></section>',
+        '<section class="panel-block"><div class="section-heading"><h3>Player Settings</h3></div><div class="player-settings-layout"><label class="input-group"><span>Theme</span><select data-world-setting="theme">' + themeOptions + '</select></label><div class="settings-character-card"><div class="settings-character-preview-frame">' + characterPreview + '</div><div><strong>Edit Character</strong><p>Customize your look, clothing, accessories, and colors.</p><button class="primary-button" type="button" data-action="edit-character">Edit Character</button></div></div></div></section>',
         '<section class="panel-block"><div class="section-heading"><h3>Map Settings</h3></div><div class="form-grid">' +
         '<label class="input-group"><span>Encounter Preview</span><select data-world-setting="encounterPreview"><option value="true"' + (state.settings.encounterPreview ? " selected" : "") + '>Yes</option><option value="false"' + (!state.settings.encounterPreview ? " selected" : "") + '>No</option></select></label>' +
         '<label class="input-group"><span>Encounter Preview Mode</span><select data-world-setting="encounterPreviewMode"><option value="available"' + (state.settings.encounterPreviewMode === "available" || !state.settings.encounterPreviewMode ? " selected" : "") + '>Show Available</option><option value="current"' + (state.settings.encounterPreviewMode === "current" ? " selected" : "") + '>Show Current Encounters</option><option value="available-current"' + (state.settings.encounterPreviewMode === "available-current" ? " selected" : "") + '>Show Available And Current</option></select></label>' +
@@ -11882,7 +11902,7 @@
 
     return [
       '<div class="battle-overlay">',
-      '<section class="battle-modal world-panel-modal">',
+      '<section class="battle-modal world-panel-modal' + (panel === "character-editor" ? " character-editor-modal" : "") + '">',
       '<div class="section-heading"><h2>' + panelTitle + '</h2><button class="secondary-button" type="button" data-action="close-world-panel">Close</button></div>',
       '<div class="world-panel-body">' + panelBody + "</div>",
       "</section>",
@@ -16141,6 +16161,18 @@
     root.querySelector('[data-action="close-world-panel"]')?.addEventListener("click", function () {
       app.closeWorldPanel();
     });
+    root.querySelector('[data-action="edit-character"]')?.addEventListener("click", function () {
+      app.openCharacterEditor();
+    });
+    root.querySelector('[data-action="cancel-character-editor"]')?.addEventListener("click", function () {
+      app.cancelCharacterEditor();
+    });
+    root.querySelector('[data-action="save-character-editor"]')?.addEventListener("click", function () {
+      app.saveCharacterEditor();
+    });
+    root.querySelector('[data-action="randomize-world-character"]')?.addEventListener("click", function () {
+      app.randomizeWorldCharacterAppearance();
+    });
 
     root.querySelector('[data-action="title"]')?.addEventListener("click", function () {
       app.showTitle();
@@ -16197,6 +16229,14 @@
     root.querySelectorAll("[data-world-player-field]").forEach(function (field) {
       field.addEventListener("change", function () {
         app.updateWorldPlayerField(field.getAttribute("data-world-player-field"), field.value);
+      });
+    });
+    root.querySelectorAll("[data-world-character-appearance-field]").forEach(function (field) {
+      field.addEventListener("change", function () {
+        app.updateWorldCharacterAppearanceField(
+          field.getAttribute("data-world-character-appearance-field") || "",
+          field.value
+        );
       });
     });
     root.querySelectorAll("[data-adjust-affinity]").forEach(function (button) {
@@ -18037,12 +18077,57 @@
         }
         this.render();
       },
+      openCharacterEditor: function () {
+        if (this.state.screen !== "world") {
+          return;
+        }
+
+        const appearance = normalizeCharacterAppearance(this.state.player.appearance, getCharacterPartsCatalog(this.content))
+          || createDefaultCharacterAppearance(this.content);
+        const ui = ensureWorldUiState(this.state);
+        ui.characterEditorDraft = appearance ? JSON.parse(JSON.stringify(appearance)) : null;
+        ui.activePanel = "character-editor";
+        this.render();
+      },
       closeWorldPanel: function () {
         if (this.state.screen !== "world") {
           return;
         }
 
-        ensureWorldUiState(this.state).activePanel = "";
+        const ui = ensureWorldUiState(this.state);
+        if (ui.activePanel === "character-editor") {
+          ui.characterEditorDraft = null;
+        }
+        ui.activePanel = "";
+        this.render();
+      },
+      cancelCharacterEditor: function () {
+        if (this.state.screen !== "world") {
+          return;
+        }
+
+        const ui = ensureWorldUiState(this.state);
+        ui.characterEditorDraft = null;
+        ui.activePanel = "settings";
+        CHARACTER_VISUAL_FRAME_CACHE.clear();
+        this.render();
+      },
+      saveCharacterEditor: function () {
+        if (this.state.screen !== "world") {
+          return;
+        }
+
+        const ui = ensureWorldUiState(this.state);
+        const appearance = normalizeCharacterAppearance(ui.characterEditorDraft, getCharacterPartsCatalog(this.content));
+        if (appearance) {
+          this.state.player.appearance = JSON.parse(JSON.stringify(appearance));
+          const base = findCharacterBase(this.content, appearance.baseId);
+          const baseSheet = getSheetForCharacterLayer(this.content, base, getCharacterSheetConfig(this.content, this.state.player.avatarId || ""));
+          this.state.player.avatarId = baseSheet?.id || this.state.player.avatarId;
+        }
+        ui.characterEditorDraft = null;
+        ui.activePanel = "settings";
+        CHARACTER_VISUAL_FRAME_CACHE.clear();
         this.render();
       },
       selectCharacterCrest: function (crestId) {
@@ -18122,6 +18207,53 @@
           this.state.player[key] = rawValue;
         }
 
+        this.render();
+      },
+      updateWorldCharacterAppearanceField: function (path, rawValue) {
+        if (this.state.screen !== "world") {
+          return;
+        }
+
+        const ui = ensureWorldUiState(this.state);
+        if (ui.activePanel !== "character-editor") {
+          return;
+        }
+        const current = normalizeCharacterAppearance(ui.characterEditorDraft, getCharacterPartsCatalog(this.content))
+          || normalizeCharacterAppearance(this.state.player.appearance, getCharacterPartsCatalog(this.content))
+          || createDefaultCharacterAppearance(this.content);
+        if (!current) {
+          return;
+        }
+        if (path === "baseId") {
+          current.baseId = rawValue;
+        } else if (path.startsWith("part:")) {
+          const slotId = path.slice("part:".length);
+          if (rawValue) {
+            current.parts[slotId] = rawValue;
+          } else {
+            delete current.parts[slotId];
+          }
+        } else if (path.startsWith("palette:")) {
+          current.palette[path.slice("palette:".length)] = rawValue;
+        } else {
+          return;
+        }
+
+        ui.characterEditorDraft = normalizeCharacterAppearance(current, getCharacterPartsCatalog(this.content));
+        CHARACTER_VISUAL_FRAME_CACHE.clear();
+        this.render();
+      },
+      randomizeWorldCharacterAppearance: function () {
+        if (this.state.screen !== "world") {
+          return;
+        }
+
+        const ui = ensureWorldUiState(this.state);
+        if (ui.activePanel !== "character-editor") {
+          return;
+        }
+        ui.characterEditorDraft = randomizeCharacterAppearance(this.content, ui.characterEditorDraft || this.state.player.appearance);
+        CHARACTER_VISUAL_FRAME_CACHE.clear();
         this.render();
       },
       adjustMonsterAffinityPoint: function (collection, index, element, delta) {

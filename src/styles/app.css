@@ -654,6 +654,99 @@ button {
   min-width: 0;
 }
 
+.player-settings-layout {
+  display: grid;
+  grid-template-columns: minmax(190px, 0.7fr) minmax(300px, 1.3fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.settings-character-card {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 1rem;
+  align-items: center;
+  padding: 0.85rem;
+  border: 1px solid rgba(57, 79, 91, 0.12);
+  border-radius: 16px;
+  background: rgba(214, 237, 246, 0.32);
+}
+
+.settings-character-card p {
+  margin: 0.25rem 0 0.75rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.settings-character-preview-frame {
+  display: grid;
+  place-items: center;
+  min-height: 112px;
+  border-radius: 12px;
+  background: rgba(255, 251, 245, 0.72);
+}
+
+.settings-character-preview {
+  width: 104px;
+  height: 104px;
+  display: block;
+}
+
+.character-editor-modal {
+  width: min(1060px, calc(100vw - 2rem));
+}
+
+.character-editor-page {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.character-editor-intro h3 {
+  margin: 0.25rem 0 0.4rem;
+  font-size: clamp(1.35rem, 3vw, 2rem);
+}
+
+.character-editor-intro p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.character-editor-page .character-creator-layout {
+  grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.2fr);
+  gap: 1.5rem;
+}
+
+.character-editor-page .character-creator-preview {
+  position: sticky;
+  top: 0;
+  min-height: 390px;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(255, 255, 255, 0.96), rgba(214, 237, 246, 0.56) 58%, rgba(176, 215, 216, 0.42));
+}
+
+.character-editor-main-preview {
+  width: min(280px, 90%);
+  height: min(280px, 90%);
+  display: block;
+}
+
+.character-editor-actions,
+.character-editor-actions > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.character-editor-actions > div {
+  justify-content: flex-end;
+}
+
+.character-editor-save-note {
+  text-align: right;
+}
+
 .character-appearance-dev-editor {
   margin-top: 1rem;
 }
@@ -3830,8 +3923,24 @@ button {
   .form-grid,
   .option-grid,
   .avatar-grid,
-  .character-creator-layout {
+  .character-creator-layout,
+  .player-settings-layout,
+  .character-editor-page .character-creator-layout {
     grid-template-columns: 1fr;
+  }
+
+  .character-editor-page .character-creator-preview {
+    position: static;
+    min-height: 240px;
+  }
+
+  .character-editor-main-preview {
+    width: 210px;
+    height: 210px;
+  }
+
+  .settings-character-card {
+    grid-template-columns: 96px minmax(0, 1fr);
   }
 
   .option-card-town {

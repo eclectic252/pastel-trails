@@ -5,7 +5,7 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
       "zoom": 100,
       "walkSpeed": 260,
       "partySize": 6,
-      "playerSpriteRenderWidth": 220,
+      "playerSpriteRenderWidth": 200,
       "monsterSpriteRenderWidth": 128,
       "playerSpriteAnchorOffsetY": 0,
       "shareExperience": true,
@@ -5274,6 +5274,22 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         ]
       },
       {
+        "id": "assets-characters-base-bottoms-100-pants-galaxy",
+        "slot": "bottom",
+        "label": "Pants Galaxy",
+        "path": "assets/Characters/Base/Bottoms/100_Pants_Galaxy.png",
+        "sheetId": "assets-characters-base-bottoms-100-pants-galaxy",
+        "renderPriority": 100,
+        "foregroundPath": "",
+        "foregroundSheetId": "",
+        "tintPalette": "",
+        "layerMode": "",
+        "compatibleBaseIds": [
+          "assets-characters-base-spritesheet",
+          "assets-characters-base-female-base-pose-reference-walksheet"
+        ]
+      },
+      {
         "id": "assets-characters-base-bottoms-100-pants-navy",
         "slot": "bottom",
         "label": "Pants Navy",
@@ -5306,6 +5322,22 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         ]
       },
       {
+        "id": "assets-characters-base-bottoms-100-skirt-white",
+        "slot": "bottom",
+        "label": "Skirt White",
+        "path": "assets/Characters/Base/Bottoms/100_skirt_white.png",
+        "sheetId": "assets-characters-base-bottoms-100-skirt-white",
+        "renderPriority": 100,
+        "foregroundPath": "",
+        "foregroundSheetId": "",
+        "tintPalette": "",
+        "layerMode": "",
+        "compatibleBaseIds": [
+          "assets-characters-base-spritesheet",
+          "assets-characters-base-female-base-pose-reference-walksheet"
+        ]
+      },
+      {
         "id": "assets-characters-base-face-81-eyes-brown",
         "slot": "eyes",
         "label": "Eyes Brown",
@@ -5327,6 +5359,22 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "label": "Eyes Gray",
         "path": "assets/Characters/Base/Face/81_Eyes_Gray.png",
         "sheetId": "assets-characters-base-face-81-eyes-gray",
+        "renderPriority": 81,
+        "foregroundPath": "",
+        "foregroundSheetId": "",
+        "tintPalette": "",
+        "layerMode": "",
+        "compatibleBaseIds": [
+          "assets-characters-base-spritesheet",
+          "assets-characters-base-female-base-pose-reference-walksheet"
+        ]
+      },
+      {
+        "id": "assets-characters-base-face-81-eyes-green",
+        "slot": "eyes",
+        "label": "Eyes Green",
+        "path": "assets/Characters/Base/Face/81_Eyes_Green.png",
+        "sheetId": "assets-characters-base-face-81-eyes-green",
         "renderPriority": 81,
         "foregroundPath": "",
         "foregroundSheetId": "",
@@ -5450,6 +5498,22 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         ]
       },
       {
+        "id": "assets-characters-base-tops-120-shirt-strapless-black",
+        "slot": "top",
+        "label": "Shirt Strapless Black",
+        "path": "assets/Characters/Base/Tops/120_shirt_strapless_black.png",
+        "sheetId": "assets-characters-base-tops-120-shirt-strapless-black",
+        "renderPriority": 120,
+        "foregroundPath": "",
+        "foregroundSheetId": "",
+        "tintPalette": "",
+        "layerMode": "over-bottom",
+        "compatibleBaseIds": [
+          "assets-characters-base-spritesheet",
+          "assets-characters-base-female-base-pose-reference-walksheet"
+        ]
+      },
+      {
         "id": "assets-characters-base-tops-mint-tshirt-walksheet",
         "slot": "top",
         "label": "Mint Tshirt Walksheet",
@@ -5466,6 +5530,22 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         ]
       },
       {
+        "id": "hair-long-wavy-blondepink",
+        "slot": "hair",
+        "label": "Long Wavy BlondePink",
+        "path": "assets/Characters/Base/Hair/30_Long_Wavy_BlondePink.png",
+        "sheetId": "assets-characters-base-hair-30-long-wavy-blondepink",
+        "layerPosition": "below-all",
+        "abovePath": "assets/Characters/Base/Hair/190_Long_Wavy_BlondePink.png",
+        "aboveSheetId": "assets-characters-base-hair-190-long-wavy-blondepink",
+        "tintPalette": "",
+        "layerMode": "",
+        "compatibleBaseIds": [
+          "assets-characters-base-spritesheet",
+          "assets-characters-base-female-base-pose-reference-walksheet"
+        ]
+      },
+      {
         "id": "hair-long-wavy-brown",
         "slot": "hair",
         "label": "Long Wavy Brown",
@@ -5474,6 +5554,22 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "layerPosition": "below-all",
         "abovePath": "assets/Characters/Base/Hair/190_Long_Wavy_Brown.png",
         "aboveSheetId": "assets-characters-base-hair-190-long-wavy-brown",
+        "tintPalette": "",
+        "layerMode": "",
+        "compatibleBaseIds": [
+          "assets-characters-base-spritesheet",
+          "assets-characters-base-female-base-pose-reference-walksheet"
+        ]
+      },
+      {
+        "id": "hair-long-wavy-galaxy",
+        "slot": "hair",
+        "label": "Long Wavy Galaxy",
+        "path": "assets/Characters/Base/Hair/30_Long_Wavy_Galaxy.png",
+        "sheetId": "assets-characters-base-hair-30-long-wavy-galaxy",
+        "layerPosition": "below-all",
+        "abovePath": "assets/Characters/Base/Hair/190_Long_Wavy_Galaxy.png",
+        "aboveSheetId": "assets-characters-base-hair-190-long-wavy-galaxy",
         "tintPalette": "",
         "layerMode": "",
         "compatibleBaseIds": [
@@ -5506,6 +5602,22 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "layerPosition": "below-all",
         "abovePath": "assets/Characters/Base/Hair/190_Short_Mint.png",
         "aboveSheetId": "assets-characters-base-hair-190-short-mint",
+        "tintPalette": "",
+        "layerMode": "",
+        "compatibleBaseIds": [
+          "assets-characters-base-spritesheet",
+          "assets-characters-base-female-base-pose-reference-walksheet"
+        ]
+      },
+      {
+        "id": "hair-short-pink",
+        "slot": "hair",
+        "label": "Short Pink",
+        "path": "assets/Characters/Base/Hair/30_Short_Pink.png",
+        "sheetId": "assets-characters-base-hair-30-short-pink",
+        "layerPosition": "below-all",
+        "abovePath": "assets/Characters/Base/Hair/190_Short_Pink.png",
+        "aboveSheetId": "assets-characters-base-hair-190-short-pink",
         "tintPalette": "",
         "layerMode": "",
         "compatibleBaseIds": [
@@ -5596,6 +5708,23 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "frameOffsets": []
       },
       {
+        "id": "assets-characters-base-bottoms-100-pants-galaxy",
+        "label": "100 Pants Galaxy",
+        "playerLabel": "100 Pants Galaxy",
+        "playerSelectable": false,
+        "kind": "character",
+        "group": "Characters / Base / Bottoms",
+        "path": "assets/Characters/Base/Bottoms/100_Pants_Galaxy.png",
+        "columns": 4,
+        "rows": 4,
+        "frameHeight": 313,
+        "offsetX": 0,
+        "offsetY": 0,
+        "renderWidth": null,
+        "rowOffsets": [],
+        "frameOffsets": []
+      },
+      {
         "id": "assets-characters-base-bottoms-100-pants-navy",
         "label": "100 Pants Navy",
         "playerLabel": "100 Pants Navy",
@@ -5620,6 +5749,23 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "kind": "character",
         "group": "Characters / Base / Bottoms",
         "path": "assets/Characters/Base/Bottoms/100_Pants_Pink.png",
+        "columns": 4,
+        "rows": 4,
+        "frameHeight": 313,
+        "offsetX": 0,
+        "offsetY": 0,
+        "renderWidth": null,
+        "rowOffsets": [],
+        "frameOffsets": []
+      },
+      {
+        "id": "assets-characters-base-bottoms-100-skirt-white",
+        "label": "100 Skirt White",
+        "playerLabel": "100 Skirt White",
+        "playerSelectable": false,
+        "kind": "character",
+        "group": "Characters / Base / Bottoms",
+        "path": "assets/Characters/Base/Bottoms/100_skirt_white.png",
         "columns": 4,
         "rows": 4,
         "frameHeight": 313,
@@ -5664,6 +5810,23 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "frameOffsets": []
       },
       {
+        "id": "assets-characters-base-face-81-eyes-green",
+        "label": "81 Eyes Green",
+        "playerLabel": "81 Eyes Green",
+        "playerSelectable": false,
+        "kind": "character",
+        "group": "Characters / Base / Face",
+        "path": "assets/Characters/Base/Face/81_Eyes_Green.png",
+        "columns": 4,
+        "rows": 4,
+        "frameHeight": 313,
+        "offsetX": 0,
+        "offsetY": 0,
+        "renderWidth": null,
+        "rowOffsets": [],
+        "frameOffsets": []
+      },
+      {
         "id": "assets-characters-base-face-81-eyes-teal",
         "label": "81 Eyes Teal",
         "playerLabel": "81 Eyes Teal",
@@ -5698,6 +5861,23 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "frameOffsets": []
       },
       {
+        "id": "assets-characters-base-hair-190-long-wavy-blondepink",
+        "label": "190 Long Wavy BlondePink",
+        "playerLabel": "190 Long Wavy BlondePink",
+        "playerSelectable": false,
+        "kind": "character",
+        "group": "Characters / Base / Hair",
+        "path": "assets/Characters/Base/Hair/190_Long_Wavy_BlondePink.png",
+        "columns": 4,
+        "rows": 4,
+        "frameHeight": 313,
+        "offsetX": 0,
+        "offsetY": 0,
+        "renderWidth": null,
+        "rowOffsets": [],
+        "frameOffsets": []
+      },
+      {
         "id": "assets-characters-base-hair-190-long-wavy-brown",
         "label": "190 Long Wavy Brown",
         "playerLabel": "190 Long Wavy Brown",
@@ -5705,6 +5885,23 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "kind": "character",
         "group": "Characters / Base / Hair",
         "path": "assets/Characters/Base/Hair/190_Long_Wavy_Brown.png",
+        "columns": 4,
+        "rows": 4,
+        "frameHeight": 313,
+        "offsetX": 0,
+        "offsetY": 0,
+        "renderWidth": null,
+        "rowOffsets": [],
+        "frameOffsets": []
+      },
+      {
+        "id": "assets-characters-base-hair-190-long-wavy-galaxy",
+        "label": "190 Long Wavy Galaxy",
+        "playerLabel": "190 Long Wavy Galaxy",
+        "playerSelectable": false,
+        "kind": "character",
+        "group": "Characters / Base / Hair",
+        "path": "assets/Characters/Base/Hair/190_Long_Wavy_Galaxy.png",
         "columns": 4,
         "rows": 4,
         "frameHeight": 313,
@@ -5749,6 +5946,40 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "frameOffsets": []
       },
       {
+        "id": "assets-characters-base-hair-190-short-pink",
+        "label": "190 Short Pink",
+        "playerLabel": "190 Short Pink",
+        "playerSelectable": false,
+        "kind": "character",
+        "group": "Characters / Base / Hair",
+        "path": "assets/Characters/Base/Hair/190_Short_Pink.png",
+        "columns": 4,
+        "rows": 4,
+        "frameHeight": 313,
+        "offsetX": 0,
+        "offsetY": 0,
+        "renderWidth": null,
+        "rowOffsets": [],
+        "frameOffsets": []
+      },
+      {
+        "id": "assets-characters-base-hair-30-long-wavy-blondepink",
+        "label": "30 Long Wavy BlondePink",
+        "playerLabel": "30 Long Wavy BlondePink",
+        "playerSelectable": false,
+        "kind": "character",
+        "group": "Characters / Base / Hair",
+        "path": "assets/Characters/Base/Hair/30_Long_Wavy_BlondePink.png",
+        "columns": 4,
+        "rows": 4,
+        "frameHeight": 313,
+        "offsetX": 0,
+        "offsetY": 0,
+        "renderWidth": null,
+        "rowOffsets": [],
+        "frameOffsets": []
+      },
+      {
         "id": "assets-characters-base-hair-30-long-wavy-brown",
         "label": "30 Long Wavy Brown",
         "playerLabel": "30 Long Wavy Brown",
@@ -5756,6 +5987,23 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "kind": "character",
         "group": "Characters / Base / Hair",
         "path": "assets/Characters/Base/Hair/30_Long_Wavy_Brown.png",
+        "columns": 4,
+        "rows": 4,
+        "frameHeight": 313,
+        "offsetX": 0,
+        "offsetY": 0,
+        "renderWidth": null,
+        "rowOffsets": [],
+        "frameOffsets": []
+      },
+      {
+        "id": "assets-characters-base-hair-30-long-wavy-galaxy",
+        "label": "30 Long Wavy Galaxy",
+        "playerLabel": "30 Long Wavy Galaxy",
+        "playerSelectable": false,
+        "kind": "character",
+        "group": "Characters / Base / Hair",
+        "path": "assets/Characters/Base/Hair/30_Long_Wavy_Galaxy.png",
         "columns": 4,
         "rows": 4,
         "frameHeight": 313,
@@ -5790,6 +6038,23 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "kind": "character",
         "group": "Characters / Base / Hair",
         "path": "assets/Characters/Base/Hair/30_Short_Mint.png",
+        "columns": 4,
+        "rows": 4,
+        "frameHeight": 313,
+        "offsetX": 0,
+        "offsetY": 0,
+        "renderWidth": null,
+        "rowOffsets": [],
+        "frameOffsets": []
+      },
+      {
+        "id": "assets-characters-base-hair-30-short-pink",
+        "label": "30 Short Pink",
+        "playerLabel": "30 Short Pink",
+        "playerSelectable": false,
+        "kind": "character",
+        "group": "Characters / Base / Hair",
+        "path": "assets/Characters/Base/Hair/30_Short_Pink.png",
         "columns": 4,
         "rows": 4,
         "frameHeight": 313,
@@ -5926,6 +6191,23 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "kind": "character",
         "group": "Characters / Base / Tops",
         "path": "assets/Characters/Base/Tops/120_shirt_coldshoulderWhite_foreground.png",
+        "columns": 4,
+        "rows": 4,
+        "frameHeight": 313,
+        "offsetX": 0,
+        "offsetY": 0,
+        "renderWidth": null,
+        "rowOffsets": [],
+        "frameOffsets": []
+      },
+      {
+        "id": "assets-characters-base-tops-120-shirt-strapless-black",
+        "label": "120 Shirt Strapless Black",
+        "playerLabel": "120 Shirt Strapless Black",
+        "playerSelectable": false,
+        "kind": "character",
+        "group": "Characters / Base / Tops",
+        "path": "assets/Characters/Base/Tops/120_shirt_strapless_black.png",
         "columns": 4,
         "rows": 4,
         "frameHeight": 313,
