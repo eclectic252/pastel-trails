@@ -962,10 +962,16 @@
         return base.id && (base.sheetId || base.path);
       }),
       parts: parts.map(function (part) {
+        const assetMetadata = getCharacterPartAssetMetadata(part?.path || part?.sheetId || part?.id, String(part?.slot || "").trim());
         return {
           id: String(part?.id || "").trim(),
           slot: String(part?.slot || "").trim(),
           label: String(part?.label || part?.id || "").trim(),
+          collection: String(part?.collection || assetMetadata.collection || "").trim(),
+          styleId: String(part?.styleId || assetMetadata.styleId || part?.id || "").trim(),
+          styleLabel: String(part?.styleLabel || assetMetadata.styleLabel || part?.label || part?.id || "").trim(),
+          variantId: String(part?.variantId || assetMetadata.variantId || "default").trim(),
+          variantLabel: String(part?.variantLabel || assetMetadata.variantLabel || "Default").trim(),
           path: String(part?.path || "").trim(),
           sheetId: String(part?.sheetId || "").trim(),
           foregroundPath: String(part?.foregroundPath || "").trim(),
@@ -1064,6 +1070,97 @@
     return match ? Number(match[1]) : null;
   }
 
+  const CHARACTER_VARIANT_WORDS = new Set([
+    "aqua", "beige", "black", "blonde", "blue", "brown", "cream", "dark", "default",
+    "electric", "fire", "frost", "galaxy", "gold", "gray", "green", "grey", "lavender",
+    "light", "mint", "navy", "orange", "pink", "plaid", "purple", "red", "rose", "sage",
+    "silver", "snow", "tan", "teal", "water", "white", "yellow",
+  ]);
+
+  function splitCharacterAssetWords(value) {
+    return String(value || "")
+      .replace(/([a-z])([A-Z])/g, "$1 $2")
+      .replace(/[_-]+/g, " ")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+  }
+
+  function titleCaseCharacterAssetWords(words) {
+    return words.map(function (word) {
+      return word.toLowerCase() === "aline" ? "A-line" : word.charAt(0).toUpperCase() + word.slice(1);
+    }).join(" ");
+  }
+
+  function getCharacterPartAssetMetadata(pathValue, slot) {
+    const normalizedPath = String(pathValue || "").replace(/\\/g, "/");
+    const pathParts = normalizedPath.split("/");
+    const fileStem = (pathParts.pop() || "").replace(/\.[^.]+$/, "").replace(/^\d+[_ -]+/, "");
+    const lowerParts = pathParts.map(function (part) { return part.toLowerCase(); });
+    const slotFolderAliases = {
+      eyes: ["eye", "eyes", "face"],
+      hair: ["hair", "hairs", "hairstyle", "hairstyles"],
+      undershirt: ["top", "tops", "undershirt", "undershirts"],
+      top: ["top", "tops", "shirt", "shirts"],
+      bottom: ["bottom", "bottoms", "pants", "shorts", "skirt", "skirts"],
+      shoes: ["shoe", "shoes", "boot", "boots"],
+      accessory: ["accessory", "accessories"],
+    };
+    const aliases = slotFolderAliases[slot] || [];
+    let slotFolderIndex = -1;
+    lowerParts.forEach(function (part, index) {
+      if (aliases.includes(part)) {
+        slotFolderIndex = index;
+      }
+    });
+    const collectionParts = slotFolderIndex >= 0 ? pathParts.slice(slotFolderIndex + 1) : [];
+    const collectionLabel = collectionParts.join(" / ");
+    const words = splitCharacterAssetWords(fileStem);
+    const variantWords = [];
+    while (words.length > 1 && CHARACTER_VARIANT_WORDS.has(words[words.length - 1].toLowerCase())) {
+      variantWords.unshift(words.pop());
+    }
+    const styleWords = words.length ? words : splitCharacterAssetWords(fileStem);
+    let styleLabel = titleCaseCharacterAssetWords(styleWords);
+    const finalCollectionLabel = collectionParts[collectionParts.length - 1] || "";
+    if (finalCollectionLabel && styleLabel.toLowerCase() === finalCollectionLabel.toLowerCase()) {
+      styleLabel = finalCollectionLabel;
+    } else if (finalCollectionLabel && styleLabel.toLowerCase().startsWith(finalCollectionLabel.toLowerCase() + " ")) {
+      styleLabel = finalCollectionLabel + styleLabel.slice(finalCollectionLabel.length);
+    }
+    const variantLabel = variantWords.length ? titleCaseCharacterAssetWords(variantWords) : "Default";
+    const stableStem = slugify(fileStem) || "part";
+    return {
+      collection: collectionLabel,
+      styleId: slugify(slot + "-" + styleLabel) || slugify(slot + "-" + stableStem),
+      styleLabel,
+      variantId: slugify(variantLabel) || "default",
+      variantLabel,
+      stableId: slugify(slot + "-" + stableStem),
+    };
+  }
+
+  function getCharacterPartMigrationKey(value, slot) {
+    let normalized = slugify(String(value || "").replace(/\.[^.]+$/, ""));
+    if (!normalized) {
+      return "";
+    }
+    const aliases = {
+      eyes: "eye|eyes|face",
+      hair: "hair|hairs|hairstyle|hairstyles",
+      undershirt: "top|tops|undershirt|undershirts",
+      top: "top|tops|shirt|shirts",
+      bottom: "bottom|bottoms|pants|shorts|skirt|skirts",
+      shoes: "shoe|shoes|boot|boots",
+      accessory: "accessory|accessories",
+    }[slot] || slot;
+    normalized = normalized
+      .replace(new RegExp("^assets-characters-base-(?:" + aliases + ")-"), "")
+      .replace(new RegExp("^(?:" + aliases + ")-"), "")
+      .replace(/^\d+-/, "");
+    return normalized;
+  }
+
   function isCharacterPartReferenceSheetPath(pathValue) {
     const fileName = String(pathValue || "").replace(/\\/g, "/").split("/").pop() || "";
     return fileName.toLowerCase() === "spritesheet.png";
@@ -1128,7 +1225,12 @@
     const folder = parts.slice(charactersIndex + 2, -1).reverse().find(function (candidate) {
       return !!slotAliases[candidate];
     });
-    return slotAliases[folder] || "";
+    const resolvedSlot = slotAliases[folder] || "";
+    const renderPriority = getCharacterPartNumericLayer(pathValue);
+    if (resolvedSlot === "top" && renderPriority !== null && renderPriority < 100) {
+      return "undershirt";
+    }
+    return resolvedSlot;
   }
 
   function inferCharacterPartLayerMode(pathValue, slot, existingMode) {
@@ -1172,10 +1274,16 @@
   }
 
   function buildLayeredPartFromSheet(sheet, slot, compatibleBaseIds, existingPart, foregroundSheet) {
+    const assetMetadata = getCharacterPartAssetMetadata(sheet.path || sheet.id, slot);
     return {
-      id: existingPart?.id || sheet.id || slugify((sheet.path || "character-part").replace(/\.[^.]+$/, "")),
+      id: existingPart?.id || assetMetadata.stableId || sheet.id || slugify((sheet.path || "character-part").replace(/\.[^.]+$/, "")),
       slot,
       label: existingPart?.label || sheet.playerLabel || sheet.label || prettifyCharacterSheetLabel(sheet.path || sheet.id),
+      collection: existingPart?.collection || assetMetadata.collection,
+      styleId: existingPart?.styleId || assetMetadata.styleId,
+      styleLabel: existingPart?.styleLabel || assetMetadata.styleLabel,
+      variantId: existingPart?.variantId || assetMetadata.variantId,
+      variantLabel: existingPart?.variantLabel || assetMetadata.variantLabel,
       path: sheet.path || existingPart?.path || "",
       sheetId: sheet.id || existingPart?.sheetId || "",
       foregroundPath: foregroundSheet?.path || existingPart?.foregroundPath || "",
@@ -1313,10 +1421,16 @@
       const labelPath = String(belowSheet.path || belowSheet.id).replace(/(^|\/)30[_ -]+/i, "$1");
       const slot = getLayeredPartSlotFromPath(belowSheet.path);
       const nameKey = associationKey.split("/").pop() || associationKey;
+      const assetMetadata = getCharacterPartAssetMetadata(belowSheet.path, slot);
       return {
-        id: existing?.id || slugify(slot + "-" + nameKey),
+        id: existing?.id || assetMetadata.stableId || slugify(slot + "-" + nameKey),
         slot,
         label: existing?.label || prettifyCharacterSheetLabel(labelPath),
+        collection: existing?.collection || assetMetadata.collection,
+        styleId: existing?.styleId || assetMetadata.styleId,
+        styleLabel: existing?.styleLabel || assetMetadata.styleLabel,
+        variantId: existing?.variantId || assetMetadata.variantId,
+        variantLabel: existing?.variantLabel || assetMetadata.variantLabel,
         path: belowSheet.path,
         sheetId: belowSheet.id,
         layerPosition: "below-all",
@@ -1394,6 +1508,15 @@
           && (!part.compatibleBaseIds.length || part.compatibleBaseIds.includes(base.id));
       });
       if (appearance.parts[slot.id] && !compatibleParts.some(function (part) { return part.id === appearance.parts[slot.id]; })) {
+        const migrationKey = getCharacterPartMigrationKey(appearance.parts[slot.id], slot.id);
+        const filenameMatch = migrationKey ? compatibleParts.find(function (part) {
+          return [part.id, part.path, part.sheetId].some(function (candidate) {
+            return getCharacterPartMigrationKey(candidate, slot.id) === migrationKey;
+          });
+        }) : null;
+        if (filenameMatch) {
+          appearance.parts[slot.id] = filenameMatch.id;
+        }
         const legacyMarker = "-" + slot.id + "-";
         const legacyId = String(appearance.parts[slot.id]);
         const markerIndex = legacyId.lastIndexOf(legacyMarker);
@@ -1401,7 +1524,7 @@
         const migratedPart = legacyNameKey ? compatibleParts.find(function (part) {
           return part.id === slot.id + "-" + legacyNameKey || part.id.endsWith(legacyMarker + legacyNameKey);
         }) : null;
-        if (migratedPart) {
+        if (migratedPart && !compatibleParts.some(function (part) { return part.id === appearance.parts[slot.id]; })) {
           appearance.parts[slot.id] = migratedPart.id;
         }
       }
@@ -11109,56 +11232,225 @@
     safeDrawAvatarPreviewCanvases(root, content);
   }
 
+  function chooseCharacterPreviewBackground(content, currentPath) {
+    const options = getBattleBackgroundImageOptions(content);
+    if (!options.length) {
+      return "";
+    }
+    if (currentPath && options.includes(currentPath) && options.length === 1) {
+      return currentPath;
+    }
+    const alternatives = options.filter(function (entry) {
+      return entry !== currentPath;
+    });
+    const pool = alternatives.length ? alternatives : options;
+    return pool[Math.floor(Math.random() * pool.length)] || options[0] || "";
+  }
+
+  function getAppearanceWithPart(content, appearance, slotId, partId) {
+    const next = JSON.parse(JSON.stringify(appearance || createDefaultCharacterAppearance(content)));
+    if (partId) {
+      next.parts[slotId] = partId;
+    } else {
+      delete next.parts[slotId];
+    }
+    return normalizeCharacterAppearance(next, getCharacterPartsCatalog(content));
+  }
+
+  function renderCharacterPreviewStage(content, baseSheet, appearance, options) {
+    const backgroundPath = options?.backgroundEnabled === false ? "" : String(options?.backgroundPath || "");
+    const previewClass = options?.previewClass || "character-appearance-preview-sprite";
+    const previewMarkup = renderAvatarPreviewMarkup(baseSheet, previewClass, {
+      appearance,
+      transparent: true,
+    });
+    const actionPrefix = String(options?.previewActionPrefix || "");
+    const toolbar = actionPrefix
+      ? [
+          '<div class="character-preview-toolbar">',
+          '<button class="secondary-button character-preview-toolbar-button" type="button" data-action="' + escapeHtml(actionPrefix + "-toggle-background") + '">' + (backgroundPath ? "Clean Backdrop" : "Battle Backdrop") + "</button>",
+          '<button class="secondary-button character-preview-toolbar-button" type="button" data-action="' + escapeHtml(actionPrefix + "-reroll-background") + '"' + (backgroundPath ? "" : " disabled") + '>New Background</button>',
+          "</div>",
+        ].join("")
+      : "";
+    return [
+      '<div class="character-preview-shell">',
+      '<div class="character-preview-stage' + (backgroundPath ? " character-preview-stage-scene" : "") + '">',
+      backgroundPath ? '<img class="character-preview-background" src="' + escapeHtml(backgroundPath) + '" alt="" />' : "",
+      previewMarkup,
+      "</div>",
+      toolbar,
+      "</div>",
+    ].join("");
+  }
+
+  function renderCharacterPartStylePicker(content, appearance, baseSheet, slot, parts, choiceAttr, activeSlot) {
+    const selectableParts = parts.filter(function (part) {
+      return !(slot.optional && part.id === "none") && Boolean(part.path || part.sheetId);
+    });
+    const styleGroups = new Map();
+    selectableParts.forEach(function (part) {
+      const metadata = getCharacterPartAssetMetadata(part.path || part.sheetId || part.id, slot.id);
+      const styleId = part.styleId || metadata.styleId || part.id;
+      if (!styleGroups.has(styleId)) {
+        styleGroups.set(styleId, {
+          id: styleId,
+          label: part.styleLabel || metadata.styleLabel || part.label || part.id,
+          collection: part.collection || metadata.collection || "",
+          parts: [],
+        });
+      }
+      styleGroups.get(styleId).parts.push(part);
+    });
+    const collections = new Map();
+    Array.from(styleGroups.values()).forEach(function (group) {
+      const collection = group.collection || "Other " + (slot.label || slot.id);
+      if (!collections.has(collection)) {
+        collections.set(collection, []);
+      }
+      collections.get(collection).push(group);
+    });
+    const selectedPartId = appearance?.parts?.[slot.id] || "";
+    const noneCard = slot.optional
+      ? '<button class="character-style-card character-style-card-none' + (!selectedPartId ? " character-style-card-selected" : "") + '" type="button" ' + choiceAttr + '="part:' + escapeHtml(slot.id) + '" value=""><span class="character-style-none-icon">×</span><strong>None</strong></button>'
+      : "";
+    const collectionMarkup = Array.from(collections.entries()).map(function ([collection, groups]) {
+      const styles = groups.sort(function (left, right) {
+        return left.label.localeCompare(right.label);
+      }).map(function (group) {
+        const selectedVariant = group.parts.find(function (part) {
+          return part.id === selectedPartId;
+        }) || group.parts[0];
+        const previewAppearance = getAppearanceWithPart(content, appearance, slot.id, selectedVariant?.id || "");
+        const selectedStyle = group.parts.some(function (part) { return part.id === selectedPartId; });
+        const variantButtons = group.parts.sort(function (left, right) {
+          return String(left.variantLabel || left.label).localeCompare(String(right.variantLabel || right.label));
+        }).map(function (part) {
+          const selected = part.id === selectedPartId;
+          const label = part.variantLabel || getCharacterPartAssetMetadata(part.path || part.id, slot.id).variantLabel || part.label || part.id;
+          const variantAppearance = getAppearanceWithPart(content, appearance, slot.id, part.id);
+          return [
+            '<button class="character-variant-chip' + (selected ? " character-variant-chip-selected" : "") + '" type="button" ' + choiceAttr + '="part:' + escapeHtml(slot.id) + '" value="' + escapeHtml(part.id) + '" title="' + escapeHtml("Preview " + label) + '" aria-label="' + escapeHtml("Choose " + label) + '" data-character-hover-appearance="' + escapeHtml(JSON.stringify(variantAppearance)) + '">',
+            '<span>' + escapeHtml(label) + "</span>",
+            "</button>",
+          ].join("");
+        }).join("");
+        return [
+          '<article class="character-style-card' + (selectedStyle ? " character-style-card-selected" : "") + '">',
+          '<button class="character-style-card-main" type="button" ' + choiceAttr + '="part:' + escapeHtml(slot.id) + '" value="' + escapeHtml(selectedVariant?.id || "") + '">',
+          renderAvatarPreviewMarkup(baseSheet, "character-style-preview", { appearance: previewAppearance, transparent: true, focus: slot.id }),
+          '<strong>' + escapeHtml(group.label) + "</strong>",
+          "</button>",
+          group.parts.length > 1
+            ? '<div class="character-variant-row">' + variantButtons + "</div>"
+            : "",
+          "</article>",
+        ].join("");
+      }).join("");
+      return '<section class="character-asset-collection"><h4>' + escapeHtml(collection) + '</h4><div class="character-style-grid">' + styles + "</div></section>";
+    }).join("");
+    return '<details class="character-slot-picker"' + (activeSlot === slot.id ? " open" : "") + '><summary><span>' + escapeHtml(slot.label || slot.id) + '</span><strong>' + escapeHtml(parts.find(function (part) { return part.id === selectedPartId; })?.label || "None") + '</strong></summary><div class="character-slot-picker-body">' + noneCard + collectionMarkup + "</div></details>";
+  }
+
   function renderCharacterAppearanceControls(content, appearance, options) {
     const catalog = getCharacterPartsCatalog(content);
     const normalizedAppearance = normalizeCharacterAppearance(appearance, catalog) || createDefaultCharacterAppearance(content);
     const base = findCharacterBase(content, normalizedAppearance?.baseId);
     const baseSheet = getSheetForCharacterLayer(content, base, getCharacterSheetConfig(content, ""));
     const fieldAttr = options?.fieldAttribute || "data-character-appearance-field";
-    const previewClass = options?.previewClass || "character-appearance-preview-sprite";
+    const choiceAttr = options?.choiceAttribute || "data-character-appearance-choice";
     const baseOptions = catalog.bases.map(function (entry) {
       const selected = normalizedAppearance?.baseId === entry.id ? " selected" : "";
       return '<option value="' + escapeHtml(entry.id) + '"' + selected + ">" + escapeHtml(entry.label || entry.id) + "</option>";
     }).join("");
     const partControls = catalog.slots.map(function (slot) {
-      const parts = getCharacterPartsForSlot(content, normalizedAppearance?.baseId, slot.id);
-      const optionalNone = slot.optional
-        ? '<option value=""' + (!normalizedAppearance?.parts?.[slot.id] ? " selected" : "") + '>None</option>'
-        : "";
-      const partOptions = optionalNone + parts.filter(function (part) {
-        return !(slot.optional && part.id === "none");
-      }).map(function (part) {
-        const selected = normalizedAppearance?.parts?.[slot.id] === part.id ? " selected" : "";
-        const layerLabel = slot.id === "top" ? (part.layerMode === "under-bottom" ? " (Tucked)" : " (Untucked)") : "";
-        return '<option value="' + escapeHtml(part.id) + '"' + selected + ">" + escapeHtml((part.label || part.id) + layerLabel) + "</option>";
-      }).join("");
-      return '<label class="input-group"><span>' + escapeHtml(slot.label || slot.id) + '</span><select ' + fieldAttr + '="part:' + escapeHtml(slot.id) + '">' + partOptions + "</select></label>";
+      return renderCharacterPartStylePicker(
+        content,
+        normalizedAppearance,
+        baseSheet,
+        slot,
+        getCharacterPartsForSlot(content, normalizedAppearance?.baseId, slot.id),
+        choiceAttr,
+        options?.activeSlot || "bottom"
+      );
     }).join("");
-    const paletteControls = Object.entries(catalog.palettes).map(function ([paletteKey, entries]) {
+    const selectedParts = Object.values(normalizedAppearance.parts || {}).map(function (partId) {
+      return catalog.parts.find(function (part) { return part.id === partId; });
+    }).filter(Boolean);
+    const activePaletteKeys = new Set(selectedParts.map(function (part) {
+      return part.tintPalette;
+    }).filter(Boolean));
+    const paletteControls = Object.entries(catalog.palettes).filter(function ([paletteKey]) {
+      return activePaletteKeys.has(paletteKey);
+    }).map(function ([paletteKey, entries]) {
       const paletteOptions = entries.map(function (entry) {
         const selected = normalizedAppearance?.palette?.[paletteKey] === entry.id ? " selected" : "";
         return '<option value="' + escapeHtml(entry.id) + '"' + selected + ">" + escapeHtml(entry.label || entry.id) + "</option>";
       }).join("");
       const label = paletteKey.charAt(0).toUpperCase() + paletteKey.slice(1);
-      return '<label class="input-group"><span>' + escapeHtml(label) + ' Color</span><select ' + fieldAttr + '="palette:' + escapeHtml(paletteKey) + '">' + paletteOptions + "</select></label>";
+      return '<label class="input-group"><span>' + escapeHtml(label) + ' Tint</span><select ' + fieldAttr + '="palette:' + escapeHtml(paletteKey) + '">' + paletteOptions + "</select></label>";
     }).join("");
-    const previewMarkup = renderAvatarPreviewMarkup(baseSheet, previewClass, {
-      appearance: normalizedAppearance,
-      transparent: options?.transparentPreview,
-    });
+    const previewMarkup = renderCharacterPreviewStage(content, baseSheet, normalizedAppearance, options);
 
     return [
-      '<div class="character-creator-layout">',
+      '<div class="character-creator-layout character-creator-visual-picker">',
       '<div class="character-creator-preview">' + previewMarkup + "</div>",
       '<div class="character-creator-controls">',
-      '<div class="form-grid">',
-      '<label class="input-group"><span>Base</span><select ' + fieldAttr + '="baseId">' + baseOptions + "</select></label>",
-      partControls,
-      paletteControls,
-      "</div>",
+      '<div class="character-base-controls"><label class="input-group"><span>Base</span><select ' + fieldAttr + '="baseId">' + baseOptions + "</select></label>" + paletteControls + "</div>",
+      '<div class="character-slot-list">' + partControls + "</div>",
       "</div>",
       "</div>",
     ].join("");
+  }
+
+  function drawCharacterHoverPreviewCanvas(canvas, content, appearanceOverride) {
+    if (!(canvas instanceof HTMLCanvasElement)) {
+      return;
+    }
+    const storedAppearance = safeParse(canvas.getAttribute("data-avatar-preview-appearance") || "", null);
+    drawAvatarPreviewCanvas(
+      canvas,
+      content,
+      canvas.getAttribute("data-avatar-preview-sheet") || "",
+      appearanceOverride || storedAppearance
+    );
+  }
+
+  function attachCharacterAppearanceHoverHandlers(root, content) {
+    root.querySelectorAll("[data-character-hover-appearance]").forEach(function (button) {
+      const getTargetCanvases = function () {
+        const stageCanvases = Array.from(root.querySelectorAll(".character-preview-stage [data-avatar-preview-sheet]"));
+        const mainPreview = stageCanvases.length ? stageCanvases[stageCanvases.length - 1] : null;
+        const stylePreview = button.closest(".character-style-card")?.querySelector(".character-style-preview") || null;
+        return [mainPreview, stylePreview].filter(Boolean);
+      };
+      const showHoverPreview = function () {
+        const previewAppearance = safeParse(button.getAttribute("data-character-hover-appearance") || "", null);
+        if (!previewAppearance) {
+          return;
+        }
+        const targetCanvases = getTargetCanvases();
+        if (targetCanvases[0]) {
+          drawCharacterHoverPreviewCanvas(targetCanvases[0], content, previewAppearance);
+        }
+        if (targetCanvases[1]) {
+          drawCharacterHoverPreviewCanvas(targetCanvases[1], content, previewAppearance);
+        }
+      };
+      const restoreSelectedPreview = function () {
+        const targetCanvases = getTargetCanvases();
+        if (targetCanvases[0]) {
+          drawCharacterHoverPreviewCanvas(targetCanvases[0], content, null);
+        }
+        if (targetCanvases[1]) {
+          drawCharacterHoverPreviewCanvas(targetCanvases[1], content, null);
+        }
+      };
+      button.addEventListener("mouseenter", showHoverPreview);
+      button.addEventListener("mouseleave", restoreSelectedPreview);
+      button.addEventListener("focus", showHoverPreview);
+      button.addEventListener("blur", restoreSelectedPreview);
+    });
   }
 
   function renderNewGameScreen(root, content, setup, onAction) {
@@ -11187,12 +11479,23 @@
     }).join("");
 
     setup.appearance = normalizeCharacterAppearance(setup.appearance, getCharacterPartsCatalog(content)) || createDefaultCharacterAppearance(content);
+    if (typeof setup.appearancePreviewBackgroundEnabled !== "boolean") {
+      setup.appearancePreviewBackgroundEnabled = true;
+    }
+    if (!setup.appearancePreviewBackgroundPath) {
+      setup.appearancePreviewBackgroundPath = chooseCharacterPreviewBackground(content, "");
+    }
     const appearanceBase = findCharacterBase(content, setup.appearance?.baseId);
     const appearanceBaseSheet = getSheetForCharacterLayer(content, appearanceBase, getCharacterSheetConfig(content, setup.avatarId || ""));
     setup.avatarId = appearanceBaseSheet?.id || setup.avatarId;
     const creatorMarkup = renderCharacterAppearanceControls(content, setup.appearance, {
       fieldAttribute: "data-new-game-appearance-field",
+      choiceAttribute: "data-new-game-appearance-choice",
       previewClass: "avatar-preview-sprite character-creator-main-preview",
+      previewActionPrefix: "new-game-character-preview",
+      backgroundEnabled: setup.appearancePreviewBackgroundEnabled,
+      backgroundPath: setup.appearancePreviewBackgroundPath,
+      activeSlot: setup.appearanceActiveSlot || "bottom",
     });
 
     root.innerHTML = [
@@ -11249,6 +11552,12 @@
     root.querySelector('[data-action="random-appearance"]')?.addEventListener("click", function () {
       onAction("random-appearance");
     });
+    root.querySelector('[data-action="new-game-character-preview-toggle-background"]')?.addEventListener("click", function () {
+      onAction("toggle-appearance-background");
+    });
+    root.querySelector('[data-action="new-game-character-preview-reroll-background"]')?.addEventListener("click", function () {
+      onAction("reroll-appearance-background");
+    });
     root.querySelector('[data-action="back-to-title"]')?.addEventListener("click", function () {
       onAction("back-to-title");
     });
@@ -11280,9 +11589,18 @@
         });
       });
     });
+    root.querySelectorAll("[data-new-game-appearance-choice]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        onAction("set-appearance-field", {
+          path: button.getAttribute("data-new-game-appearance-choice") || "",
+          value: button.value,
+        });
+      });
+    });
 
     drawMonsterVariantCanvases(root, content);
     safeDrawAvatarPreviewCanvases(root, content);
+    attachCharacterAppearanceHoverHandlers(root, content);
   }
 
   function renderBattleModal(state, content) {
@@ -11820,10 +12138,21 @@
         || normalizeCharacterAppearance(state.player.appearance, getCharacterPartsCatalog(content))
         || createDefaultCharacterAppearance(content);
       ui.characterEditorDraft = JSON.parse(JSON.stringify(draftAppearance));
+      if (typeof ui.characterPreviewBackgroundEnabled !== "boolean") {
+        ui.characterPreviewBackgroundEnabled = true;
+      }
+      if (!ui.characterPreviewBackgroundPath) {
+        ui.characterPreviewBackgroundPath = chooseCharacterPreviewBackground(content, "");
+      }
       const creatorMarkup = renderCharacterAppearanceControls(content, draftAppearance, {
         fieldAttribute: "data-world-character-appearance-field",
+        choiceAttribute: "data-world-character-appearance-choice",
         previewClass: "avatar-preview-sprite character-editor-main-preview",
         transparentPreview: true,
+        previewActionPrefix: "world-character-preview",
+        backgroundEnabled: ui.characterPreviewBackgroundEnabled,
+        backgroundPath: ui.characterPreviewBackgroundPath,
+        activeSlot: ui.characterAppearanceActiveSlot || "bottom",
       });
       panelBody = [
         '<section class="character-editor-page">',
@@ -12982,7 +13311,10 @@
     const appearanceAttr = options?.appearance
       ? ' data-avatar-preview-appearance="' + escapeHtml(JSON.stringify(options.appearance)) + '"'
       : "";
-    return '<canvas class="' + escapeHtml(className || "avatar-preview-sprite") + '" data-avatar-preview-sheet="' + escapeHtml(sheet.id || "") + '"' + appearanceAttr + (options?.transparent ? ' data-avatar-preview-transparent="true"' : "") + '></canvas>';
+    const focusAttr = options?.focus
+      ? ' data-avatar-preview-focus="' + escapeHtml(options.focus) + '"'
+      : "";
+    return '<canvas class="' + escapeHtml(className || "avatar-preview-sprite") + '" data-avatar-preview-sheet="' + escapeHtml(sheet.id || "") + '"' + appearanceAttr + focusAttr + (options?.transparent ? ' data-avatar-preview-transparent="true"' : "") + '></canvas>';
   }
 
   function getCharacterSheetConfig(content, sheetId) {
@@ -14737,7 +15069,7 @@
       return partsById.get(partId) || null;
     }).filter(Boolean);
     const selectedTop = partsById.get(appearance.parts?.top || "") || null;
-    const tuckedTop = selectedTop?.layerMode === "under-bottom" ? selectedTop : null;
+    const selectedBottom = partsById.get(appearance.parts?.bottom || "") || null;
     const selectedForegroundLayers = selectedParts.map(function (part) {
       if (!part.foregroundPath && !part.foregroundSheetId) {
         return null;
@@ -14749,6 +15081,9 @@
         path: part.foregroundPath || "",
         sheetId: part.foregroundSheetId || "",
         tintPalette: part.tintPalette || "",
+        renderPriority: part.renderPriority !== null && Number.isFinite(Number(part.renderPriority))
+          ? Math.max(151, Number(part.renderPriority) + 0.5)
+          : 151,
       };
     }).filter(Boolean);
     const selectedBelowLayers = selectedParts.filter(function (part) {
@@ -14765,11 +15100,9 @@
         path: part.abovePath || "",
         sheetId: part.aboveSheetId || "",
         tintPalette: part.tintPalette || "",
+        renderPriority: 190,
       };
     }).filter(Boolean);
-    const selectedTopmostLayers = selectedParts.filter(function (part) {
-      return Number(part.renderPriority || 0) > 190;
-    });
     const foregroundArmsLayer = base.foregroundArmsPath || base.foregroundArmsSheetId
       ? {
           id: base.id + "-foreground-arms",
@@ -14778,6 +15111,7 @@
           path: base.foregroundArmsPath || "",
           sheetId: base.foregroundArmsSheetId || "",
           tintPalette: "",
+          renderPriority: 150,
         }
       : null;
     const addPartLayer = function (part) {
@@ -14793,32 +15127,67 @@
         tintColor: getCharacterPaletteColor(catalog, appearance, part.tintPalette),
       }));
     };
-    selectedBelowLayers.forEach(addPartLayer);
-    layers.push(baseLayer);
-    catalog.layerOrder.forEach(function (slotId) {
-      if (slotId === "base") {
+    const fallbackPriorityBySlot = {
+      base: 80,
+      eyes: 81,
+      undershirt: 90,
+      bottom: 100,
+      shoes: 110,
+      top: 120,
+      "foreground-arms": 150,
+      hair: 190,
+      accessory: 191,
+    };
+    const getLayerRenderPriority = function (part, fallbackPriority) {
+      if (part?.renderPriority !== null && part?.renderPriority !== "" && Number.isFinite(Number(part?.renderPriority))) {
+        return Number(part.renderPriority);
+      }
+      if (Number.isFinite(Number(fallbackPriority))) {
+        return Number(fallbackPriority);
+      }
+      return Number(fallbackPriorityBySlot[part?.slot] ?? 150);
+    };
+    const bottomRenderPriority = getLayerRenderPriority(selectedBottom, fallbackPriorityBySlot.bottom);
+    const queuedLayers = [];
+    let layerSequence = 0;
+    const queueLayer = function (part, priority) {
+      if (!part || part.id === "none") {
         return;
       }
-      if (slotId === "foreground-arms") {
-        addPartLayer(foregroundArmsLayer);
-        selectedForegroundLayers.forEach(addPartLayer);
-        return;
-      }
-      if (slotId === "bottom") {
-        addPartLayer(tuckedTop);
-      }
-      if (slotId === "top" && tuckedTop) {
-        return;
-      }
-      const partId = appearance.parts?.[slotId] || "";
-      const part = partsById.get(partId);
-      if (part?.layerPosition === "below-all" || Number(part?.renderPriority || 0) > 190) {
-        return;
-      }
-      addPartLayer(part);
+      queuedLayers.push({
+        part,
+        priority: Number.isFinite(Number(priority)) ? Number(priority) : getLayerRenderPriority(part),
+        sequence: layerSequence,
+      });
+      layerSequence += 1;
+    };
+
+    selectedBelowLayers.forEach(function (part) {
+      queueLayer(part, Math.min(getLayerRenderPriority(part, 30), 79));
     });
-    selectedAboveLayers.forEach(addPartLayer);
-    selectedTopmostLayers.forEach(addPartLayer);
+    queueLayer(baseLayer, fallbackPriorityBySlot.base);
+    selectedParts.forEach(function (part) {
+      if (part.layerPosition === "below-all") {
+        return;
+      }
+      let priority = getLayerRenderPriority(part, fallbackPriorityBySlot[part.slot]);
+      if (part === selectedTop && part.layerMode === "under-bottom") {
+        priority = Math.min(priority, bottomRenderPriority - 0.5);
+      }
+      queueLayer(part, priority);
+    });
+    queueLayer(foregroundArmsLayer, fallbackPriorityBySlot["foreground-arms"]);
+    selectedForegroundLayers.forEach(function (part) {
+      queueLayer(part, getLayerRenderPriority(part, 151));
+    });
+    selectedAboveLayers.forEach(function (part) {
+      queueLayer(part, 190);
+    });
+    queuedLayers.sort(function (left, right) {
+      return left.priority - right.priority || left.sequence - right.sequence;
+    }).forEach(function (entry) {
+      addPartLayer(entry.part);
+    });
 
     return {
       type: "layered",
@@ -15012,10 +15381,20 @@
       (cssWidth - padding * 2) / sourceRect.sw,
       (cssHeight - padding * 2) / sourceRect.sh
     );
-    const drawWidth = sourceRect.sw * scale;
-    const drawHeight = sourceRect.sh * scale;
-    const drawX = Math.round((cssWidth - drawWidth) / 2);
-    const drawY = Math.round((cssHeight - drawHeight) / 2);
+    const focusMode = canvas.getAttribute("data-avatar-preview-focus") || "";
+    const focusConfig = {
+      eyes: { zoom: 2.15, x: 0.5, y: 0.3 },
+      hair: { zoom: 2.05, x: 0.5, y: 0.31 },
+      undershirt: { zoom: 1.72, x: 0.5, y: 0.43 },
+      top: { zoom: 1.72, x: 0.5, y: 0.43 },
+      bottom: { zoom: 1.58, x: 0.5, y: 0.61 },
+      shoes: { zoom: 2.1, x: 0.5, y: 0.78 },
+      accessory: { zoom: 1.9, x: 0.5, y: 0.36 },
+    }[focusMode] || { zoom: 1, x: 0.5, y: 0.5 };
+    const drawWidth = sourceRect.sw * scale * focusConfig.zoom;
+    const drawHeight = sourceRect.sh * scale * focusConfig.zoom;
+    const drawX = Math.round(cssWidth / 2 - drawWidth * focusConfig.x);
+    const drawY = Math.round(cssHeight / 2 - drawHeight * focusConfig.y);
 
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
@@ -15898,6 +16277,12 @@
     const selectedBase = findCharacterBase(content, selectedPreset?.appearance?.baseId);
     const selectedBaseSheet = getSheetForCharacterLayer(content, selectedBase, getCharacterSheetConfig(content, ""));
     ensureLayeredSpritePreviewState(devToolsState, selectedBaseSheet);
+    if (typeof devToolsState.layeredSpriteBackgroundEnabled !== "boolean") {
+      devToolsState.layeredSpriteBackgroundEnabled = true;
+    }
+    if (!devToolsState.layeredSpriteBackgroundPath) {
+      devToolsState.layeredSpriteBackgroundPath = chooseCharacterPreviewBackground(content, "");
+    }
     const isGameScalePreview = devToolsState.layeredSpritePreviewDisplayMode === "game";
     const gameScaleRenderWidth = Math.max(64, Number(ensureGlobalPlayerSpriteSettings(content).playerSpriteRenderWidth || PLAYER_RENDER_WIDTH));
     const directionLabels = ["Down", "Left", "Right", "Up"];
@@ -15936,8 +16321,13 @@
           '</div>',
           renderCharacterAppearanceControls(content, selectedPreset.appearance, {
             fieldAttribute: "data-dev-layered-appearance-field",
+            choiceAttribute: "data-dev-layered-appearance-choice",
             previewClass: "avatar-preview-sprite character-creator-main-preview",
             transparentPreview: true,
+            previewActionPrefix: "dev-layered-preview",
+            backgroundEnabled: devToolsState.layeredSpriteBackgroundEnabled,
+            backgroundPath: devToolsState.layeredSpriteBackgroundPath,
+            activeSlot: devToolsState.layeredAppearanceActiveSlot || "bottom",
           }),
           '<section class="dev-layered-animation-panel">',
           '<div class="section-heading"><h3>Animation Preview</h3><span data-layered-preview-frame-label>Frame ' + (Number(devToolsState.layeredSpriteAnimation?.frameIndex || 0) + 1) + '</span></div>',
@@ -16173,6 +16563,12 @@
     root.querySelector('[data-action="randomize-world-character"]')?.addEventListener("click", function () {
       app.randomizeWorldCharacterAppearance();
     });
+    root.querySelector('[data-action="world-character-preview-toggle-background"]')?.addEventListener("click", function () {
+      app.toggleWorldCharacterPreviewBackground();
+    });
+    root.querySelector('[data-action="world-character-preview-reroll-background"]')?.addEventListener("click", function () {
+      app.rerollWorldCharacterPreviewBackground();
+    });
 
     root.querySelector('[data-action="title"]')?.addEventListener("click", function () {
       app.showTitle();
@@ -16236,6 +16632,14 @@
         app.updateWorldCharacterAppearanceField(
           field.getAttribute("data-world-character-appearance-field") || "",
           field.value
+        );
+      });
+    });
+    root.querySelectorAll("[data-world-character-appearance-choice]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.updateWorldCharacterAppearanceField(
+          button.getAttribute("data-world-character-appearance-choice") || "",
+          button.value
         );
       });
     });
@@ -16462,6 +16866,12 @@
     });
     root.querySelector('[data-action="toggle-layered-animation"]')?.addEventListener("click", function () {
       app.toggleLayeredSpriteAnimation();
+    });
+    root.querySelector('[data-action="dev-layered-preview-toggle-background"]')?.addEventListener("click", function () {
+      app.toggleLayeredSpriteBackground();
+    });
+    root.querySelector('[data-action="dev-layered-preview-reroll-background"]')?.addEventListener("click", function () {
+      app.rerollLayeredSpriteBackground();
     });
     root.querySelectorAll("[data-layered-preview-frame]").forEach(function (button) {
       button.addEventListener("click", function () {
@@ -17494,6 +17904,14 @@
         app.updateLayeredSpriteAppearanceField(field.getAttribute("data-dev-layered-appearance-field") || "", field.value);
       });
     });
+    root.querySelectorAll("[data-dev-layered-appearance-choice]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        app.updateLayeredSpriteAppearanceField(
+          button.getAttribute("data-dev-layered-appearance-choice") || "",
+          button.value
+        );
+      });
+    });
     root.querySelectorAll("[data-dev-layered-preview-field]").forEach(function (field) {
       field.addEventListener("change", function () {
         app.updateLayeredSpritePreviewField(field.getAttribute("data-dev-layered-preview-field") || "", field.value);
@@ -18228,6 +18646,7 @@
           current.baseId = rawValue;
         } else if (path.startsWith("part:")) {
           const slotId = path.slice("part:".length);
+          ui.characterAppearanceActiveSlot = slotId;
           if (rawValue) {
             current.parts[slotId] = rawValue;
           } else {
@@ -18254,6 +18673,16 @@
         }
         ui.characterEditorDraft = randomizeCharacterAppearance(this.content, ui.characterEditorDraft || this.state.player.appearance);
         CHARACTER_VISUAL_FRAME_CACHE.clear();
+        this.render();
+      },
+      toggleWorldCharacterPreviewBackground: function () {
+        const ui = ensureWorldUiState(this.state);
+        ui.characterPreviewBackgroundEnabled = !ui.characterPreviewBackgroundEnabled;
+        this.render();
+      },
+      rerollWorldCharacterPreviewBackground: function () {
+        const ui = ensureWorldUiState(this.state);
+        ui.characterPreviewBackgroundPath = chooseCharacterPreviewBackground(this.content, ui.characterPreviewBackgroundPath);
         this.render();
       },
       adjustMonsterAffinityPoint: function (collection, index, element, delta) {
@@ -18732,7 +19161,13 @@
           if (path === "baseId") {
             current.baseId = value.value;
           } else if (path.startsWith("part:")) {
-            current.parts[path.slice("part:".length)] = value.value;
+            const slotId = path.slice("part:".length);
+            this.state.appearanceActiveSlot = slotId;
+            if (value.value) {
+              current.parts[slotId] = value.value;
+            } else {
+              delete current.parts[slotId];
+            }
           } else if (path.startsWith("palette:")) {
             current.palette[path.slice("palette:".length)] = value.value;
           }
@@ -18745,6 +19180,10 @@
           const base = findCharacterBase(this.content, this.state.appearance?.baseId);
           const baseSheet = getSheetForCharacterLayer(this.content, base, getCharacterSheetConfig(this.content, this.state.avatarId || ""));
           this.state.avatarId = baseSheet?.id || this.state.avatarId;
+        } else if (action === "toggle-appearance-background") {
+          this.state.appearancePreviewBackgroundEnabled = !this.state.appearancePreviewBackgroundEnabled;
+        } else if (action === "reroll-appearance-background") {
+          this.state.appearancePreviewBackgroundPath = chooseCharacterPreviewBackground(this.content, this.state.appearancePreviewBackgroundPath);
         } else if (action === "set-player-name") {
           this.state.playerName = value;
           return;
@@ -19430,6 +19869,7 @@
           current.baseId = rawValue;
         } else if (String(path || "").startsWith("part:")) {
           const slotId = String(path).slice("part:".length);
+          this.devTools.layeredAppearanceActiveSlot = slotId;
           if (rawValue) {
             current.parts[slotId] = rawValue;
           } else {
@@ -19444,6 +19884,14 @@
         if (shouldRender !== false) {
           this.render();
         }
+      },
+      toggleLayeredSpriteBackground: function () {
+        this.devTools.layeredSpriteBackgroundEnabled = !this.devTools.layeredSpriteBackgroundEnabled;
+        this.render();
+      },
+      rerollLayeredSpriteBackground: function () {
+        this.devTools.layeredSpriteBackgroundPath = chooseCharacterPreviewBackground(this.content, this.devTools.layeredSpriteBackgroundPath);
+        this.render();
       },
       clearLayeredSpriteOptionalParts: function () {
         const catalog = getCharacterPartsCatalog(this.content);
@@ -22024,6 +22472,7 @@
           }
           safeDrawMonsterVariantCanvases(root, this.content);
           safeDrawAvatarPreviewCanvases(root, this.content);
+          attachCharacterAppearanceHoverHandlers(root, this.content);
           attachDevToolsHandlers(root, this);
           restoreFocusableState(root, focusState);
           this.restoreDevPreviewScroll();
@@ -22033,6 +22482,7 @@
         renderWorld(root, this.state, this.content, this.saveManager, this.devTools);
         safeDrawMonsterVariantCanvases(root, this.content);
         safeDrawAvatarPreviewCanvases(root, this.content);
+        attachCharacterAppearanceHoverHandlers(root, this.content);
         attachInputHandlers(root, this);
         restoreFocusableState(root, focusState);
         if (shouldPreserveWorldPanelScroll) {

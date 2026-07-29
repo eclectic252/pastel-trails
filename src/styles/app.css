@@ -644,6 +644,75 @@ button {
   background: rgba(252, 250, 246, 0.72);
 }
 
+.character-creator-visual-picker .character-creator-preview {
+  position: sticky;
+  top: 1rem;
+  min-height: 390px;
+  overflow: hidden;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(255, 255, 255, 0.96), rgba(214, 237, 246, 0.56) 58%, rgba(176, 215, 216, 0.42));
+}
+
+.character-preview-shell {
+  width: 100%;
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.75rem;
+}
+
+.character-preview-stage {
+  position: relative;
+  width: 100%;
+  min-height: 310px;
+  overflow: hidden;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 50% 40%, rgba(255, 255, 255, 0.96), rgba(214, 237, 246, 0.58) 62%, rgba(176, 215, 216, 0.44));
+}
+
+.character-preview-stage-scene::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(24, 42, 47, 0.13));
+  pointer-events: none;
+}
+
+.character-preview-background {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.character-preview-stage > canvas {
+  position: absolute;
+  z-index: 2;
+  inset: 50% auto auto 50%;
+  width: min(270px, 88%);
+  height: min(270px, 88%);
+  transform: translate(-50%, -50%);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  filter: drop-shadow(0 10px 7px rgba(29, 45, 48, 0.22));
+}
+
+.character-preview-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.character-preview-toolbar-button {
+  padding: 0.55rem 0.8rem;
+  font-size: 0.78rem;
+}
+
 .character-creator-main-preview {
   width: 156px;
   height: 156px;
@@ -652,6 +721,185 @@ button {
 
 .character-creator-controls {
   min-width: 0;
+}
+
+.character-base-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.character-slot-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.character-slot-picker {
+  overflow: hidden;
+  border: 1px solid rgba(57, 79, 91, 0.13);
+  border-radius: 14px;
+  background: rgba(255, 252, 248, 0.72);
+}
+
+.character-slot-picker > summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.character-slot-picker > summary::-webkit-details-marker {
+  display: none;
+}
+
+.character-slot-picker > summary::after {
+  content: "⌄";
+  color: var(--muted);
+}
+
+.character-slot-picker[open] > summary::after {
+  transform: rotate(180deg);
+}
+
+.character-slot-picker > summary strong {
+  margin-left: auto;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.character-slot-picker-body {
+  display: grid;
+  gap: 1rem;
+  padding: 0 0.85rem 0.85rem;
+  border-top: 1px solid rgba(57, 79, 91, 0.09);
+}
+
+.character-asset-collection {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.character-asset-collection h4 {
+  margin: 0.8rem 0 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.character-style-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 0.65rem;
+}
+
+.character-style-card {
+  display: grid;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgba(57, 79, 91, 0.12);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.character-style-card-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.character-style-card-main,
+.character-style-card-none,
+.character-variant-chip {
+  border: 0;
+  color: var(--text);
+  background: transparent;
+  cursor: pointer;
+}
+
+.character-style-card-main {
+  display: grid;
+  place-items: center;
+  gap: 0.35rem;
+  padding: 0.7rem;
+}
+
+.character-style-preview {
+  width: 156px;
+  height: 156px;
+  border: 0;
+  background: transparent;
+}
+
+.character-style-card-main strong {
+  min-height: 2.2em;
+  font-size: 0.92rem;
+  line-height: 1.1;
+}
+
+.character-style-card-none {
+  width: min(138px, 100%);
+  margin-top: 0.85rem;
+  padding: 0.75rem;
+}
+
+.character-style-none-icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 0.35rem;
+  border-radius: 50%;
+  color: var(--muted);
+  background: rgba(57, 79, 91, 0.08);
+  font-size: 1.5rem;
+}
+
+.character-variant-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.55rem;
+  border-top: 1px solid rgba(57, 79, 91, 0.1);
+  background: rgba(214, 237, 246, 0.14);
+}
+
+.character-variant-chip {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  min-height: 36px;
+  padding: 0.4rem 0.72rem;
+  border: 1px solid rgba(57, 79, 91, 0.13);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  font-size: 0.78rem;
+}
+
+.character-variant-chip:hover,
+.character-variant-chip:focus-visible {
+  border-color: color-mix(in srgb, var(--accent) 65%, rgba(57, 79, 91, 0.13));
+  background: color-mix(in srgb, var(--accent) 7%, white);
+  outline: none;
+}
+
+.character-variant-chip-selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 11%, white);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.character-variant-chip span {
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .player-settings-layout {
@@ -3929,14 +4177,23 @@ button {
     grid-template-columns: 1fr;
   }
 
-  .character-editor-page .character-creator-preview {
+  .character-editor-page .character-creator-preview,
+  .character-creator-visual-picker .character-creator-preview {
     position: static;
     min-height: 240px;
+  }
+
+  .character-preview-stage {
+    min-height: 245px;
   }
 
   .character-editor-main-preview {
     width: 210px;
     height: 210px;
+  }
+
+  .character-style-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .settings-character-card {

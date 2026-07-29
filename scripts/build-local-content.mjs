@@ -187,6 +187,74 @@ function getCharacterPartNumericLayer(pathValue) {
   return match ? Number(match[1]) : null;
 }
 
+const CHARACTER_VARIANT_WORDS = new Set([
+  "aqua", "beige", "black", "blonde", "blue", "brown", "cream", "dark", "default",
+  "electric", "fire", "frost", "galaxy", "gold", "gray", "green", "grey", "lavender",
+  "light", "mint", "navy", "orange", "pink", "plaid", "purple", "red", "rose", "sage",
+  "silver", "snow", "tan", "teal", "water", "white", "yellow",
+]);
+
+function splitCharacterAssetWords(value) {
+  return String(value || "")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+function titleCaseCharacterAssetWords(words) {
+  return words.map((word) => word.toLowerCase() === "aline" ? "A-line" : word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
+}
+
+function getCharacterPartAssetMetadata(pathValue, slot) {
+  const normalizedPath = String(pathValue || "").replace(/\\/g, "/");
+  const pathParts = normalizedPath.split("/");
+  const fileStem = (pathParts.pop() || "").replace(/\.[^.]+$/, "").replace(/^\d+[_ -]+/, "");
+  const lowerParts = pathParts.map((part) => part.toLowerCase());
+  const slotFolderAliases = {
+    eyes: ["eye", "eyes", "face"],
+    hair: ["hair", "hairs", "hairstyle", "hairstyles"],
+    undershirt: ["top", "tops", "undershirt", "undershirts"],
+    top: ["top", "tops", "shirt", "shirts"],
+    bottom: ["bottom", "bottoms", "pants", "shorts", "skirt", "skirts"],
+    shoes: ["shoe", "shoes", "boot", "boots"],
+    accessory: ["accessory", "accessories"],
+  };
+  const aliases = slotFolderAliases[slot] || [];
+  let slotFolderIndex = -1;
+  lowerParts.forEach((part, index) => {
+    if (aliases.includes(part)) {
+      slotFolderIndex = index;
+    }
+  });
+  const collectionParts = slotFolderIndex >= 0 ? pathParts.slice(slotFolderIndex + 1) : [];
+  const collectionLabel = collectionParts.join(" / ");
+  const words = splitCharacterAssetWords(fileStem);
+  const variantWords = [];
+  while (words.length > 1 && CHARACTER_VARIANT_WORDS.has(words[words.length - 1].toLowerCase())) {
+    variantWords.unshift(words.pop());
+  }
+  const styleWords = words.length ? words : splitCharacterAssetWords(fileStem);
+  let styleLabel = titleCaseCharacterAssetWords(styleWords);
+  const finalCollectionLabel = collectionParts[collectionParts.length - 1] || "";
+  if (finalCollectionLabel && styleLabel.toLowerCase() === finalCollectionLabel.toLowerCase()) {
+    styleLabel = finalCollectionLabel;
+  } else if (finalCollectionLabel && styleLabel.toLowerCase().startsWith(finalCollectionLabel.toLowerCase() + " ")) {
+    styleLabel = finalCollectionLabel + styleLabel.slice(finalCollectionLabel.length);
+  }
+  const variantLabel = variantWords.length ? titleCaseCharacterAssetWords(variantWords) : "Default";
+  const stableStem = slugify(fileStem) || "part";
+  return {
+    collection: collectionLabel,
+    styleId: slugify(slot + "-" + styleLabel) || slugify(slot + "-" + stableStem),
+    styleLabel,
+    variantId: slugify(variantLabel) || "default",
+    variantLabel,
+    stableId: slugify(slot + "-" + stableStem),
+  };
+}
+
 function isCharacterPartReferenceSheetPath(pathValue) {
   const fileName = String(pathValue || "").replace(/\\/g, "/").split("/").pop() || "";
   return fileName.toLowerCase() === "spritesheet.png";
@@ -245,7 +313,12 @@ function getLayeredPartSlotFromPath(relativePath) {
     accessories: "accessory",
   };
   const folder = parts.slice(charactersIndex + 2, -1).reverse().find((candidate) => slotAliases[candidate]);
-  return slotAliases[folder] || "";
+  const resolvedSlot = slotAliases[folder] || "";
+  const renderPriority = getCharacterPartNumericLayer(relativePath);
+  if (resolvedSlot === "top" && renderPriority !== null && renderPriority < 100) {
+    return "undershirt";
+  }
+  return resolvedSlot;
 }
 
 function inferCharacterPartLayerMode(pathValue, slot, existingMode) {
@@ -360,6 +433,7 @@ function mergeLayeredBaseSheets(characterParts, characterSheets) {
       const existing = existingPartsByPath.get(sheet.path) || existingPartsBySheetId.get(sheet.id);
       const foregroundSheet = findForegroundSheetForPart(sheet, layeredPartSheets);
       const renderPriority = getCharacterPartNumericLayer(sheet.path);
+      const assetMetadata = getCharacterPartAssetMetadata(sheet.path, slot);
       const labelPath = renderPriority === null
         ? sheet.path
         : String(sheet.path || sheet.id)
@@ -367,9 +441,14 @@ function mergeLayeredBaseSheets(characterParts, characterSheets) {
           .replace(/([a-z])([A-Z])/g, "$1 $2");
       const nameKey = getCharacterPartAssociationKey(sheet.path || sheet.id).split("/").pop() || "";
       return {
-        id: existing?.id || (slot === "accessory" && nameKey ? slugify(slot + "-" + nameKey) : sheet.id) || slugify((sheet.path || "character-part").replace(/\.[^.]+$/, "")),
+        id: existing?.id || assetMetadata.stableId || (slot === "accessory" && nameKey ? slugify(slot + "-" + nameKey) : sheet.id) || slugify((sheet.path || "character-part").replace(/\.[^.]+$/, "")),
         slot,
         label: existing?.label || (renderPriority === null ? (sheet.playerLabel || sheet.label) : "") || prettifyCharacterSheetLabel(labelPath || sheet.id),
+        collection: existing?.collection || assetMetadata.collection,
+        styleId: existing?.styleId || assetMetadata.styleId,
+        styleLabel: existing?.styleLabel || assetMetadata.styleLabel,
+        variantId: existing?.variantId || assetMetadata.variantId,
+        variantLabel: existing?.variantLabel || assetMetadata.variantLabel,
         path: sheet.path || existing?.path || "",
         sheetId: sheet.id || existing?.sheetId || "",
         renderPriority: renderPriority ?? existing?.renderPriority ?? null,
@@ -392,10 +471,16 @@ function mergeLayeredBaseSheets(characterParts, characterSheets) {
       const labelPath = String(belowSheet.path || belowSheet.id).replace(/(^|\/)30[_ -]+/i, "$1");
       const slot = getLayeredPartSlotFromPath(belowSheet.path);
       const nameKey = associationKey.split("/").pop() || associationKey;
+      const assetMetadata = getCharacterPartAssetMetadata(belowSheet.path, slot);
       return {
-        id: existing?.id || slugify(slot + "-" + nameKey),
+        id: existing?.id || assetMetadata.stableId || slugify(slot + "-" + nameKey),
         slot,
         label: existing?.label || prettifyCharacterSheetLabel(labelPath),
+        collection: existing?.collection || assetMetadata.collection,
+        styleId: existing?.styleId || assetMetadata.styleId,
+        styleLabel: existing?.styleLabel || assetMetadata.styleLabel,
+        variantId: existing?.variantId || assetMetadata.variantId,
+        variantLabel: existing?.variantLabel || assetMetadata.variantLabel,
         path: belowSheet.path,
         sheetId: belowSheet.id,
         layerPosition: "below-all",
