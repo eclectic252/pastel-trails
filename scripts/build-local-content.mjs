@@ -228,7 +228,13 @@ function getCharacterPartAssetMetadata(pathValue, slot) {
       slotFolderIndex = index;
     }
   });
-  const collectionParts = slotFolderIndex >= 0 ? pathParts.slice(slotFolderIndex + 1) : [];
+  let collectionParts = slotFolderIndex >= 0 ? pathParts.slice(slotFolderIndex + 1) : [];
+  const usesBaseFolder = collectionParts[collectionParts.length - 1]?.toLowerCase() === "base"
+    && collectionParts.length >= 2;
+  const baseStyleLabel = usesBaseFolder ? collectionParts[collectionParts.length - 2] : "";
+  if (usesBaseFolder) {
+    collectionParts = collectionParts.slice(0, -2);
+  }
   const collectionLabel = collectionParts.join(" / ");
   const words = splitCharacterAssetWords(fileStem);
   const variantWords = [];
@@ -236,14 +242,16 @@ function getCharacterPartAssetMetadata(pathValue, slot) {
     variantWords.unshift(words.pop());
   }
   const styleWords = words.length ? words : splitCharacterAssetWords(fileStem);
-  let styleLabel = titleCaseCharacterAssetWords(styleWords);
+  let styleLabel = baseStyleLabel || titleCaseCharacterAssetWords(styleWords);
   const finalCollectionLabel = collectionParts[collectionParts.length - 1] || "";
   if (finalCollectionLabel && styleLabel.toLowerCase() === finalCollectionLabel.toLowerCase()) {
     styleLabel = finalCollectionLabel;
   } else if (finalCollectionLabel && styleLabel.toLowerCase().startsWith(finalCollectionLabel.toLowerCase() + " ")) {
     styleLabel = finalCollectionLabel + styleLabel.slice(finalCollectionLabel.length);
   }
-  const variantLabel = variantWords.length ? titleCaseCharacterAssetWords(variantWords) : "Default";
+  const variantLabel = usesBaseFolder
+    ? titleCaseCharacterAssetWords(splitCharacterAssetWords(fileStem))
+    : variantWords.length ? titleCaseCharacterAssetWords(variantWords) : "Default";
   const stableStem = slugify(fileStem) || "part";
   return {
     collection: collectionLabel,
@@ -251,7 +259,43 @@ function getCharacterPartAssetMetadata(pathValue, slot) {
     styleLabel,
     variantId: slugify(variantLabel) || "default",
     variantLabel,
-    stableId: slugify(slot + "-" + stableStem),
+    stableId: slugify(slot + "-" + (baseStyleLabel ? baseStyleLabel + "-" : "") + stableStem),
+  };
+}
+
+function isCharacterAddOnSheetPath(pathValue) {
+  return String(pathValue || "").replace(/\\/g, "/").toLowerCase().split("/").includes("options");
+}
+
+function getCharacterAddOnAssetMetadata(pathValue, slot) {
+  const normalizedPath = String(pathValue || "").replace(/\\/g, "/");
+  const pathParts = normalizedPath.split("/");
+  const fileStem = (pathParts.pop() || "")
+    .replace(/\.[^.]+$/, "")
+    .replace(/^\d+[_ -]+/, "")
+    .replace(/(?:[_ -]+foreground)$/, "");
+  const optionsIndex = pathParts.map((part) => part.toLowerCase()).lastIndexOf("options");
+  const parentStyleLabel = optionsIndex > 0 ? pathParts[optionsIndex - 1] : "";
+  const groupLabel = optionsIndex >= 0 && pathParts[optionsIndex + 1]
+    ? pathParts[optionsIndex + 1]
+    : "Details";
+  const words = splitCharacterAssetWords(fileStem);
+  const variantWords = [];
+  while (words.length > 1 && CHARACTER_VARIANT_WORDS.has(words[words.length - 1].toLowerCase())) {
+    variantWords.unshift(words.pop());
+  }
+  const optionStyleLabel = titleCaseCharacterAssetWords(words.length ? words : splitCharacterAssetWords(fileStem));
+  const variantLabel = variantWords.length ? titleCaseCharacterAssetWords(variantWords) : "Default";
+  return {
+    parentStyleId: slugify(slot + "-" + parentStyleLabel),
+    parentStyleLabel,
+    groupId: slugify(groupLabel) || "details",
+    groupLabel,
+    styleId: slugify(optionStyleLabel) || "detail",
+    styleLabel: optionStyleLabel,
+    variantId: slugify(variantLabel) || "default",
+    variantLabel,
+    stableId: slugify("addon-" + slot + "-" + parentStyleLabel + "-" + groupLabel + "-" + fileStem),
   };
 }
 
@@ -353,6 +397,7 @@ function normalizeCharacterPartsCatalog(catalog) {
     palettes: catalog?.palettes && typeof catalog.palettes === "object" ? catalog.palettes : {},
     bases: Array.isArray(catalog?.bases) ? catalog.bases : [],
     parts: Array.isArray(catalog?.parts) ? catalog.parts : [],
+    addOns: Array.isArray(catalog?.addOns) ? catalog.addOns : [],
     presets: Array.isArray(catalog?.presets) ? catalog.presets : [],
   };
 }
@@ -412,8 +457,10 @@ function mergeLayeredBaseSheets(characterParts, characterSheets) {
   const existingPartsBySheetId = new Map(remappedParts.map((part) => [part.sheetId, part]));
   const allLayeredPartSheets = (characterSheets?.sheets || []).filter((sheet) => getLayeredPartSlotFromPath(sheet.path));
   const layeredPartSheets = allLayeredPartSheets.filter((sheet) => !isCharacterPartReferenceSheetPath(sheet.path));
+  const addOnSheets = layeredPartSheets.filter((sheet) => isCharacterAddOnSheetPath(sheet.path));
+  const basePartSheets = layeredPartSheets.filter((sheet) => !isCharacterAddOnSheetPath(sheet.path));
   const numericLayerGroups = new Map();
-  layeredPartSheets.forEach((sheet) => {
+  basePartSheets.forEach((sheet) => {
     const layerNumber = getCharacterPartNumericLayer(sheet.path);
     if (layerNumber !== 30 && layerNumber !== 190) {
       return;
@@ -426,12 +473,12 @@ function mergeLayeredBaseSheets(characterParts, characterSheets) {
   });
   const pairedLayerGroups = Array.from(numericLayerGroups.entries()).filter(([, layers]) => layers.has(30) && layers.has(190));
   const pairedLayerPaths = new Set(pairedLayerGroups.flatMap(([, layers]) => [layers.get(30).path, layers.get(190).path]));
-  const discoveredParts = layeredPartSheets
+  const discoveredParts = basePartSheets
     .filter((sheet) => !isForegroundCharacterPartSheetPath(sheet.path) && !pairedLayerPaths.has(sheet.path))
     .map((sheet) => {
       const slot = getLayeredPartSlotFromPath(sheet.path);
       const existing = existingPartsByPath.get(sheet.path) || existingPartsBySheetId.get(sheet.id);
-      const foregroundSheet = findForegroundSheetForPart(sheet, layeredPartSheets);
+      const foregroundSheet = findForegroundSheetForPart(sheet, basePartSheets);
       const renderPriority = getCharacterPartNumericLayer(sheet.path);
       const assetMetadata = getCharacterPartAssetMetadata(sheet.path, slot);
       const labelPath = renderPriority === null
@@ -494,6 +541,43 @@ function mergeLayeredBaseSheets(characterParts, characterSheets) {
       };
     }));
   const discoveredPartKeys = new Set(allLayeredPartSheets.flatMap((sheet) => [sheet.path, sheet.id]).filter(Boolean));
+  const existingAddOnsByPath = new Map(catalog.addOns.map((addOn) => [addOn.path, addOn]));
+  const existingAddOnsBySheetId = new Map(catalog.addOns.map((addOn) => [addOn.sheetId, addOn]));
+  const discoveredAddOns = addOnSheets
+    .filter((sheet) => !isForegroundCharacterPartSheetPath(sheet.path))
+    .map((sheet) => {
+      const optionRoot = String(sheet.path || "").replace(/\\/g, "/").split(/\/options\//i)[0];
+      const siblingStyles = discoveredParts.filter((part) => {
+        const partPath = String(part.path || "").replace(/\\/g, "/");
+        return partPath.startsWith(optionRoot + "/");
+      });
+      const siblingStyleKeys = new Set(siblingStyles.map((part) => part.slot + ":" + part.styleId));
+      const parentPart = siblingStyleKeys.size === 1 ? siblingStyles[0] : null;
+      const slot = parentPart?.slot || getLayeredPartSlotFromPath(sheet.path);
+      const existing = existingAddOnsByPath.get(sheet.path) || existingAddOnsBySheetId.get(sheet.id);
+      const metadata = getCharacterAddOnAssetMetadata(sheet.path, slot);
+      const foregroundSheet = findForegroundSheetForPart(sheet, addOnSheets);
+      return {
+        id: existing?.id || metadata.stableId,
+        slot,
+        label: existing?.label || prettifyCharacterSheetLabel(sheet.path || sheet.id),
+        parentStyleId: parentPart?.styleId || existing?.parentStyleId || metadata.parentStyleId,
+        parentStyleLabel: parentPart?.styleLabel || existing?.parentStyleLabel || metadata.parentStyleLabel,
+        groupId: existing?.groupId || metadata.groupId,
+        groupLabel: existing?.groupLabel || metadata.groupLabel,
+        styleId: existing?.styleId || metadata.styleId,
+        styleLabel: existing?.styleLabel || metadata.styleLabel,
+        variantId: existing?.variantId || metadata.variantId,
+        variantLabel: existing?.variantLabel || metadata.variantLabel,
+        path: sheet.path,
+        sheetId: sheet.id,
+        foregroundPath: foregroundSheet?.path || existing?.foregroundPath || "",
+        foregroundSheetId: foregroundSheet?.id || existing?.foregroundSheetId || "",
+        renderPriority: getCharacterPartNumericLayer(sheet.path) ?? existing?.renderPriority ?? null,
+        compatibleBaseIds: existing?.compatibleBaseIds?.length ? existing.compatibleBaseIds : nextBaseIds.slice(),
+      };
+    });
+  const discoveredAddOnKeys = new Set(addOnSheets.flatMap((sheet) => [sheet.path, sheet.id]).filter(Boolean));
 
   return {
     ...catalog,
@@ -504,6 +588,12 @@ function mergeLayeredBaseSheets(characterParts, characterSheets) {
         && !discoveredPartKeys.has(part.abovePath)
         && !discoveredPartKeys.has(part.aboveSheetId))
       .concat(discoveredParts),
+    addOns: catalog.addOns
+      .filter((addOn) => !discoveredAddOnKeys.has(addOn.path)
+        && !discoveredAddOnKeys.has(addOn.sheetId)
+        && !discoveredAddOnKeys.has(addOn.foregroundPath)
+        && !discoveredAddOnKeys.has(addOn.foregroundSheetId))
+      .concat(discoveredAddOns),
     presets: catalog.presets.map((preset) => {
       const appearance = { ...(preset.appearance || {}) };
       if (!nextBaseIds.includes(appearance.baseId)) {
@@ -511,7 +601,10 @@ function mergeLayeredBaseSheets(characterParts, characterSheets) {
       }
       return {
         ...preset,
-        appearance,
+        appearance: {
+          ...appearance,
+          addOns: appearance.addOns && typeof appearance.addOns === "object" ? appearance.addOns : {},
+        },
       };
     }),
   };

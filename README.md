@@ -81,6 +81,34 @@ their available colors beneath each style. Generated part IDs are based on the
 filename rather than the collection folder, so reorganizing folders does not change
 the saved selection.
 
+Styles that need color-independent details can use `Base` and `Options` folders:
+
+```text
+assets/Characters/Base/Shoes/Ankle Boots/
+  Base/
+    110_Black.png
+    110_Brown.png
+  Options/
+    Closure/
+      111_Zipper_Silver.png
+      111_Zipper_Gold.png
+      111_Buttons_Black.png
+    Trim/
+      112_Stitching_White.png
+```
+
+Files in `Base` are the color variants of one clothing style. Each folder directly
+inside `Options` becomes an independent detail group, so one Closure and one Trim can
+be worn together. The picker automatically includes `None` for every group. Detail
+selections remain when the player changes color within the same style and are cleared
+when they switch to another style.
+
+Every option image must use the same transparent 4-by-4 canvas and frame alignment as
+the base clothing sheet, with only the zipper, buttons, stitching, or other detail
+painted. The numeric filename prefix controls its render position. An option may also
+have a matching `_foreground.png` companion when part of the detail must render in
+front of the character's arms.
+
 Clothing in `assets/Characters/Base/` can include a companion sheet that renders in front of the character's foreground arms. Give the companion the same filename as the main clothing sheet with `_foreground` appended before `.png`:
 
 ```text

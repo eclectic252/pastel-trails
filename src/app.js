@@ -112,6 +112,7 @@
         { id: "sage-01", label: "Sage", color: "#708c6a" },
       ],
     },
+    addOns: [],
     bases: [
       {
         id: "female-base-01",
@@ -979,7 +980,9 @@
           layerPosition: String(part?.layerPosition || "").trim(),
           abovePath: String(part?.abovePath || "").trim(),
           aboveSheetId: String(part?.aboveSheetId || "").trim(),
-          renderPriority: Number.isFinite(Number(part?.renderPriority)) ? Number(part.renderPriority) : null,
+          renderPriority: part?.renderPriority === null || part?.renderPriority === undefined || part?.renderPriority === ""
+            ? null
+            : Number.isFinite(Number(part.renderPriority)) ? Number(part.renderPriority) : null,
           tintPalette: String(part?.tintPalette || "").trim(),
           layerMode: inferCharacterPartLayerMode(part?.path, String(part?.slot || "").trim(), String(part?.layerMode || "").trim()),
           compatibleBaseIds: Array.isArray(part?.compatibleBaseIds)
@@ -988,6 +991,32 @@
         };
       }).filter(function (part) {
         return part.id && part.slot;
+      }),
+      addOns: (Array.isArray(source.addOns) ? source.addOns : []).map(function (addOn) {
+        const metadata = getCharacterAddOnAssetMetadata(addOn?.path || addOn?.sheetId || addOn?.id, String(addOn?.slot || "").trim());
+        return {
+          id: String(addOn?.id || metadata.stableId || "").trim(),
+          slot: String(addOn?.slot || "").trim(),
+          label: String(addOn?.label || addOn?.id || "").trim(),
+          parentStyleId: String(addOn?.parentStyleId || metadata.parentStyleId || "").trim(),
+          parentStyleLabel: String(addOn?.parentStyleLabel || metadata.parentStyleLabel || "").trim(),
+          groupId: String(addOn?.groupId || metadata.groupId || "details").trim(),
+          groupLabel: String(addOn?.groupLabel || metadata.groupLabel || "Details").trim(),
+          styleId: String(addOn?.styleId || metadata.styleId || "").trim(),
+          styleLabel: String(addOn?.styleLabel || metadata.styleLabel || addOn?.label || "").trim(),
+          variantId: String(addOn?.variantId || metadata.variantId || "default").trim(),
+          variantLabel: String(addOn?.variantLabel || metadata.variantLabel || "Default").trim(),
+          path: String(addOn?.path || "").trim(),
+          sheetId: String(addOn?.sheetId || "").trim(),
+          foregroundPath: String(addOn?.foregroundPath || "").trim(),
+          foregroundSheetId: String(addOn?.foregroundSheetId || "").trim(),
+          renderPriority: addOn?.renderPriority === null || addOn?.renderPriority === undefined || addOn?.renderPriority === ""
+            ? null
+            : Number.isFinite(Number(addOn.renderPriority)) ? Number(addOn.renderPriority) : null,
+          compatibleBaseIds: Array.isArray(addOn?.compatibleBaseIds) ? addOn.compatibleBaseIds.map(String) : [],
+        };
+      }).filter(function (addOn) {
+        return addOn.id && addOn.slot && addOn.parentStyleId;
       }),
       presets: (Array.isArray(source.presets) ? source.presets : fallback.presets).map(function (preset) {
         return {
@@ -1113,7 +1142,13 @@
         slotFolderIndex = index;
       }
     });
-    const collectionParts = slotFolderIndex >= 0 ? pathParts.slice(slotFolderIndex + 1) : [];
+    let collectionParts = slotFolderIndex >= 0 ? pathParts.slice(slotFolderIndex + 1) : [];
+    const usesBaseFolder = collectionParts[collectionParts.length - 1]?.toLowerCase() === "base"
+      && collectionParts.length >= 2;
+    const baseStyleLabel = usesBaseFolder ? collectionParts[collectionParts.length - 2] : "";
+    if (usesBaseFolder) {
+      collectionParts = collectionParts.slice(0, -2);
+    }
     const collectionLabel = collectionParts.join(" / ");
     const words = splitCharacterAssetWords(fileStem);
     const variantWords = [];
@@ -1121,14 +1156,16 @@
       variantWords.unshift(words.pop());
     }
     const styleWords = words.length ? words : splitCharacterAssetWords(fileStem);
-    let styleLabel = titleCaseCharacterAssetWords(styleWords);
+    let styleLabel = baseStyleLabel || titleCaseCharacterAssetWords(styleWords);
     const finalCollectionLabel = collectionParts[collectionParts.length - 1] || "";
     if (finalCollectionLabel && styleLabel.toLowerCase() === finalCollectionLabel.toLowerCase()) {
       styleLabel = finalCollectionLabel;
     } else if (finalCollectionLabel && styleLabel.toLowerCase().startsWith(finalCollectionLabel.toLowerCase() + " ")) {
       styleLabel = finalCollectionLabel + styleLabel.slice(finalCollectionLabel.length);
     }
-    const variantLabel = variantWords.length ? titleCaseCharacterAssetWords(variantWords) : "Default";
+    const variantLabel = usesBaseFolder
+      ? titleCaseCharacterAssetWords(splitCharacterAssetWords(fileStem))
+      : variantWords.length ? titleCaseCharacterAssetWords(variantWords) : "Default";
     const stableStem = slugify(fileStem) || "part";
     return {
       collection: collectionLabel,
@@ -1136,7 +1173,41 @@
       styleLabel,
       variantId: slugify(variantLabel) || "default",
       variantLabel,
-      stableId: slugify(slot + "-" + stableStem),
+      stableId: slugify(slot + "-" + (baseStyleLabel ? baseStyleLabel + "-" : "") + stableStem),
+    };
+  }
+
+  function isCharacterAddOnSheetPath(pathValue) {
+    return String(pathValue || "").replace(/\\/g, "/").toLowerCase().split("/").includes("options");
+  }
+
+  function getCharacterAddOnAssetMetadata(pathValue, slot) {
+    const normalizedPath = String(pathValue || "").replace(/\\/g, "/");
+    const pathParts = normalizedPath.split("/");
+    const fileStem = (pathParts.pop() || "")
+      .replace(/\.[^.]+$/, "")
+      .replace(/^\d+[_ -]+/, "")
+      .replace(/(?:[_ -]+foreground)$/, "");
+    const optionsIndex = pathParts.map(function (part) { return part.toLowerCase(); }).lastIndexOf("options");
+    const parentStyleLabel = optionsIndex > 0 ? pathParts[optionsIndex - 1] : "";
+    const groupLabel = optionsIndex >= 0 && pathParts[optionsIndex + 1] ? pathParts[optionsIndex + 1] : "Details";
+    const words = splitCharacterAssetWords(fileStem);
+    const variantWords = [];
+    while (words.length > 1 && CHARACTER_VARIANT_WORDS.has(words[words.length - 1].toLowerCase())) {
+      variantWords.unshift(words.pop());
+    }
+    const optionStyleLabel = titleCaseCharacterAssetWords(words.length ? words : splitCharacterAssetWords(fileStem));
+    const variantLabel = variantWords.length ? titleCaseCharacterAssetWords(variantWords) : "Default";
+    return {
+      parentStyleId: slugify(slot + "-" + parentStyleLabel),
+      parentStyleLabel,
+      groupId: slugify(groupLabel) || "details",
+      groupLabel,
+      styleId: slugify(optionStyleLabel) || "detail",
+      styleLabel: optionStyleLabel,
+      variantId: slugify(variantLabel) || "default",
+      variantLabel,
+      stableId: slugify("addon-" + slot + "-" + parentStyleLabel + "-" + groupLabel + "-" + fileStem),
     };
   }
 
@@ -1368,8 +1439,14 @@
     const layeredPartSheets = allLayeredPartSheets.filter(function (sheet) {
       return !isCharacterPartReferenceSheetPath(sheet.path);
     });
+    const addOnSheets = layeredPartSheets.filter(function (sheet) {
+      return isCharacterAddOnSheetPath(sheet.path);
+    });
+    const basePartSheets = layeredPartSheets.filter(function (sheet) {
+      return !isCharacterAddOnSheetPath(sheet.path);
+    });
     const numericLayerGroups = new Map();
-    layeredPartSheets.forEach(function (sheet) {
+    basePartSheets.forEach(function (sheet) {
       const layerNumber = getCharacterPartNumericLayer(sheet.path);
       if (layerNumber !== 30 && layerNumber !== 190) {
         return;
@@ -1386,12 +1463,12 @@
     const pairedLayerPaths = new Set(pairedLayerGroups.flatMap(function (entry) {
       return [entry[1].get(30).path, entry[1].get(190).path];
     }));
-    const discoveredParts = layeredPartSheets.filter(function (sheet) {
+    const discoveredParts = basePartSheets.filter(function (sheet) {
       return !isForegroundCharacterPartSheetPath(sheet.path) && !pairedLayerPaths.has(sheet.path);
     }).map(function (sheet) {
       const slot = getLayeredPartSlotFromPath(sheet.path);
       const existing = existingPartsByPath.get(sheet.path) || existingPartsBySheetId.get(sheet.id);
-      const foregroundSheet = findForegroundSheetForPart(sheet, layeredPartSheets);
+      const foregroundSheet = findForegroundSheetForPart(sheet, basePartSheets);
       const part = buildLayeredPartFromSheet(sheet, slot, nextBaseIds, existing, foregroundSheet);
       const renderPriority = getCharacterPartNumericLayer(sheet.path);
       const labelPath = renderPriority === null
@@ -1452,6 +1529,57 @@
         && !discoveredPartKeys.has(part.abovePath)
         && !discoveredPartKeys.has(part.aboveSheetId);
     }).concat(discoveredParts);
+    const existingAddOnsByPath = new Map(catalog.addOns.map(function (addOn) {
+      return [addOn.path, addOn];
+    }));
+    const existingAddOnsBySheetId = new Map(catalog.addOns.map(function (addOn) {
+      return [addOn.sheetId, addOn];
+    }));
+    const discoveredAddOns = addOnSheets.filter(function (sheet) {
+      return !isForegroundCharacterPartSheetPath(sheet.path);
+    }).map(function (sheet) {
+      const optionRoot = String(sheet.path || "").replace(/\\/g, "/").split(/\/options\//i)[0];
+      const siblingStyles = discoveredParts.filter(function (part) {
+        const partPath = String(part.path || "").replace(/\\/g, "/");
+        return partPath.startsWith(optionRoot + "/");
+      });
+      const siblingStyleKeys = new Set(siblingStyles.map(function (part) {
+        return part.slot + ":" + part.styleId;
+      }));
+      const parentPart = siblingStyleKeys.size === 1 ? siblingStyles[0] : null;
+      const slot = parentPart?.slot || getLayeredPartSlotFromPath(sheet.path);
+      const existing = existingAddOnsByPath.get(sheet.path) || existingAddOnsBySheetId.get(sheet.id);
+      const metadata = getCharacterAddOnAssetMetadata(sheet.path, slot);
+      const foregroundSheet = findForegroundSheetForPart(sheet, addOnSheets);
+      return {
+        id: existing?.id || metadata.stableId,
+        slot,
+        label: existing?.label || prettifyCharacterSheetLabel(sheet.path || sheet.id),
+        parentStyleId: parentPart?.styleId || existing?.parentStyleId || metadata.parentStyleId,
+        parentStyleLabel: parentPart?.styleLabel || existing?.parentStyleLabel || metadata.parentStyleLabel,
+        groupId: existing?.groupId || metadata.groupId,
+        groupLabel: existing?.groupLabel || metadata.groupLabel,
+        styleId: existing?.styleId || metadata.styleId,
+        styleLabel: existing?.styleLabel || metadata.styleLabel,
+        variantId: existing?.variantId || metadata.variantId,
+        variantLabel: existing?.variantLabel || metadata.variantLabel,
+        path: sheet.path,
+        sheetId: sheet.id,
+        foregroundPath: foregroundSheet?.path || existing?.foregroundPath || "",
+        foregroundSheetId: foregroundSheet?.id || existing?.foregroundSheetId || "",
+        renderPriority: getCharacterPartNumericLayer(sheet.path) ?? existing?.renderPriority ?? null,
+        compatibleBaseIds: existing?.compatibleBaseIds?.length ? existing.compatibleBaseIds : nextBaseIds.slice(),
+      };
+    });
+    const discoveredAddOnKeys = new Set(addOnSheets.flatMap(function (sheet) {
+      return [sheet.path, sheet.id];
+    }).filter(Boolean));
+    catalog.addOns = catalog.addOns.filter(function (addOn) {
+      return !discoveredAddOnKeys.has(addOn.path)
+        && !discoveredAddOnKeys.has(addOn.sheetId)
+        && !discoveredAddOnKeys.has(addOn.foregroundPath)
+        && !discoveredAddOnKeys.has(addOn.foregroundSheetId);
+    }).concat(discoveredAddOns);
     catalog.presets = catalog.presets.map(function (preset) {
       const appearance = Object.assign({}, preset.appearance || {});
       if (!nextBaseIds.includes(appearance.baseId)) {
@@ -1500,6 +1628,7 @@
       baseId: base.id,
       palette: Object.assign({}, source.palette || {}),
       parts: Object.assign({}, source.parts || {}),
+      addOns: JSON.parse(JSON.stringify(source.addOns || {})),
     };
 
     catalog.slots.forEach(function (slot) {
@@ -1542,6 +1671,30 @@
           appearance.parts[slot.id] = compatibleParts[0].id;
         }
       }
+
+      const selectedPart = compatibleParts.find(function (part) {
+        return part.id === appearance.parts[slot.id];
+      }) || null;
+      const selectedGroups = appearance.addOns[slot.id];
+      if (!selectedPart || !selectedGroups || typeof selectedGroups !== "object") {
+        delete appearance.addOns[slot.id];
+        return;
+      }
+      Object.entries(selectedGroups).forEach(function ([groupId, addOnId]) {
+        const compatibleAddOn = (catalog.addOns || []).find(function (addOn) {
+          return addOn.id === addOnId
+            && addOn.slot === slot.id
+            && addOn.groupId === groupId
+            && addOn.parentStyleId === selectedPart.styleId
+            && (!(addOn.compatibleBaseIds || []).length || addOn.compatibleBaseIds.includes(base.id));
+        });
+        if (!compatibleAddOn) {
+          delete selectedGroups[groupId];
+        }
+      });
+      if (!Object.keys(selectedGroups).length) {
+        delete appearance.addOns[slot.id];
+      }
     });
 
     Object.entries(catalog.palettes).forEach(function ([paletteKey, entries]) {
@@ -1562,7 +1715,7 @@
     return normalizeCharacterAppearance(preset, catalog);
   }
 
-  function randomizeCharacterAppearance(content, appearance) {
+  function randomizeCharacterAppearance(content, appearance, options) {
     const catalog = getCharacterPartsCatalog(content);
     const currentBase = findCharacterBase(content, appearance?.baseId);
     const base = currentBase || catalog.bases[Math.floor(Math.random() * Math.max(1, catalog.bases.length))] || catalog.bases[0] || null;
@@ -1573,6 +1726,7 @@
       baseId: base.id,
       palette: {},
       parts: {},
+      addOns: {},
     };
 
     Object.entries(catalog.palettes).forEach(function ([paletteKey, entries]) {
@@ -1581,13 +1735,68 @@
         next.palette[paletteKey] = entry.id;
       }
     });
+
+    const getRandomizablePartsForSlot = function (slotId) {
+      return getCharacterPartsForSlot(content, base.id, slotId).filter(function (part) {
+        return part.id !== "none" && Boolean(part.path || part.sheetId);
+      });
+    };
+    const pickRandomPartForSlot = function (slotId) {
+      const compatibleParts = getRandomizablePartsForSlot(slotId);
+      return compatibleParts[Math.floor(Math.random() * Math.max(1, compatibleParts.length))] || compatibleParts[0] || null;
+    };
+
+    if (options?.enforcePlayerOutfitRules !== true) {
+      catalog.slots.forEach(function (slot) {
+        const part = pickRandomPartForSlot(slot.id);
+        if (part) {
+          next.parts[slot.id] = part.id;
+        }
+      });
+      return normalizeCharacterAppearance(next, catalog);
+    }
+
     catalog.slots.forEach(function (slot) {
-      const options = getCharacterPartsForSlot(content, base.id, slot.id);
-      const part = options[Math.floor(Math.random() * Math.max(1, options.length))] || options[0];
+      if (["bottom", "undershirt", "top"].includes(slot.id)) {
+        return;
+      }
+      const part = pickRandomPartForSlot(slot.id);
       if (part) {
         next.parts[slot.id] = part.id;
       }
     });
+
+    // A randomized outfit must always include a bottom when the catalog has one.
+    const bottom = pickRandomPartForSlot("bottom");
+    if (bottom) {
+      next.parts.bottom = bottom.id;
+    }
+
+    // Require at least one torso layer, while allowing undershirt-only, top-only,
+    // or both whenever those categories have compatible assets.
+    const undershirtOptions = getRandomizablePartsForSlot("undershirt");
+    const topOptions = getRandomizablePartsForSlot("top");
+    const torsoModes = [
+      { undershirt: true, top: false },
+      { undershirt: false, top: true },
+      { undershirt: true, top: true },
+    ].filter(function (mode) {
+      return (!mode.undershirt || undershirtOptions.length)
+        && (!mode.top || topOptions.length);
+    });
+    const torsoMode = torsoModes[Math.floor(Math.random() * Math.max(1, torsoModes.length))] || null;
+    if (torsoMode?.undershirt) {
+      const undershirt = undershirtOptions[Math.floor(Math.random() * undershirtOptions.length)] || undershirtOptions[0];
+      if (undershirt) {
+        next.parts.undershirt = undershirt.id;
+      }
+    }
+    if (torsoMode?.top) {
+      const top = topOptions[Math.floor(Math.random() * topOptions.length)] || topOptions[0];
+      if (top) {
+        next.parts.top = top.id;
+      }
+    }
 
     return normalizeCharacterAppearance(next, catalog);
   }
@@ -2143,6 +2352,16 @@
           if (root) {
             drawMonsterVariantCanvases(root, ACTIVE_APP.content);
             safeDrawAvatarPreviewCanvases(root, ACTIVE_APP.content);
+          }
+          return;
+        }
+
+        const root = document.querySelector("#app");
+        if (root?.querySelector("[data-character-hover-appearance]")) {
+          drawMonsterVariantCanvases(root, ACTIVE_APP.content);
+          safeDrawAvatarPreviewCanvases(root, ACTIVE_APP.content);
+          if (ACTIVE_APP.state.screen === "dev-tools" && ACTIVE_APP.devTools.section === "layered-sprites") {
+            drawLayeredSpriteDevCanvas(root, ACTIVE_APP.content, ACTIVE_APP.devTools);
           }
           return;
         }
@@ -11257,6 +11476,21 @@
     return normalizeCharacterAppearance(next, getCharacterPartsCatalog(content));
   }
 
+  function getAppearanceWithAddOn(content, appearance, slotId, groupId, addOnId) {
+    const next = JSON.parse(JSON.stringify(appearance || createDefaultCharacterAppearance(content)));
+    next.addOns = next.addOns || {};
+    next.addOns[slotId] = next.addOns[slotId] || {};
+    if (addOnId) {
+      next.addOns[slotId][groupId] = addOnId;
+    } else {
+      delete next.addOns[slotId][groupId];
+      if (!Object.keys(next.addOns[slotId]).length) {
+        delete next.addOns[slotId];
+      }
+    }
+    return normalizeCharacterAppearance(next, getCharacterPartsCatalog(content));
+  }
+
   function renderCharacterPreviewStage(content, baseSheet, appearance, options) {
     const backgroundPath = options?.backgroundEnabled === false ? "" : String(options?.backgroundPath || "");
     const previewClass = options?.previewClass || "character-appearance-preview-sprite";
@@ -11285,6 +11519,7 @@
   }
 
   function renderCharacterPartStylePicker(content, appearance, baseSheet, slot, parts, choiceAttr, activeSlot) {
+    const catalog = getCharacterPartsCatalog(content);
     const selectableParts = parts.filter(function (part) {
       return !(slot.optional && part.id === "none") && Boolean(part.path || part.sheetId);
     });
@@ -11335,6 +11570,40 @@
             "</button>",
           ].join("");
         }).join("");
+        const addOnGroups = selectedStyle
+          ? (catalog.addOns || []).filter(function (addOn) {
+              return addOn.slot === slot.id
+                && addOn.parentStyleId === group.id
+                && (!(addOn.compatibleBaseIds || []).length || addOn.compatibleBaseIds.includes(appearance.baseId));
+            }).reduce(function (groups, addOn) {
+              if (!groups.has(addOn.groupId)) {
+                groups.set(addOn.groupId, { label: addOn.groupLabel, addOns: [] });
+              }
+              groups.get(addOn.groupId).addOns.push(addOn);
+              return groups;
+            }, new Map())
+          : new Map();
+        const addOnMarkup = Array.from(addOnGroups.entries()).map(function ([groupId, addOnGroup]) {
+          const selectedAddOnId = appearance?.addOns?.[slot.id]?.[groupId] || "";
+          const buttons = [{
+            id: "",
+            label: "None",
+          }].concat(addOnGroup.addOns.sort(function (left, right) {
+            return (left.styleLabel + left.variantLabel).localeCompare(right.styleLabel + right.variantLabel);
+          }).map(function (addOn) {
+            return {
+              id: addOn.id,
+              label: addOn.variantLabel === "Default"
+                ? addOn.styleLabel
+                : addOn.styleLabel + " · " + addOn.variantLabel,
+            };
+          })).map(function (option) {
+            const selected = option.id === selectedAddOnId;
+            const hoverAppearance = getAppearanceWithAddOn(content, appearance, slot.id, groupId, option.id);
+            return '<button class="character-variant-chip' + (selected ? " character-variant-chip-selected" : "") + '" type="button" ' + choiceAttr + '="addon:' + escapeHtml(slot.id) + ":" + escapeHtml(groupId) + '" value="' + escapeHtml(option.id) + '" data-character-hover-appearance="' + escapeHtml(JSON.stringify(hoverAppearance)) + '">' + escapeHtml(option.label) + "</button>";
+          }).join("");
+          return '<div class="character-addon-group"><h5>' + escapeHtml(addOnGroup.label || groupId) + '</h5><div class="character-variant-row">' + buttons + "</div></div>";
+        }).join("");
         return [
           '<article class="character-style-card' + (selectedStyle ? " character-style-card-selected" : "") + '">',
           '<button class="character-style-card-main" type="button" ' + choiceAttr + '="part:' + escapeHtml(slot.id) + '" value="' + escapeHtml(selectedVariant?.id || "") + '">',
@@ -11344,6 +11613,7 @@
           group.parts.length > 1
             ? '<div class="character-variant-row">' + variantButtons + "</div>"
             : "",
+          addOnMarkup ? '<div class="character-addon-panel">' + addOnMarkup + "</div>" : "",
           "</article>",
         ].join("");
       }).join("");
@@ -11380,8 +11650,9 @@
     const activePaletteKeys = new Set(selectedParts.map(function (part) {
       return part.tintPalette;
     }).filter(Boolean));
+    const hiddenPaletteKeys = new Set(["hair", "eyes"]);
     const paletteControls = Object.entries(catalog.palettes).filter(function ([paletteKey]) {
-      return activePaletteKeys.has(paletteKey);
+      return activePaletteKeys.has(paletteKey) && !hiddenPaletteKeys.has(paletteKey);
     }).map(function ([paletteKey, entries]) {
       const paletteOptions = entries.map(function (entry) {
         const selected = normalizedAppearance?.palette?.[paletteKey] === entry.id ? " selected" : "";
@@ -11416,6 +11687,22 @@
     );
   }
 
+  function showCharacterHoverPreviewCanvas(canvas, content, appearance) {
+    if (!(canvas instanceof HTMLCanvasElement) || !appearance) {
+      return;
+    }
+    canvas.__characterHoverPreviewAppearance = JSON.parse(JSON.stringify(appearance));
+    drawCharacterHoverPreviewCanvas(canvas, content, canvas.__characterHoverPreviewAppearance);
+  }
+
+  function restoreCharacterHoverPreviewCanvas(canvas, content) {
+    if (!(canvas instanceof HTMLCanvasElement)) {
+      return;
+    }
+    delete canvas.__characterHoverPreviewAppearance;
+    drawCharacterHoverPreviewCanvas(canvas, content, null);
+  }
+
   function attachCharacterAppearanceHoverHandlers(root, content) {
     root.querySelectorAll("[data-character-hover-appearance]").forEach(function (button) {
       const getTargetCanvases = function () {
@@ -11431,19 +11718,19 @@
         }
         const targetCanvases = getTargetCanvases();
         if (targetCanvases[0]) {
-          drawCharacterHoverPreviewCanvas(targetCanvases[0], content, previewAppearance);
+          showCharacterHoverPreviewCanvas(targetCanvases[0], content, previewAppearance);
         }
         if (targetCanvases[1]) {
-          drawCharacterHoverPreviewCanvas(targetCanvases[1], content, previewAppearance);
+          showCharacterHoverPreviewCanvas(targetCanvases[1], content, previewAppearance);
         }
       };
       const restoreSelectedPreview = function () {
         const targetCanvases = getTargetCanvases();
         if (targetCanvases[0]) {
-          drawCharacterHoverPreviewCanvas(targetCanvases[0], content, null);
+          restoreCharacterHoverPreviewCanvas(targetCanvases[0], content);
         }
         if (targetCanvases[1]) {
-          drawCharacterHoverPreviewCanvas(targetCanvases[1], content, null);
+          restoreCharacterHoverPreviewCanvas(targetCanvases[1], content);
         }
       };
       button.addEventListener("mouseenter", showHoverPreview);
@@ -12156,9 +12443,9 @@
       });
       panelBody = [
         '<section class="character-editor-page">',
-        '<div class="character-editor-intro"><span class="eyebrow">Player appearance</span><h3>Make this character yours</h3><p>Choose a base, hairstyle, outfit, accessories, and colors. Your preview updates as you make changes.</p></div>',
-        creatorMarkup,
+        '<div class="character-editor-intro"><p>Choose a base, hairstyle, outfit, accessories, and colors. Your preview updates as you make changes.</p></div>',
         '<div class="character-editor-actions"><button class="secondary-button" type="button" data-action="randomize-world-character">Surprise Me</button><div><button class="secondary-button" type="button" data-action="cancel-character-editor">Cancel</button><button class="primary-button" type="button" data-action="save-character-editor">Save Changes</button></div></div>',
+        creatorMarkup,
         '<p class="dev-helper-text character-editor-save-note">Changes remain a preview until you choose Save Changes. Cancel or Close will discard them.</p>',
         '</section>',
       ].join("");
@@ -15063,14 +15350,23 @@
     const partsById = new Map(catalog.parts.map(function (part) {
       return [part.id, part];
     }));
+    const addOnsById = new Map((catalog.addOns || []).map(function (addOn) {
+      return [addOn.id, addOn];
+    }));
     const layers = [];
     const baseLayer = { id: "base", slot: "base", label: base.label, path: baseSheet.path, sheetId: baseSheet.id, sheet: baseSheet };
     const selectedParts = Object.values(appearance.parts || {}).map(function (partId) {
       return partsById.get(partId) || null;
     }).filter(Boolean);
+    const selectedAddOns = Object.values(appearance.addOns || {}).flatMap(function (groups) {
+      return Object.values(groups || {});
+    }).map(function (addOnId) {
+      return addOnsById.get(addOnId) || null;
+    }).filter(Boolean);
+    const selectedLayers = selectedParts.concat(selectedAddOns);
     const selectedTop = partsById.get(appearance.parts?.top || "") || null;
     const selectedBottom = partsById.get(appearance.parts?.bottom || "") || null;
-    const selectedForegroundLayers = selectedParts.map(function (part) {
+    const selectedForegroundLayers = selectedLayers.map(function (part) {
       if (!part.foregroundPath && !part.foregroundSheetId) {
         return null;
       }
@@ -15086,10 +15382,10 @@
           : 151,
       };
     }).filter(Boolean);
-    const selectedBelowLayers = selectedParts.filter(function (part) {
+    const selectedBelowLayers = selectedLayers.filter(function (part) {
       return part.layerPosition === "below-all";
     });
-    const selectedAboveLayers = selectedParts.map(function (part) {
+    const selectedAboveLayers = selectedLayers.map(function (part) {
       if (!part.abovePath && !part.aboveSheetId) {
         return null;
       }
@@ -15166,7 +15462,7 @@
       queueLayer(part, Math.min(getLayerRenderPriority(part, 30), 79));
     });
     queueLayer(baseLayer, fallbackPriorityBySlot.base);
-    selectedParts.forEach(function (part) {
+    selectedLayers.forEach(function (part) {
       if (part.layerPosition === "below-all") {
         return;
       }
@@ -15408,7 +15704,7 @@
         canvas,
         content,
         canvas.getAttribute("data-avatar-preview-sheet") || "",
-        rawAppearance ? safeParse(rawAppearance, null) : null
+        canvas.__characterHoverPreviewAppearance || (rawAppearance ? safeParse(rawAppearance, null) : null)
       );
     });
   }
@@ -18652,6 +18948,18 @@
           } else {
             delete current.parts[slotId];
           }
+        } else if (path.startsWith("addon:")) {
+          const pathParts = path.split(":");
+          const slotId = pathParts[1] || "";
+          const groupId = pathParts[2] || "";
+          ui.characterAppearanceActiveSlot = slotId;
+          current.addOns = current.addOns || {};
+          current.addOns[slotId] = current.addOns[slotId] || {};
+          if (rawValue) {
+            current.addOns[slotId][groupId] = rawValue;
+          } else {
+            delete current.addOns[slotId][groupId];
+          }
         } else if (path.startsWith("palette:")) {
           current.palette[path.slice("palette:".length)] = rawValue;
         } else {
@@ -18671,7 +18979,11 @@
         if (ui.activePanel !== "character-editor") {
           return;
         }
-        ui.characterEditorDraft = randomizeCharacterAppearance(this.content, ui.characterEditorDraft || this.state.player.appearance);
+        ui.characterEditorDraft = randomizeCharacterAppearance(
+          this.content,
+          ui.characterEditorDraft || this.state.player.appearance,
+          { enforcePlayerOutfitRules: true }
+        );
         CHARACTER_VISUAL_FRAME_CACHE.clear();
         this.render();
       },
@@ -19168,6 +19480,18 @@
             } else {
               delete current.parts[slotId];
             }
+          } else if (path.startsWith("addon:")) {
+            const pathParts = path.split(":");
+            const slotId = pathParts[1] || "";
+            const groupId = pathParts[2] || "";
+            this.state.appearanceActiveSlot = slotId;
+            current.addOns = current.addOns || {};
+            current.addOns[slotId] = current.addOns[slotId] || {};
+            if (value.value) {
+              current.addOns[slotId][groupId] = value.value;
+            } else {
+              delete current.addOns[slotId][groupId];
+            }
           } else if (path.startsWith("palette:")) {
             current.palette[path.slice("palette:".length)] = value.value;
           }
@@ -19176,7 +19500,11 @@
           const baseSheet = getSheetForCharacterLayer(this.content, base, getCharacterSheetConfig(this.content, this.state.avatarId || ""));
           this.state.avatarId = baseSheet?.id || this.state.avatarId;
         } else if (action === "random-appearance") {
-          this.state.appearance = randomizeCharacterAppearance(this.content, this.state.appearance);
+          this.state.appearance = randomizeCharacterAppearance(
+            this.content,
+            this.state.appearance,
+            { enforcePlayerOutfitRules: true }
+          );
           const base = findCharacterBase(this.content, this.state.appearance?.baseId);
           const baseSheet = getSheetForCharacterLayer(this.content, base, getCharacterSheetConfig(this.content, this.state.avatarId || ""));
           this.state.avatarId = baseSheet?.id || this.state.avatarId;
@@ -19874,6 +20202,18 @@
             current.parts[slotId] = rawValue;
           } else {
             delete current.parts[slotId];
+          }
+        } else if (String(path || "").startsWith("addon:")) {
+          const pathParts = String(path).split(":");
+          const slotId = pathParts[1] || "";
+          const groupId = pathParts[2] || "";
+          this.devTools.layeredAppearanceActiveSlot = slotId;
+          current.addOns = current.addOns || {};
+          current.addOns[slotId] = current.addOns[slotId] || {};
+          if (rawValue) {
+            current.addOns[slotId][groupId] = rawValue;
+          } else {
+            delete current.addOns[slotId][groupId];
           }
         } else if (String(path || "").startsWith("palette:")) {
           current.palette[String(path).slice("palette:".length)] = rawValue;
