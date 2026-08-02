@@ -5771,6 +5771,26 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         ]
       },
       {
+        "id": "top-shirt-forestgreen",
+        "slot": "top",
+        "label": "Shirt Forest Green",
+        "collection": "T-Shirt",
+        "styleId": "top-shirt-forest",
+        "styleLabel": "Shirt Forest",
+        "variantId": "green",
+        "variantLabel": "Green",
+        "path": "assets/Characters/Base/Tops/T-Shirt/120_Shirt_ForestGreen.png",
+        "sheetId": "assets-characters-base-tops-t-shirt-120-shirt-forestgreen",
+        "renderPriority": 120,
+        "foregroundPath": "",
+        "foregroundSheetId": "",
+        "tintPalette": "",
+        "layerMode": "over-bottom",
+        "compatibleBaseIds": [
+          "assets-characters-base-spritesheet"
+        ]
+      },
+      {
         "id": "top-shirt-mint",
         "slot": "top",
         "label": "Shirt Mint",
@@ -5921,6 +5941,26 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "variantLabel": "Blue",
         "path": "assets/Characters/Base/Tops/Undershirt/90_Shirt_Blue.png",
         "sheetId": "assets-characters-base-tops-undershirt-90-shirt-blue",
+        "renderPriority": 90,
+        "foregroundPath": "",
+        "foregroundSheetId": "",
+        "tintPalette": "",
+        "layerMode": "",
+        "compatibleBaseIds": [
+          "assets-characters-base-spritesheet"
+        ]
+      },
+      {
+        "id": "undershirt-shirt-forestgreen",
+        "slot": "undershirt",
+        "label": "Shirt Forest Green",
+        "collection": "",
+        "styleId": "undershirt-shirt-forest",
+        "styleLabel": "Shirt Forest",
+        "variantId": "green",
+        "variantLabel": "Green",
+        "path": "assets/Characters/Base/Tops/Undershirt/90_Shirt_ForestGreen.png",
+        "sheetId": "assets-characters-base-tops-undershirt-90-shirt-forestgreen",
         "renderPriority": 90,
         "foregroundPath": "",
         "foregroundSheetId": "",
@@ -7358,6 +7398,23 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "frameOffsets": []
       },
       {
+        "id": "assets-characters-base-tops-t-shirt-120-shirt-forestgreen",
+        "label": "120 Shirt ForestGreen",
+        "playerLabel": "120 Shirt ForestGreen",
+        "playerSelectable": false,
+        "kind": "character",
+        "group": "Characters / Base / Tops / T-Shirt",
+        "path": "assets/Characters/Base/Tops/T-Shirt/120_Shirt_ForestGreen.png",
+        "columns": 4,
+        "rows": 4,
+        "frameHeight": 313,
+        "offsetX": 0,
+        "offsetY": 0,
+        "renderWidth": null,
+        "rowOffsets": [],
+        "frameOffsets": []
+      },
+      {
         "id": "assets-characters-base-tops-t-shirt-120-shirt-mint",
         "label": "120 Shirt Mint",
         "playerLabel": "120 Shirt Mint",
@@ -7552,6 +7609,23 @@ window.PASTEL_TRAILS_LOCAL_CONTENT = {
         "kind": "character",
         "group": "Characters / Base / Tops / Undershirt",
         "path": "assets/Characters/Base/Tops/Undershirt/90_Shirt_Blue.png",
+        "columns": 4,
+        "rows": 4,
+        "frameHeight": 313,
+        "offsetX": 0,
+        "offsetY": 0,
+        "renderWidth": null,
+        "rowOffsets": [],
+        "frameOffsets": []
+      },
+      {
+        "id": "assets-characters-base-tops-undershirt-90-shirt-forestgreen",
+        "label": "90 Shirt ForestGreen",
+        "playerLabel": "90 Shirt ForestGreen",
+        "playerSelectable": false,
+        "kind": "character",
+        "group": "Characters / Base / Tops / Undershirt",
+        "path": "assets/Characters/Base/Tops/Undershirt/90_Shirt_ForestGreen.png",
         "columns": 4,
         "rows": 4,
         "frameHeight": 313,
